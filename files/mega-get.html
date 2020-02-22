@@ -1,0 +1,55 @@
+<head>
+    <style>
+        body {
+            background-color: #424242;
+        }
+
+        input {
+            background-color: #BDBDBD;
+        }
+
+        label {
+            color: #F5F5F5;
+            font-family: monospace;
+        }
+
+        textarea {
+            background-color: #424242;
+            color: #F5F5F5;
+            font-family: monospace;
+            height: 95%;
+            width: 100%;
+            resize: none;
+        }
+    </style>
+    <script>
+        const websocket = "set from entrypoint.sh";
+        const socket = new WebSocket(websocket);
+        var doOverwrite = true;
+        socket.onmessage = function (event) {
+            if (doOverwrite) {
+                document.getElementById("status").value = event.data + "\n";
+                doOverwrite = false;
+            } else {
+                document.getElementById("status").value += event.data + "\n";
+            }
+            if (event.data === "") {
+                doOverwrite = true;
+            }
+        }
+        function sendURL() {
+            socket.send(document.getElementById("megaURL").value);
+        }
+    </script>
+</head>
+
+<body>
+    <form onSubmit="sendURL()">
+        <label for="megaURL">MEGA URL:</label>
+        <input type="url" id="megaURL"
+            placeholder="https://mega.nz/#!xxxxxxxx!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" size="70">
+        <input type="submit" value="Get">
+    </form>
+    <hr>
+    <textarea id="status">No data received yet</textarea>
+</body>
