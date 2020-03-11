@@ -1,6 +1,7 @@
 FROM ubuntu:19.10
 
 ENV DOWNLOAD_DIR /data
+ENV HOME /mega
 ENV EXTERNAL_HOST localhost
 ENV WEBSOCKET_PORT 8080
 ENV TRANSFER_LIST_LIMIT 50
@@ -14,9 +15,11 @@ ADD https://mega.nz/linux/MEGAsync/xUbuntu_19.10/amd64/megacmd-xUbuntu_19.10_amd
 RUN apt-get update; \
     apt-get install ./websocketd*.deb ./megacmd*.deb -y; \
     apt-get clean; \
-    rm ./websocketd*.deb ./megacmd*.deb;
+    rm ./websocketd*.deb ./megacmd*.deb; \
+    mkdir ${HOME}; \
+    chmod 777 ${HOME};
 
-COPY files/ /root
+COPY files/ ${HOME}
 EXPOSE ${WEBSOCKET_PORT}
 
-ENTRYPOINT /root/entrypoint.sh
+ENTRYPOINT ${HOME}/entrypoint.sh

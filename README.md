@@ -11,5 +11,6 @@ docker run \
     --env "EXTERNAL_HOST=NAS.lan" \
     --publish 8080:8080 \
     --volume /mnt/samba-share:/data \
+    --user "1000:1000"
     gm0n3y2503/mega-get-server:latest
 ```
