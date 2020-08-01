@@ -4,6 +4,10 @@
             background-color: #424242;
         }
 
+        div.input-line {
+            height: 3%;
+        }
+
         input {
             background-color: #BDBDBD;
         }
@@ -17,8 +21,10 @@
             background-color: #424242;
             color: #F5F5F5;
             font-family: monospace;
-            height: 95%;
+            height: 94%;
             width: 100%;
+            white-space: pre;
+            overflow-x: scroll;
             resize: none;
         }
     </style>
@@ -38,18 +44,32 @@
             }
         }
         function sendURL() {
-            socket.send(document.getElementById("megaURL").value);
+            socket.send("get: " + document.getElementById("megaURL").value);
+        }
+        function cancelTransfer() {
+            socket.send("cancel: " + document.getElementById("transferTag").value);
+        }
+        function pauseTransfer() {
+            socket.send("pause: " + document.getElementById("transferTag").value);
+        }
+        function resumeTransfer() {
+            socket.send("resume: " + document.getElementById("transferTag").value);
         }
     </script>
 </head>
 
 <body>
-    <form onSubmit="sendURL()">
+    <div class="input-line">
         <label for="megaURL">MEGA URL:</label>
-        <input type="url" id="megaURL"
-            placeholder="https://mega.nz/#!xxxxxxxx!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" size="70">
-        <input type="submit" value="Get">
-    </form>
-    <hr>
+        <input type="url" id="megaURL" placeholder="https://mega.nz/#!xxxxxxxx!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" size="70">
+        <input type="submit" value="Get" onclick="sendURL()" >
+    </div>
+    <div class="input-line">
+        <label for="transferTag">Transfer Tag:</label>
+        <input type="text" id="transferTag" placeholder="or all with -a" size="6">
+        <input type="submit" value="Cancel" onclick="cancelTransfer()">
+        <input type="submit" value="Pause" onclick="pauseTransfer()">
+        <input type="submit" value="Resume" onclick="resumeTransfer()">
+    </div>
     <textarea id="status">No data received yet</textarea>
 </body>
