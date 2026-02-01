@@ -1,0 +1,29 @@
+name: Test
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r flet-app/requirements.txt -r flet-app/requirements-dev.txt
+
+      - name: Run tests
+        run: |
+          pytest flet-app/tests -m "not integration and not e2e" -v --strict-markers --cov=app --cov=config --cov=main --cov-report=term-missing
+        env:
+          PYTHONPATH: flet-app
