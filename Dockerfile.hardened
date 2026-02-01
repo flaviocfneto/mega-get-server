@@ -1,0 +1,58 @@
+# Hardened image: dhi.io/python (Debian 13) + MEGA CMD. Requires: docker login dhi.io
+# See docs/HARDENED-IMAGE.md and .env.example for login.
+
+# Build stage: install MEGA CMD and Python venv
+FROM dhi.io/python:3.12-debian13-dev AS build-stage
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/app/venv/bin:$PATH"
+
+WORKDIR /app
+
+ADD https://mega.nz/linux/repo/Debian_13/amd64/megacmd_2.4.0-1.1_amd64.deb ./
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3-venv \
+        ./megacmd_2.4.0-1.1_amd64.deb && \
+    apt-get clean && \
+    rm -f ./megacmd_2.4.0-1.1_amd64.deb
+
+RUN python3 -m venv /app/venv
+COPY flet-app/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Runtime stage: same -dev base so shell and MEGA CMD are available for entrypoint
+FROM dhi.io/python:3.12-debian13-dev AS runtime-stage
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/app/venv/bin:$PATH"
+ENV DOWNLOAD_DIR=/data/
+ENV HOME=/home/mega
+ENV NEW_FILE_PERMISSIONS=600
+ENV NEW_FOLDER_PERMISSIONS=700
+ENV TRANSFER_LIST_LIMIT=50
+ENV PATH_DISPLAY_SIZE=80
+ENV INPUT_TIMEOUT=0.0166
+ENV FLET_FORCE_WEB_SERVER=true
+ENV FLET_SERVER_PORT=8080
+
+WORKDIR /app
+
+# Install MEGA CMD again in runtime stage (simplest; keeps entrypoint.sh working)
+ADD https://mega.nz/linux/repo/Debian_13/amd64/megacmd_2.4.0-1.1_amd64.deb ./
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ./megacmd_2.4.0-1.1_amd64.deb && \
+    apt-get clean && \
+    rm -f ./megacmd_2.4.0-1.1_amd64.deb
+
+COPY --from=build-stage /app/venv /app/venv
+COPY flet-app/ /app/
+RUN mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && chmod 777 "${HOME}" "${DOWNLOAD_DIR}"
+
+COPY files/ "${HOME}/"
+EXPOSE 8080
+
+ENTRYPOINT ["/home/mega/entrypoint.sh"]
