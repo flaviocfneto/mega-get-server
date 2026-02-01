@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
+set -e
 
-# start servers in background
+# Start MEGA CMD server in background (required for mega-get / mega-transfers)
 mega-cmd-server &
-mkdir --parents "${HOME}/static"
-websocketd --passenv INPUT_TIMEOUT,DOWNLOAD_DIR,TRANSFER_LIST_LIMIT,PATH_DISPLAY_SIZE --staticdir="${HOME}/static" --port="${WEBSOCKET_PORT}" "${HOME}/websocket.sh" &
 
+# Apply default file/folder permissions
 mega-permissions --files -s "${NEW_FILE_PERMISSIONS}"
 mega-permissions --folders -s "${NEW_FOLDER_PERMISSIONS}"
 
-WEBSOCKET_URL="ws://${EXTERNAL_HOST}:${EXTERNAL_PORT}"
-sed --in-place "s|websocket = \".*\"|websocket = \"${WEBSOCKET_URL}\"|" "${HOME}/mega-get.html"
+# Give mega-cmd-server a moment to bind its socket
+sleep 2
 
-# setup files for serving over websocket
-cp "${HOME}/mega-get.html" "${HOME}/static/index.html"
-
-# Fix accidental deletion
-while sleep "${FILE_UPDATE_TIMEOUT}"; do
-    cp --update "${HOME}/mega-get.html" "${DOWNLOAD_DIR}"
-done
+# Run Flet web app (HTTP + WebSocket on port 8080)
+exec /app/venv/bin/python /app/main.py
