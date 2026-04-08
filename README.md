@@ -2,9 +2,7 @@
 
 A simple Docker image with a web UI for downloading exported links from https://mega.nz/
 
-Deploy this image to a NAS server to facilitate direct download of files via the **React** UI in [`web/`](web/) and a **FastAPI** backend (MEGAcmd) in [`api/`](api/).
-
-Legacy folder names `react-new` and `flet-app` may exist as **symlinks** to `web/` and `api/` during a transition period; see [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md). The old minimal React app and the Flet prototype entrypoint were removed from the active tree (retrieve from git history or a local `archive/` copy if needed).
+Deploy this image to a NAS server to facilitate direct download of files via the **React** UI in [`web/`](web/) and a **FastAPI** backend (MEGAcmd) in [`api/`](api/). Folder layout notes: [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md).
 
 ## Basic Set Up
 

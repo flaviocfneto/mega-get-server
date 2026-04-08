@@ -106,4 +106,4 @@ Persistent transfer state is primarily in MEGA CMD; the server adds logging, met
 - **Persistence:** Mounted volume for `DOWNLOAD_DIR`.
 - **Security:** Runs as root unless overridden; no TLS in the image (use a reverse proxy for HTTPS).
 
-Repository layout and symlink compatibility are documented in [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md).
+Repository layout is documented in [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md).

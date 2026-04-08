@@ -6,9 +6,9 @@ All notable changes to this project are documented in this file.
 
 ### Repository layout
 - **Canonical folders:** active backend code lives under `api/` (formerly `flet-app/`); active frontend under `web/` (formerly `react-new/`).
-- **Compatibility symlinks (temporary):** root-level `flet-app` → `api` and `react-new` → `web` so existing scripts and muscle memory keep working until removed (see `docs/COMPAT-LAYOUT.md`).
 - **Legacy sources:** the old minimal React app was removed from the tracked tree; the Flet entrypoint `main.py` was removed from the backend tree. Local copies may exist under gitignored `archive/`; retrieve historical files from git if needed.
-- **Tooling and docs** now reference `api/` and `web/` (Dockerfiles, CI, launchers, `README.md`, `INFRASTRUCTURE.md`).
+- **Tooling and docs** reference `api/` and `web/` (Dockerfiles, CI, launchers, `README.md`, `INFRASTRUCTURE.md`).
+- **Final cleanup:** removed temporary root symlinks `flet-app` and `react-new`; use `api/` and `web/` only.
 
 ### Added
 - New transfer metadata persistence helper at `api/transfer_metadata.py` with JSON-backed storage per transfer tag.
@@ -60,5 +60,5 @@ All notable changes to this project are documented in this file.
 ### Documentation
 - Updated `README.md` with diagnostics endpoint details, smoke test instructions, and missing-tool install guidance.
 - Updated `api/README.md` with API diagnostics usage and manual install guidance.
-- Added `docs/COMPAT-LAYOUT.md` describing the folder rename, symlinks, and archive policy.
+- Added `docs/COMPAT-LAYOUT.md` describing the folder rename and archive policy.
 - Refreshed `INFRASTRUCTURE.md` for FastAPI + React static deployment (replacing outdated Flet-only description).
