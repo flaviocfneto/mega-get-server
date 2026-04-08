@@ -2,7 +2,7 @@
 
 A simple Docker image with a web UI for downloading exported links from https://mega.nz/
 
-Deploy this image to a NAS server to facilitate direct download of files via a Flet-based web interface.
+Deploy this image to a NAS server to facilitate direct download of files via the **React** UI in [`react-new/`](react-new/) and a **FastAPI** backend (MEGAcmd). An older minimal UI lives in [`react/`](react/). A **Flet** desktop/web prototype remains in [`flet-app/main.py`](flet-app/main.py) for local use.
 
 ## Basic Set Up
 
@@ -33,3 +33,54 @@ By default, files and folders downloaded will be owned by `root` with user-only 
 `PATH_DISPLAY_SIZE=80` — Maximum characters shown for the download file path.
 
 `INPUT_TIMEOUT=0.0166` — Poll interval lower bound (seconds) for the transfer list; affects UI update frequency and CPU use.
+
+## Diagnostics and smoke tests
+
+The backend exposes tool readiness diagnostics at `GET /api/diag/tools`.
+This endpoint reports:
+
+- whether each external dependency is available
+- detected version (when available)
+- what features are impacted if missing
+- install instructions and suggested commands to run manually
+
+The app does not auto-install dependencies; it only reports availability and suggests commands.
+
+### Run backend smoke tests locally
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r flet-app/requirements.txt pytest
+PYTHONPATH=flet-app MEGA_SIMULATE=1 UI_TEST_MODE=1 pytest flet-app/tests -v
+```
+
+If MEGAcmd is missing, install it and set the binary path when needed:
+
+```bash
+brew install --cask megacmd
+export MEGACMD_PATH=/Applications/MEGAcmd.app/Contents/MacOS
+```
+
+## Local launcher (frontend + backend)
+
+From project root, use the cross-platform Node launcher:
+
+- `node start-dev.mjs`
+
+This launcher starts:
+
+- FastAPI backend (`flet-app/api_main.py`) on `http://127.0.0.1:8000`
+- React frontend (`react-new`) dev server on `http://localhost:5173`
+
+Optional overrides:
+
+- `API_HOST` (default `127.0.0.1`)
+- `API_PORT` (default `8000`)
+- `UI_PORT` (default `5173`)
+
+Legacy platform-specific scripts are still available if needed:
+
+- `./start-dev.sh`
+- `start-dev.bat`
+- `.\start-dev.ps1`

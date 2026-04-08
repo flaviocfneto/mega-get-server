@@ -1,2 +1,4 @@
 .env
 .mega-get-history.json
+.mega-debug.log
+flet-app/ui_settings.json

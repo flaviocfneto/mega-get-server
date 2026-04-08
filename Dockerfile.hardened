@@ -1,6 +1,14 @@
 # Hardened image: dhi.io/python (Debian 13) + MEGA CMD. Requires: docker login dhi.io
 # See docs/HARDENED-IMAGE.md and .env.example for login.
 
+FROM node:22-alpine AS react-build
+
+WORKDIR /build
+COPY react-new/package.json ./
+RUN npm install
+COPY react-new/ ./
+RUN npm run build
+
 # Build stage: install MEGA CMD and Python venv
 FROM dhi.io/python:3.12-debian13-dev AS build-stage
 
@@ -50,6 +58,7 @@ RUN apt-get update && \
 
 COPY --from=build-stage /app/venv /app/venv
 COPY flet-app/ /app/
+COPY --from=react-build /build/dist /app/static
 RUN mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && chmod 777 "${HOME}" "${DOWNLOAD_DIR}"
 
 COPY files/ "${HOME}/"

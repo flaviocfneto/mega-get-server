@@ -11,5 +11,5 @@ mega-permissions --folders -s "${NEW_FOLDER_PERMISSIONS}"
 # Give mega-cmd-server a moment to bind its socket
 sleep 2
 
-# Run Flet web app (HTTP + WebSocket on port 8080)
-exec /app/venv/bin/python /app/main.py
+# FastAPI + React static (port 8080)
+exec /app/venv/bin/python -m uvicorn api_main:app --host 0.0.0.0 --port "${FLET_SERVER_PORT:-8080}" --app-dir /app

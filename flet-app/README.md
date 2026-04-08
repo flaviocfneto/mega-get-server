@@ -74,6 +74,20 @@ DOWNLOAD_DIR=$HOME/Downloads FLET_FORCE_WEB_SERVER=true flet run --web --port 80
 | `MEGA_SIMULATE` | (unset) | Set to `1` to run without MEGA CMD (fake transfers). |
 | `MEGACMD_PATH` | (auto on macOS) | Path to MEGAcmd binaries. On macOS, defaults to `/Applications/MEGAcmd.app/Contents/MacOS` if that folder exists. |
 
+## API diagnostics
+
+For runtime readiness checks, use `GET /api/diag/tools`.
+
+It reports missing external tools, what features are affected, and suggested install commands.
+The server does not install tools automatically.
+
+Example suggested install commands on macOS:
+
+```bash
+brew install --cask megacmd
+export MEGACMD_PATH=/Applications/MEGAcmd.app/Contents/MacOS
+```
+
 ## Docker
 
 The project Dockerfile runs this Flet app plus mega-cmd-server in the same image. The entrypoint sets `FLET_FORCE_WEB_SERVER=true` and `FLET_SERVER_PORT=8080` and runs `python main.py`; the app auto-detects Docker and runs as a web server on port 8080.

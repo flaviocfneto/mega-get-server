@@ -20,10 +20,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r flet-app/requirements.txt -r flet-app/requirements-dev.txt
+          pip install -r flet-app/requirements.txt pytest
 
       - name: Run tests
         run: |
-          pytest flet-app/tests -m "not integration and not e2e" -v --strict-markers --cov=app --cov=config --cov=main --cov-report=term-missing
+          pytest flet-app/tests -v --cov=mega_service --cov=api_main --cov=tool_diagnostics --cov-report=term-missing
         env:
           PYTHONPATH: flet-app
+          MEGA_SIMULATE: "1"
+          UI_TEST_MODE: "1"
