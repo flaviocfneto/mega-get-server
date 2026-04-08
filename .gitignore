@@ -9,3 +9,4 @@ archive/
 # Python
 __pycache__/
 *.py[cod]
+TEST-downloads/ # stop it coming back
