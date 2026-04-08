@@ -1,6 +1,6 @@
 # Hardened Docker image
 
-The hardened image uses the [Docker Hardened Python](https://hub.docker.com/hardened-images/catalog/dhi/python/guides) base (`dhi.io/python:3.12-debian13-dev`) instead of Ubuntu, and MEGA CMD for Debian 13 (megacmd 2.4.0-1.1).
+The hardened image uses the [Docker Hardened Python](https://hub.docker.com/hardened-images/catalog/dhi/python/guides) base (`dhi.io/python:3.12-debian13-dev`) instead of Ubuntu, and MEGA CMD for Debian 13 (megacmd 2.5.1-1.1).
 
 ## Prerequisites
 

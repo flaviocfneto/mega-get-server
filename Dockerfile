@@ -9,6 +9,8 @@ RUN npm run build
 
 FROM ubuntu:24.04
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 ENV DOWNLOAD_DIR=/data/
 ENV HOME=/home/mega
 ENV NEW_FILE_PERMISSIONS=600
@@ -19,17 +21,17 @@ ENV INPUT_TIMEOUT=0.0166
 ENV FLET_FORCE_WEB_SERVER=true
 ENV FLET_SERVER_PORT=8080
 
-ADD https://mega.nz/linux/repo/xUbuntu_24.04/amd64/megacmd_2.1.1-1.1_amd64.deb ./
+ADD https://mega.nz/linux/repo/xUbuntu_24.04/amd64/megacmd_2.5.1-1.1_amd64.deb ./
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         python3 \
         python3-pip \
         python3-venv \
-        ./megacmd_2.1.1-1.1_amd64.deb && \
+        ./megacmd_2.5.1-1.1_amd64.deb && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -f ./megacmd_2.1.1-1.1_amd64.deb && \
+    rm -f ./megacmd_2.5.1-1.1_amd64.deb && \
     mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && \
     chmod 777 "${HOME}" "${DOWNLOAD_DIR}"
 
