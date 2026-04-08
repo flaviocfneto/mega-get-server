@@ -5,7 +5,8 @@ FROM node:22-alpine AS react-build
 
 WORKDIR /build
 COPY web/package.json ./
-RUN npm install
+COPY web/package-lock.json ./
+RUN npm ci
 COPY web/ ./
 RUN npm run build
 
@@ -25,11 +26,13 @@ RUN apt-get update && \
         python3-venv \
         ./megacmd_2.4.0-1.1_amd64.deb && \
     apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
     rm -f ./megacmd_2.4.0-1.1_amd64.deb
 
 RUN python3 -m venv /app/venv
 COPY api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Runtime stage: same -dev base so shell and MEGA CMD are available for entrypoint
 FROM dhi.io/python:3.12-debian13-dev AS runtime-stage
@@ -54,6 +57,7 @@ ADD https://mega.nz/linux/repo/Debian_13/amd64/megacmd_2.4.0-1.1_amd64.deb ./
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ./megacmd_2.4.0-1.1_amd64.deb && \
     apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
     rm -f ./megacmd_2.4.0-1.1_amd64.deb
 
 COPY --from=build-stage /app/venv /app/venv

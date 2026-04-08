@@ -12,6 +12,8 @@ docker login dhi.io
 
 Use your Docker Hub username and a [Personal Access Token (PAT)](https://hub.docker.com/settings/security) (or password) when prompted.
 
+For local Docker Desktop setup and troubleshooting, see [dev-tools.md](dev-tools.md).
+
 ## Build with .env (optional)
 
 To avoid interactive login (e.g. in scripts):

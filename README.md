@@ -4,6 +4,19 @@ A simple Docker image with a web UI for downloading exported links from https://
 
 Deploy this image to a NAS server to facilitate direct download of files via the **React** UI in [`web/`](web/) and a **FastAPI** backend (MEGAcmd) in [`api/`](api/). Folder layout notes: [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md).
 
+## Developer tools
+
+For local development on macOS, install and start **Docker Desktop** before running Docker commands.
+
+Quick verification:
+
+```bash
+docker version
+docker buildx version
+```
+
+Detailed setup and troubleshooting: [docs/dev-tools.md](docs/dev-tools.md)
+
 ## Basic Set Up
 
 ```bash

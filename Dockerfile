@@ -2,7 +2,8 @@ FROM node:22-alpine AS react-build
 
 WORKDIR /build
 COPY web/package.json ./
-RUN npm install
+COPY web/package-lock.json ./
+RUN npm ci
 COPY web/ ./
 RUN npm run build
 
@@ -27,6 +28,7 @@ RUN apt-get update && \
         python3-venv \
         ./megacmd_2.1.1-1.1_amd64.deb && \
     apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
     rm -f ./megacmd_2.1.1-1.1_amd64.deb && \
     mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && \
     chmod 777 "${HOME}" "${DOWNLOAD_DIR}"
@@ -34,6 +36,7 @@ RUN apt-get update && \
 COPY api/ /app/
 COPY --from=react-build /build/dist /app/static
 RUN python3 -m venv /app/venv && \
+    /app/venv/bin/pip install --no-cache-dir --upgrade pip && \
     /app/venv/bin/pip install --no-cache-dir -r /app/requirements.txt
 
 COPY files/ "${HOME}/"
