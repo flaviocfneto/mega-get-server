@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200">
+  <g transform="translate(20 20) scale(0.31)">
+    <g transform="rotate(-13 256 256)">
+      <path d="M 182 66 L 358 66 Q 406 66 406 114 L 406 398 Q 406 446 358 446 L 154 446 Q 106 446 106 398 L 106 142 Z" fill="#F4F5F3"/>
+      <path d="M 182 66 L 106 142 L 182 142 Z" fill="#BE123C"/>
+      <path d="M 182 66 L 358 66 Q 406 66 406 114 L 406 398 Q 406 446 358 446 L 154 446 Q 106 446 106 398 L 106 142 Z"
+            fill="none" stroke="#0F1713" stroke-width="7" stroke-linejoin="round"/>
+      <path d="M 182 66 L 182 142 L 106 142"
+            fill="none" stroke="#0F1713" stroke-width="7" stroke-linejoin="round"/>
+    </g>
+    <g transform="rotate(-43 256 256)">
+      <rect x="-30" y="176" width="420" height="160" rx="80" fill="none" stroke="#F5B82E" stroke-width="38"/>
+      <rect x="122" y="176" width="420" height="160" rx="80" fill="none" stroke="#2DD4BF" stroke-width="38"/>
+      <path d="M -30 256 A 80 80 0 0 0 50 336 L 310 336 A 80 80 0 0 0 390 256"
+            fill="none" stroke="#F5B82E" stroke-width="38"/>
+    </g>
+  </g>
+
+  <g font-family="Inter, -apple-system, Segoe UI, sans-serif" font-weight="800">
+    <text x="200" y="118" font-size="80" fill="#0F1713">File</text>
+    <text x="324" y="118" font-size="80" fill="#BE123C">Tugger</text>
+  </g>
+
+  <text x="202" y="152" font-family="Inter, sans-serif" font-size="17"
+        font-weight="600" fill="#5C6660" letter-spacing="3.5">
+    MEGA · GOOGLE DRIVE · DIRECT LINKS
+  </text>
+</svg>

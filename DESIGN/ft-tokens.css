@@ -1,0 +1,202 @@
+/*
+ * FileTugger design tokens — Fjord palette
+ * ----------------------------------------
+ * Usage: import this once in your Vite app entry (e.g. src/main.tsx)
+ *   import "./styles/tokens.css";
+ *
+ * Light mode is the default. Dark mode activates in two ways:
+ *   1. Automatically via `prefers-color-scheme: dark`
+ *   2. Manually by adding the `.dark` class to <html> or <body>
+ *      (use this for an in-app theme toggle that overrides the OS setting)
+ *
+ * All colours are exposed as CSS custom properties with the `--ft-` prefix.
+ * Brand colours (chain gold, chain teal, cranberry accent) are fixed across
+ * both modes — they're the locked brand equity of the logo.
+ */
+
+:root {
+  /* ------------------------------------------------------------------ */
+  /* Brand — fixed in both light and dark mode                           */
+  /* ------------------------------------------------------------------ */
+  --ft-brand-gold: #F5B82E;
+  --ft-brand-teal: #2DD4BF;
+  --ft-brand-ink: #0F1713;
+
+  /* ------------------------------------------------------------------ */
+  /* Light mode (default)                                                */
+  /* ------------------------------------------------------------------ */
+
+  /* Surfaces */
+  --ft-bg: #F4F5F3;             /* page background */
+  --ft-surface: #FFFFFF;        /* cards, panels, inputs */
+  --ft-surface-raised: #FFFFFF; /* modals, menus */
+  --ft-surface-sunken: #EDEFEC; /* recessed wells, code blocks */
+
+  /* Borders */
+  --ft-border: #DDE1DC;         /* default dividers */
+  --ft-border-strong: #C4CBC4;  /* hovered/focused borders */
+  --ft-border-subtle: #E8EBE7;  /* quiet internal dividers */
+
+  /* Text */
+  --ft-text: #0F1713;           /* primary */
+  --ft-text-muted: #5C6660;     /* secondary, labels */
+  --ft-text-subtle: #94A099;    /* hints, placeholders */
+  --ft-text-inverse: #F0F3F0;   /* text on dark fills */
+
+  /* Accent (cranberry) */
+  --ft-accent: #BE123C;
+  --ft-accent-hover: #9F1239;
+  --ft-accent-active: #881337;
+  --ft-accent-fg: #FFFFFF;      /* text on accent fills */
+  --ft-accent-bg: #FEE2E6;      /* tinted bg for chips/highlights */
+  --ft-accent-border: #FDA4AF;
+
+  /* Semantic (light) */
+  --ft-success: #0F766E;
+  --ft-success-bg: #CCFBF1;
+  --ft-success-fg: #FFFFFF;
+
+  --ft-warning: #D97706;
+  --ft-warning-bg: #FEF3C7;
+  --ft-warning-fg: #FFFFFF;
+
+  --ft-danger: #BE123C;
+  --ft-danger-bg: #FEE2E6;
+  --ft-danger-fg: #FFFFFF;
+
+  --ft-info: #475569;
+  --ft-info-bg: #E2E8F0;
+  --ft-info-fg: #FFFFFF;
+
+  /* Focus ring (WCAG 2.2 — 3:1 against both surface and accent) */
+  --ft-focus-ring: 0 0 0 3px rgba(190, 18, 60, 0.35);
+
+  /* Layout tokens */
+  --ft-radius-sm: 6px;
+  --ft-radius-md: 10px;
+  --ft-radius-lg: 16px;
+  --ft-radius-xl: 24px;
+  --ft-radius-full: 9999px;
+
+  --ft-shadow-sm: 0 1px 2px rgba(15, 23, 19, 0.05);
+  --ft-shadow-md: 0 4px 12px rgba(15, 23, 19, 0.08);
+  --ft-shadow-lg: 0 12px 32px rgba(15, 23, 19, 0.12);
+
+  /* Typography */
+  --ft-font-sans: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ft-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Dark mode via OS preference */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --ft-bg: #0C1210;
+    --ft-surface: #161D18;
+    --ft-surface-raised: #1F2822;
+    --ft-surface-sunken: #0A0F0D;
+
+    --ft-border: #283027;
+    --ft-border-strong: #3A4439;
+    --ft-border-subtle: #1F2822;
+
+    --ft-text: #F0F3F0;
+    --ft-text-muted: #94A099;
+    --ft-text-subtle: #5C6660;
+    --ft-text-inverse: #0F1713;
+
+    --ft-accent: #FB7185;
+    --ft-accent-hover: #F43F5E;
+    --ft-accent-active: #E11D48;
+    --ft-accent-fg: #0C1210;
+    --ft-accent-bg: #3B1520;
+    --ft-accent-border: #9F1239;
+
+    --ft-success: #2DD4BF;
+    --ft-success-bg: #0F2B27;
+    --ft-success-fg: #0C1210;
+
+    --ft-warning: #F59E0B;
+    --ft-warning-bg: #2B1F06;
+    --ft-warning-fg: #0C1210;
+
+    --ft-danger: #FB7185;
+    --ft-danger-bg: #3B1520;
+    --ft-danger-fg: #0C1210;
+
+    --ft-info: #94A099;
+    --ft-info-bg: #1F2822;
+    --ft-info-fg: #0C1210;
+
+    --ft-focus-ring: 0 0 0 3px rgba(251, 113, 133, 0.45);
+
+    --ft-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --ft-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --ft-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* Manual override via <html class="dark"> — wins over OS preference */
+.dark {
+  --ft-bg: #0C1210;
+  --ft-surface: #161D18;
+  --ft-surface-raised: #1F2822;
+  --ft-surface-sunken: #0A0F0D;
+
+  --ft-border: #283027;
+  --ft-border-strong: #3A4439;
+  --ft-border-subtle: #1F2822;
+
+  --ft-text: #F0F3F0;
+  --ft-text-muted: #94A099;
+  --ft-text-subtle: #5C6660;
+  --ft-text-inverse: #0F1713;
+
+  --ft-accent: #FB7185;
+  --ft-accent-hover: #F43F5E;
+  --ft-accent-active: #E11D48;
+  --ft-accent-fg: #0C1210;
+  --ft-accent-bg: #3B1520;
+  --ft-accent-border: #9F1239;
+
+  --ft-success: #2DD4BF;
+  --ft-success-bg: #0F2B27;
+  --ft-success-fg: #0C1210;
+
+  --ft-warning: #F59E0B;
+  --ft-warning-bg: #2B1F06;
+  --ft-warning-fg: #0C1210;
+
+  --ft-danger: #FB7185;
+  --ft-danger-bg: #3B1520;
+  --ft-danger-fg: #0C1210;
+
+  --ft-info: #94A099;
+  --ft-info-bg: #1F2822;
+  --ft-info-fg: #0C1210;
+
+  --ft-focus-ring: 0 0 0 3px rgba(251, 113, 133, 0.45);
+
+  --ft-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ft-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --ft-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* Sensible body defaults */
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--ft-bg);
+  color: var(--ft-text);
+  font-family: var(--ft-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--ft-focus-ring);
+  border-radius: var(--ft-radius-sm);
+}
