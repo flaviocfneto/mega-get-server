@@ -1,6 +1,6 @@
-# MEGA Get — FastAPI backend
+# LinkTugger — FastAPI backend
 
-Python backend for mega-get-server: MEGAcmd integration, REST API (`api_main.py`), transfer list, logs, diagnostics, and tests.
+Python backend for LinkTugger: MEGAcmd integration, REST API (`api_main.py`), transfer list, logs, diagnostics, and tests.
 
 ## Run locally (API only)
 

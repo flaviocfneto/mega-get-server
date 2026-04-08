@@ -1,6 +1,6 @@
-# Running mega-get-server behind Gluetun VPN
+# Running LinkTugger behind Gluetun VPN
 
-To send all MEGA traffic through the VPN, run mega-get-server using the VPN container’s network.
+To send all MEGA traffic through the VPN, run LinkTugger using the VPN container’s network.
 
 ## 1. Expose port 8080 on the VPN container
 
@@ -9,7 +9,7 @@ In your Gluetun compose file, add `8080:8080` to the `protonvpn` service `ports`
 ```yaml
     ports:
       - 49893:49893
-      - 8080:8080   # add this for mega-get-server
+      - 8080:8080   # add this for LinkTugger
 ```
 
 Recreate the VPN container:
@@ -18,18 +18,18 @@ Recreate the VPN container:
 docker compose up -d protonvpn
 ```
 
-## 2. Run mega-get-server on the VPN network
+## 2. Run LinkTugger on the VPN network
 
-Start mega-get-server attached to the running `protonvpn` container (no `--publish`; it uses protonvpn’s network and the port you exposed above):
+Start LinkTugger attached to the running `protonvpn` container (no `--publish`; it uses protonvpn’s network and the port you exposed above):
 
 ```bash
 docker run \
   --detach \
   --restart unless-stopped \
-  --name mega-get-server \
+  --name linktugger \
   --network container:protonvpn \
   --volume /path/to/downloads:/data/ \
-  gm0n3y2503/mega-get-server:latest
+  gm0n3y2503/linktugger:latest
 ```
 
 Replace **/path/to/downloads** with your host path for MEGA downloads. Then open `http://YOUR_HOST_OR_IP:8080/` (use the hostname or IP of the machine running the container). No EXTERNAL_HOST or EXTERNAL_PORT is needed; the UI is served from the same origin.
@@ -38,7 +38,7 @@ Replace **/path/to/downloads** with your host path for MEGA downloads. Then open
 
 ## Optional: run both from the same compose
 
-You can define mega-get-server in the same compose and bind it to the VPN service:
+You can define LinkTugger in the same compose and bind it to the VPN service:
 
 ```yaml
 version: '3.8'
@@ -70,8 +70,8 @@ services:
       - 8080:8080
     restart: unless-stopped
 
-  mega-get-server:
-    image: gm0n3y2503/mega-get-server:latest
+  linktugger:
+    image: gm0n3y2503/linktugger:latest
     network_mode: "service:protonvpn"
     volumes:
       - /path/to/downloads:/data/
@@ -90,7 +90,7 @@ docker compose up -d
 
 ## Example: same stack as qBittorrent (port 8383, /media/misatosStash)
 
-Add **mega-get-server** to your existing Gluetun + qBittorrent compose like this.
+Add **LinkTugger** to your existing Gluetun + qBittorrent compose like this.
 
 **1. In `protonvpn`, add the mega-get port** (host 8383 → container 8080):
 
@@ -99,15 +99,15 @@ Add **mega-get-server** to your existing Gluetun + qBittorrent compose like this
     # ... rest unchanged ...
     ports:
       - 49893:49893
-      - 8383:8080   # mega-get-server (same pattern as qbittorrent using 49893)
+      - 8383:8080   # LinkTugger (same pattern as qbittorrent using 49893)
 ```
 
-**2. Add the `mega-get-server` service** (same style as qbittorrent):
+**2. Add the `linktugger` service** (same style as qbittorrent):
 
 ```yaml
-  mega-get-server:
-    image: gm0n3y2503/mega-get-server:latest
-    container_name: mega-get-server
+  linktugger:
+    image: gm0n3y2503/linktugger:latest
+    container_name: linktugger
     depends_on:
       - protonvpn
     volumes:

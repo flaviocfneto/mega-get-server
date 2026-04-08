@@ -4,9 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-STANDARD_TAG="mega-get-server:smoke-standard"
-HARDENED_TAG="mega-get-server:smoke-hardened"
-SMOKE_CONTAINER="mega-get-server-smoke"
+STANDARD_TAG="linktugger:smoke-standard"
+HARDENED_TAG="linktugger:smoke-hardened"
+SMOKE_CONTAINER="linktugger-smoke"
 SMOKE_PORT="${SMOKE_PORT:-18080}"
 
 cleanup() {

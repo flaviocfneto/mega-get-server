@@ -24,7 +24,7 @@ To avoid interactive login (e.g. in scripts):
 
 ```bash
 ./login-dhi.sh
-docker build -f Dockerfile.hardened -t mega-get-server:hardened .
+docker build -f Dockerfile.hardened -t linktugger:hardened .
 ```
 
 ## Build and run
@@ -32,8 +32,8 @@ docker build -f Dockerfile.hardened -t mega-get-server:hardened .
 After logging in (interactive or via `./login-dhi.sh`):
 
 ```bash
-docker build -f Dockerfile.hardened -t mega-get-server:hardened .
-docker run --detach --restart unless-stopped --publish 8080:8080 --volume /path/to/data:/data/ mega-get-server:hardened
+docker build -f Dockerfile.hardened -t linktugger:hardened .
+docker run --detach --restart unless-stopped --publish 8080:8080 --volume /path/to/data:/data/ linktugger:hardened
 ```
 
 Open **http://host:8080** in your browser. Configurable variables (e.g. `DOWNLOAD_DIR`, `NEW_FILE_PERMISSIONS`) are the same as for the standard image; see the main [README](../README.md).

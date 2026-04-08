@@ -1,4 +1,4 @@
-# MEGA Get — React UI (primary)
+# LinkTugger — React UI (primary)
 
 Vite + React frontend. In development, `server.ts` proxies `/api/*` to FastAPI.
 

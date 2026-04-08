@@ -1,12 +1,12 @@
-# Infrastructure Document — mega-get-server
+# Infrastructure Document — LinkTugger
 
-This document describes how the **mega-get-server** project is built, deployed, and how its components interact at runtime.
+This document describes how the **LinkTugger** project is built, deployed, and how its components interact at runtime.
 
 ---
 
 ## 1. Overview
 
-**mega-get-server** is a containerized service that provides a web UI for downloading files from MEGA.nz. It is intended to run on a NAS or similar host, with a configurable download directory (typically a mounted share).
+**LinkTugger** is a containerized service that provides a web UI for downloading files from MEGA.nz. It is intended to run on a NAS or similar host, with a configurable download directory (typically a mounted share).
 
 - **Purpose:** Download MEGA export links via a browser, with transfer control (cancel, pause, resume).
 - **Stack:** Ubuntu 24.04 (default image), MEGA CMD, Python 3, **FastAPI** (backend), **React** SPA (built from `web/`, served as static files from `/app/static`).

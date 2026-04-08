@@ -256,7 +256,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan, title="MEGA Get API")
+app = FastAPI(lifespan=lifespan, title="LinkTugger API")
 
 app.add_middleware(
     CORSMiddleware,

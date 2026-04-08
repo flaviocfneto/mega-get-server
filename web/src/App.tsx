@@ -904,7 +904,7 @@ export default function App() {
               <CloudDownload className="text-white w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)]">MEGA Get</h1>
+              <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)]">LinkTugger</h1>
               <div className="flex items-center gap-2">
                 <p className="text-[10px] uppercase tracking-widest text-[var(--muted-foreground)] font-semibold">Cloud Download Manager</p>
                 {config?.is_scheduling_enabled && (

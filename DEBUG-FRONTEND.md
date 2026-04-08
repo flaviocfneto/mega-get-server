@@ -1,4 +1,4 @@
-# Debugging the mega-get-server frontend
+# Debugging the LinkTugger frontend
 
 Use these steps to find why the web UI doesn’t work while `mega-get` works in the container.
 
@@ -9,7 +9,7 @@ Use these steps to find why the web UI doesn’t work while `mega-get` works in 
 ## 1. Check that the processes are running
 
 ```bash
-docker exec mega-get-server ps aux
+docker exec linktugger ps aux
 ```
 
 You should see:
@@ -24,7 +24,7 @@ If the **Python/Flet** process is missing, it may have crashed. Check logs (step
 ## 2. Check container logs
 
 ```bash
-docker logs mega-get-server 2>&1
+docker logs linktugger 2>&1
 ```
 
 Look for:
@@ -39,7 +39,7 @@ If you run with `--network container:protonvpn`, the VPN container owns port 808
 ## 3. Check that port 8080 is listening
 
 ```bash
-docker exec mega-get-server ss -tlnp
+docker exec linktugger ss -tlnp
 ```
 
 (or `netstat -tlnp` if `ss` isn’t available)
@@ -57,7 +57,7 @@ If 8080 is not listed, the Flet app didn’t bind (crashed or wrong port).
 ## 4. Test HTTP from inside the container
 
 ```bash
-docker exec mega-get-server curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/
+docker exec linktugger curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/
 ```
 
 - **200** – HTTP and Flet UI work inside the container.
@@ -76,7 +76,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:8383/
 - **200** – The frontend is reachable; problem is likely WebSocket or browser (steps 7–8).
 - **000** / connection refused – Port not published or wrong host/port:
   - Standalone: container must be run with `-p 8383:8080`.
-  - Behind Gluetun: `protonvpn` must have `8383:8080` in `ports`, and mega-get-server must use `network_mode: "service:protonvpn"` (or `--network container:protonvpn`).
+  - Behind Gluetun: `protonvpn` must have `8383:8080` in `ports`, and LinkTugger must use `network_mode: "service:protonvpn"` (or `--network container:protonvpn`).
 
 ---
 
@@ -112,7 +112,7 @@ In DevTools → **Console**, look for:
 
 | Symptom | What to try |
 |--------|--------------|
-| Page never loads (connection refused) | Correct `-p 8383:8080` or Gluetun `8383:8080`; mega-get-server on same network as protonvpn. |
+| Page never loads (connection refused) | Correct `-p 8383:8080` or Gluetun `8383:8080`; LinkTugger on same network as protonvpn. |
 | Page loads, WebSocket fails | Check network/firewall; Flet serves same origin so no EXTERNAL_HOST/EXTERNAL_PORT. |
 | “Address already in use” in logs | Only one process can use 8080 in the shared network; stop anything else using 8080 in that stack. |
 | Python/Flet not in `ps` | Check full `docker logs`; ensure no env/volume issue preventing startup. |
@@ -127,7 +127,7 @@ To rule out Gluetun/network mode, run the app standalone and open the UI:
 docker run -d --name mega-get-test \
   -p 8383:8080 \
   -v /media/misatosStash:/data/ \
-  gm0n3y2503/mega-get-server:latest
+  gm0n3y2503/linktugger:latest
 ```
 
 Then:
