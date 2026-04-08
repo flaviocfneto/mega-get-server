@@ -4,11 +4,13 @@ FastAPI server: /api/* for React SPA + optional static files from ./static (vite
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import shlex
 import sys
 import time
 from contextlib import asynccontextmanager
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +28,74 @@ APP_STARTED = time.time()
 _analytics_completed = 0
 _analytics_failed = 0
 _last_states: dict[str, str] = {}
+# Last known byte fields per transfer tag (for inferred completion when a row vanishes from mega-transfers).
+_last_row_snapshot: dict[str, dict[str, int]] = {}
+
+_IN_FLIGHT_STATES = frozenset({"ACTIVE", "QUEUED", "RETRYING", "PAUSED"})
+
+DAILY_ANALYTICS_PATH = Path(__file__).resolve().parent / ".mega-analytics-daily.json"
+_daily_buckets: dict[str, dict[str, int]] | None = None
+_daily_loaded = False
+
+
+def _ensure_daily_loaded() -> None:
+    global _daily_buckets, _daily_loaded
+    if _daily_loaded:
+        return
+    _daily_loaded = True
+    _daily_buckets = {}
+    if DAILY_ANALYTICS_PATH.is_file():
+        try:
+            raw = json.loads(DAILY_ANALYTICS_PATH.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                for k, v in raw.items():
+                    if not isinstance(k, str) or not isinstance(v, dict):
+                        continue
+                    _daily_buckets[k] = {
+                        "bytes": int(v.get("bytes", 0) or 0),
+                        "count": int(v.get("count", 0) or 0),
+                    }
+        except (OSError, ValueError, TypeError):
+            _daily_buckets = {}
+
+
+def _persist_daily_buckets() -> None:
+    if _daily_buckets is None:
+        return
+    try:
+        DAILY_ANALYTICS_PATH.write_text(json.dumps(_daily_buckets, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _bump_daily_on_completed(bytes_done: int) -> None:
+    _ensure_daily_loaded()
+    assert _daily_buckets is not None
+    key = date.today().isoformat()
+    if key not in _daily_buckets:
+        _daily_buckets[key] = {"bytes": 0, "count": 0}
+    _daily_buckets[key]["count"] += 1
+    _daily_buckets[key]["bytes"] += max(0, int(bytes_done))
+    _persist_daily_buckets()
+
+
+def _daily_stats_last_7_days() -> list[dict[str, Any]]:
+    _ensure_daily_loaded()
+    assert _daily_buckets is not None
+    today = date.today()
+    out: list[dict[str, Any]] = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        k = d.isoformat()
+        b = _daily_buckets.get(k, {"bytes": 0, "count": 0})
+        out.append({"date": k, "bytes": b["bytes"], "count": b["count"]})
+    return out
+
+
+def _total_persisted_downloaded_bytes() -> int:
+    _ensure_daily_loaded()
+    assert _daily_buckets is not None
+    return sum(max(0, int(v.get("bytes", 0) or 0)) for v in _daily_buckets.values())
 
 
 def _full_config() -> dict[str, Any]:
@@ -42,37 +112,72 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     queued = 0
     completed_now = 0
     failed_now = 0
-    total_downloaded = 0
+    inflight_downloaded = 0
     total_speed = 0
     peak_speed = 0
+    active_n = 0
+    current_tags: set[str] = set()
     for r in rows:
-        state = str(r.get("state", "")).upper()
+        state = ms.normalize_transfer_state(str(r.get("state", "")))
         tag = str(r.get("tag", ""))
-        total_downloaded += int(r.get("downloaded_bytes", 0) or 0)
-        total_speed += int(r.get("speed_bps", 0) or 0)
-        peak_speed = max(peak_speed, int(r.get("speed_bps", 0) or 0))
+        if tag:
+            current_tags.add(tag)
+            _last_row_snapshot[tag] = {
+                "size_bytes": int(r.get("size_bytes", 0) or 0),
+                "downloaded_bytes": int(r.get("downloaded_bytes", 0) or 0),
+            }
+        downloaded_b = int(r.get("downloaded_bytes", 0) or 0)
+        sp = int(r.get("speed_bps", 0) or 0)
+        total_speed += sp
+        peak_speed = max(peak_speed, sp)
         prev = _last_states.get(tag)
         if state == "ACTIVE":
             active += 1
+            active_n += 1
+            inflight_downloaded += downloaded_b
         elif state == "QUEUED":
             queued += 1
+            inflight_downloaded += downloaded_b
+        elif state == "RETRYING":
+            inflight_downloaded += downloaded_b
+        elif state == "PAUSED":
+            inflight_downloaded += downloaded_b
         elif state == "COMPLETED":
             completed_now += 1
             if prev != "COMPLETED":
                 _analytics_completed += 1
+                done_bytes = int(r.get("size_bytes", 0) or r.get("downloaded_bytes", 0) or 0)
+                _bump_daily_on_completed(done_bytes)
         elif state == "FAILED":
             failed_now += 1
             if prev != "FAILED":
                 _analytics_failed += 1
-        _last_states[tag] = state
+        if tag:
+            _last_states[tag] = state
+
+    # MEGAcmd often drops finished transfers from the list before we ever see state COMPLETED.
+    # Infer one completion when a tag that was in-flight disappears (same server process only;
+    # _last_states is cleared on restart so we do not replay stale completions).
+    for tag in list(_last_states.keys()):
+        if not tag or tag in current_tags:
+            continue
+        prev = _last_states.pop(tag)
+        snap = _last_row_snapshot.pop(tag, {})
+        bytes_done = int(snap.get("size_bytes", 0) or snap.get("downloaded_bytes", 0) or 0)
+        if prev in _IN_FLIGHT_STATES:
+            _analytics_completed += 1
+            _bump_daily_on_completed(bytes_done)
+
+    total_downloaded = _total_persisted_downloaded_bytes() + inflight_downloaded
+    avg_speed = total_speed // active_n if active_n else 0
     return {
         "total_downloaded_bytes": total_downloaded,
         "total_transfers_completed": _analytics_completed if _analytics_completed else completed_now,
         "total_transfers_failed": _analytics_failed if _analytics_failed else failed_now,
-        "average_speed_bps": total_speed,
+        "average_speed_bps": avg_speed,
         "peak_speed_bps": peak_speed,
         "uptime_seconds": int(time.time() - APP_STARTED),
-        "daily_stats": [],
+        "daily_stats": _daily_stats_last_7_days(),
         "active_count": active,
         "queued_count": queued,
     }
@@ -210,12 +315,19 @@ async def api_logout():
     return {"status": "error", "message": result.get("output") or "Logout failed.", "command": result}
 
 
+def _analytics_parse_debug_enabled() -> bool:
+    return os.environ.get("MEGA_ANALYTICS_PARSE_DEBUG", "").strip().lower() in ("1", "true", "yes")
+
+
 @app.get("/api/analytics")
 async def api_analytics():
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
     rows = [ms.parsed_transfer_to_api_row(t) for t in parsed]
-    return _update_analytics_from_rows(rows)
+    out = _update_analytics_from_rows(rows)
+    if _analytics_parse_debug_enabled():
+        out = {**out, "parse_debug": ms.summarize_transfer_parse(raw, parsed)}
+    return out
 
 
 @app.post("/api/terminal")

@@ -324,9 +324,15 @@ async def get_transfer_list() -> str:
         env=subprocess_env(),
     )
     stdout, stderr = await proc.communicate()
-    out = (stdout or b"").decode(errors="replace")
-    if stderr and proc.returncode != 0:
-        out += (stderr or b"").decode(errors="replace")
+    out_s = (stdout or b"").decode(errors="replace")
+    err_s = (stderr or b"").decode(errors="replace")
+    # Some builds write the table to stderr or only populate stderr; merge for parsing.
+    if not out_s.strip():
+        out = err_s
+    else:
+        out = out_s
+        if err_s.strip():
+            out = out_s.rstrip() + "\n" + err_s
 
     _debug_log(
         "mega_service:get_transfer_list",
@@ -341,6 +347,21 @@ async def get_transfer_list() -> str:
         hypothesis_id="H5",
     )
     return out
+
+
+# Unicode + ASCII arrows seen in different MEGAcmd / terminal renderings
+_TRANSFER_ARROW_CLASS = r"[⇓↑↓v^]"
+
+
+def summarize_transfer_parse(raw: str, parsed: list[dict[str, Any]]) -> dict[str, Any]:
+    """Lightweight stats for API debug (e.g. MEGA_ANALYTICS_PARSE_DEBUG=1)."""
+    lines = [ln.strip() for ln in (raw or "").splitlines() if ln.strip()]
+    return {
+        "parsed_count": len(parsed),
+        "nonempty_line_count": len(lines),
+        "raw_char_len": len(raw or ""),
+        "raw_preview": (raw or "")[:1200],
+    }
 
 
 def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
@@ -361,9 +382,9 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
         if not line:
             continue
 
-        if any(header in line for header in ["TYPE", "TAG", "STATE", "TRANSFER", "PROGRESS", "PATH"]):
-            if all(h in line for h in ["TYPE", "TAG", "STATE"]):
-                continue
+        # Only skip a clear MEGAcmd table header, not random paths containing words like STATE.
+        if re.search(r"^\s*TYPE\s+.*\bTAG\b.*\bSTATE\b", line, re.IGNORECASE):
+            continue
 
         sim_match = re.match(r"^\s*(\d+)\s+(\w+)\s+(\d+)%\s+(.+)$", line)
         if sim_match:
@@ -382,7 +403,7 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
             continue
 
         real_match = re.search(
-            r"([⇓↑])\s+(\d+)\s+(.*?)\s+(\d+(?:\.\d+)?)\s*%\s+of\s+([\d.]+)\s*([KMGT]?B)\s+(\w+)\s*$",
+            rf"({_TRANSFER_ARROW_CLASS})\s+(\d+)\s+(.*?)\s+(\d+(?:\.\d+)?)\s*%\s+of\s+([\d.]+)\s*([KMGT]?B)\s+(\w+)\s*$",
             line,
         )
 
@@ -421,6 +442,54 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
             )
             continue
 
+        # Alternate MEGAcmd line: progress % without "of <size>" before state (or truncated path).
+        relaxed_match = re.search(
+            rf"({_TRANSFER_ARROW_CLASS})\s+(\d+)\s+(.*?)\s+(\d+(?:\.\d+)?)\s*%\s+(?:of\s+[\d.]+\s*[KMGT]?B\s+)?(\w+)\s*$",
+            line,
+        )
+        if relaxed_match:
+            _d, tag, path_part, pct, state = relaxed_match.groups()
+            path_part = path_part.strip()
+            filename = path_part.split("/")[-1].strip() if "/" in path_part else path_part
+            if "..." in path_part and "/" in path_part:
+                parts = path_part.split("...")
+                if len(parts) > 1 and "/" in parts[-1]:
+                    filename = parts[-1].split("/")[-1].strip()
+            if len(filename) > 60:
+                filename = filename[:57] + "..."
+            result.append(
+                {
+                    "tag": tag,
+                    "progress_pct": float(pct),
+                    "state": str(state).upper(),
+                    "path": path_part,
+                    "filename": filename or "Unknown",
+                    "size_display": "Unknown",
+                }
+            )
+            continue
+
+        # Table-style: optional DOWNLOAD/UPLOAD keyword, tag, state, percent, path (no arrow).
+        dl_match = re.match(
+            r"(?i)^\s*(?:download|upload)\s+(\d+)\s+(\w+)\s+(\d+(?:\.\d+)?)%\s+(.+)$",
+            line,
+        )
+        if dl_match:
+            tag, state, pct, path = dl_match.groups()
+            path = path.strip()
+            filename = path.split("/")[-1] if "/" in path else path
+            result.append(
+                {
+                    "tag": tag,
+                    "progress_pct": float(pct),
+                    "state": str(state).upper(),
+                    "path": path,
+                    "filename": filename,
+                    "size_display": "Unknown",
+                }
+            )
+            continue
+
         if len(line) > 10:
             _debug_log("mega_service:parse_transfer_list", "unparsed line", {"line_num": line_num, "line": line[:200]}, hypothesis_id="H6")
 
@@ -434,6 +503,83 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
 
 
 _SIZE_UNIT_RE = re.compile(r"^\s*([\d.]+)\s*([KMGT]?)B\s*$", re.IGNORECASE)
+
+
+def normalize_transfer_state(state: str) -> str:
+    """Map MEGAcmd-style labels to API transfer states used by the UI and analytics."""
+    u = str(state or "").upper().strip()
+    if u in ("FINISHED", "DONE", "COMPLETE", "SUCCESS"):
+        return "COMPLETED"
+    if u in ("ERROR", "CANCELLED", "CANCELED"):
+        return "FAILED"
+    return u
+
+
+def _infer_account_type_from_text(text: str) -> str:
+    """Best-effort plan label from mega-whoami / mega-df output (MEGAcmd varies by locale/version)."""
+    t = (text or "").lower()
+    if re.search(r"\bbusiness\b", t):
+        return "BUSINESS"
+    if re.search(r"\bpro\b", t) or "mega pro" in t or "pro lite" in t:
+        return "PRO"
+    return "UNKNOWN"
+
+
+def _parse_mega_df_bytes_and_bw(df_text: str) -> tuple[int, int, int, int, bool]:
+    """
+    Returns (storage_used, storage_total, bandwidth_used, bandwidth_limit, storage_confident).
+    Bandwidth is only set when at least four byte counts appear (common mega-df layout).
+    """
+    low = df_text.lower()
+    nums = [int(n) for n in re.findall(r"(\d+)\s*bytes", low)]
+
+    # Default fallback: historic positional parsing.
+    storage_confident = len(nums) >= 2
+    su, st = (nums[0], nums[1]) if storage_confident else (0, 0)
+    bu, bl = 0, 0
+    if len(nums) >= 4:
+        bu, bl = nums[2], nums[3]
+
+    # Try label-driven extraction first; MEGAcmd formats vary by platform/version.
+    line_vals: list[tuple[str, int]] = []
+    for m in re.finditer(r"(?im)^\s*([a-z][a-z0-9 _/\-]{1,50})\s*:\s*(\d+)\s*bytes\b", low):
+        label = m.group(1).strip()
+        val = int(m.group(2))
+        line_vals.append((label, val))
+
+    storage_used_l = [v for k, v in line_vals if "storage" in k and "used" in k]
+    storage_total_l = [v for k, v in line_vals if "storage" in k and ("total" in k or "max" in k or "available" in k)]
+    bw_used_l = [
+        v
+        for k, v in line_vals
+        if ("bandwidth" in k or "transfer" in k or "traffic" in k) and ("used" in k or "spent" in k)
+    ]
+    bw_total_l = [
+        v
+        for k, v in line_vals
+        if ("bandwidth" in k or "transfer" in k or "traffic" in k or "quota" in k)
+        and ("total" in k or "max" in k or "available" in k or "quota" in k)
+    ]
+
+    if storage_used_l and storage_total_l:
+        su, st = storage_used_l[0], storage_total_l[0]
+        storage_confident = True
+
+    if bw_used_l and bw_total_l:
+        bu, bl = bw_used_l[0], bw_total_l[0]
+
+    # If labeled bandwidth was not found, parse line forms like:
+    # "Transfer quota: 123 bytes of 456 bytes"
+    if bl == 0:
+        m = re.search(
+            r"(?im)^\s*(?:transfer|bandwidth|traffic)[^:\n]*:\s*(\d+)\s*bytes\s*(?:/|of)\s*(\d+)\s*bytes\b",
+            low,
+        )
+        if m:
+            bu = int(m.group(1))
+            bl = int(m.group(2))
+
+    return su, st, bu, bl, storage_confident
 
 
 def size_display_to_bytes(size_display: str) -> int:
@@ -459,7 +605,7 @@ def parsed_transfer_to_api_row(t: dict[str, Any]) -> dict[str, Any]:
         "progress_pct": pct,
         "downloaded_bytes": downloaded,
         "speed_bps": 0,
-        "state": str(t.get("state", "")).upper(),
+        "state": normalize_transfer_state(str(t.get("state", ""))),
         "path": t.get("path", ""),
         "filename": t.get("filename", ""),
         "size_bytes": size_b,
@@ -652,11 +798,26 @@ async def command_probe() -> list[dict[str, Any]]:
 
 
 async def get_account_info() -> dict[str, Any]:
+    if SIMULATE:
+        return {
+            "email": "simulated@local",
+            "is_logged_in": True,
+            "account_type": "FREE",
+            "storage_used_bytes": 1_000_000,
+            "storage_total_bytes": 20_000_000_000,
+            "bandwidth_limit_bytes": 0,
+            "bandwidth_used_bytes": 0,
+            "details_partial": True,
+        }
+
     who = await run_megacmd_command(["mega-whoami"])
-    logged_in = who["ok"] and bool((who.get("stdout") or "").strip())
+    out_txt = (who.get("stdout") or "").strip()
+    err_txt = (who.get("stderr") or "").strip()
+    combined_who = out_txt or err_txt or (who.get("output") or "").strip()
+    logged_in = bool(who.get("ok")) and bool(combined_who)
     email = None
     if logged_in:
-        first = (who.get("stdout") or "").splitlines()[0].strip()
+        first = combined_who.splitlines()[0].strip()
         if ":" in first:
             email = first.split(":", 1)[1].strip()
         else:
@@ -664,24 +825,32 @@ async def get_account_info() -> dict[str, Any]:
     details_partial = True
     storage_used = 0
     storage_total = 0
+    bandwidth_used = 0
+    bandwidth_limit = 0
+    account_type = "UNKNOWN"
     if logged_in:
+        account_type = _infer_account_type_from_text(combined_who)
         df = await run_megacmd_command(["mega-df"])
-        if df.get("ok"):
-            # Best-effort parse for MEGAcmd output; fallback keeps partial=true.
-            txt = (df.get("stdout") or "").lower()
-            nums = [int(n) for n in re.findall(r"(\d+)\s*bytes", txt)]
-            if len(nums) >= 2:
-                storage_used = nums[0]
-                storage_total = nums[1]
+        df_out = (df.get("stdout") or "").strip()
+        df_err = (df.get("stderr") or "").strip()
+        df_txt = df_out or df_err or (df.get("output") or "")
+        if df.get("ok") and df_txt.strip():
+            su, st, bu, bl, storage_ok = _parse_mega_df_bytes_and_bw(df_txt)
+            storage_used, storage_total = su, st
+            bandwidth_used, bandwidth_limit = bu, bl
+            d_infer = _infer_account_type_from_text(df_txt)
+            if d_infer != "UNKNOWN":
+                account_type = d_infer
+            if storage_ok:
                 details_partial = False
     return {
         "email": email,
         "is_logged_in": logged_in,
-        "account_type": "UNKNOWN",
+        "account_type": account_type,
         "storage_used_bytes": storage_used,
         "storage_total_bytes": storage_total,
-        "bandwidth_limit_bytes": 0,
-        "bandwidth_used_bytes": 0,
+        "bandwidth_limit_bytes": bandwidth_limit,
+        "bandwidth_used_bytes": bandwidth_used,
         "details_partial": details_partial,
     }
 

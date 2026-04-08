@@ -23,6 +23,9 @@ All notable changes to this project are documented in this file.
   - `start-dev.bat` (Windows CMD)
   - `start-dev.ps1` (Windows PowerShell)
 - New cross-platform Node launcher `start-dev.mjs` to run backend + frontend from a single command.
+- New backend analytics tests:
+  - `api/tests/test_analytics_capture.py`
+  - `api/tests/test_analytics_simulated_e2e.py`
 
 ### Changed
 - `api/api_main.py`
@@ -33,10 +36,18 @@ All notable changes to this project are documented in this file.
   - Added structured terminal response fields (`ok`, `command`, `exit_code`, `output`, `blocked_reason`).
   - Expanded terminal command allowlist to include `mega-quit`, enabling in-app daemon recovery workflows.
   - Improved analytics aggregation with live counters and uptime.
+  - Added persisted daily analytics buckets (`api/.mega-analytics-daily.json`) and 7-day rollups used by `GET /api/analytics`.
+  - Added env-gated analytics parse diagnostics (`MEGA_ANALYTICS_PARSE_DEBUG=1`) to include a `parse_debug` payload in `GET /api/analytics`.
+  - Added completion inference when in-flight transfers disappear from `mega-transfers` output, reducing missed completion counts.
+  - Fixed `total_downloaded_bytes` to persist after transfer completion/removal by combining persisted completed bytes with current in-flight bytes.
   - Integrated startup diagnostics logging for missing external tools.
 - `api/mega_service.py`
   - Merged persisted metadata into canonical transfer rows in `parsed_transfer_to_api_row`.
   - Improved account info handling with best-effort detail enrichment and `details_partial`.
+  - Improved `mega-transfers` parsing compatibility by merging stdout/stderr output and supporting additional line formats (Unicode/ASCII arrows, relaxed forms, and `DOWNLOAD/UPLOAD` table-style rows).
+  - Added transfer state normalization for analytics (`FINISHED/DONE` -> `COMPLETED`, `CANCELLED/ERROR` -> `FAILED`).
+  - Extended account parsing to use combined command output and infer account type when possible.
+  - Extended `mega-df` bandwidth/storage parsing with label-driven extraction and `X bytes of Y bytes` quota formats.
   - Improved download reliability and diagnostics for MEGAcmd edge cases:
     - surfaces clearer log context when `mega-get` is accepted but no active transfer appears,
     - retries submit once using a fallback invocation when intermittent `mega-exec` segmentation faults occur,
@@ -47,6 +58,12 @@ All notable changes to this project are documented in this file.
   - Switched log clearing to backend API (`DELETE /api/logs`) and server refresh.
   - Added a frontend diagnostics panel that calls `GET /api/diag/tools`.
   - Added per-tool status rendering and install UX with `Install` / `Copy command` actions.
+  - Replaced `UNKNOWN Account` fallback label with `MEGA Account` when account type cannot be inferred.
+  - Guarded account quota math against divide-by-zero in account quota calculations.
+  - Aligned analytics chart keys with API/types (`daily_stats[].bytes` and `daily_stats[].count`) and added empty-state handling when no daily data exists.
+  - In the settings account card only, hides the bandwidth quota block when quota limit is unavailable (`bandwidth_limit_bytes <= 0`).
+- `.gitignore`
+  - Added `api/.mega-analytics-daily.json` to ignore persisted local analytics counters.
 - `web/server.ts`
   - Removed conflicting body parsing from the dev proxy server path so `POST /api/download` reliably forwards request payloads.
 - `web/src/types.ts`

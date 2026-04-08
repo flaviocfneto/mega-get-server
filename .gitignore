@@ -1,6 +1,7 @@
 .DS_Store
 .env
 .mega-get-history.json
+.mega-analytics-daily.json
 .mega-debug.log
 api/ui_settings.json
 archive/

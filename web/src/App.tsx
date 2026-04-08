@@ -59,6 +59,21 @@ import {
   Bar
 } from 'recharts';
 
+function quotaPercent(used: number, limit: number): number {
+  if (!Number.isFinite(used) || !Number.isFinite(limit) || limit <= 0) return 0;
+  return Math.min(100, Math.round((used / limit) * 100));
+}
+
+function quotaBarWidthPct(used: number, limit: number): number {
+  if (!Number.isFinite(used) || !Number.isFinite(limit) || limit <= 0) return 0;
+  return Math.min(100, (used / limit) * 100);
+}
+
+function accountTypeLabel(accountType: AccountInfo['account_type']): string {
+  if (accountType === 'UNKNOWN') return 'MEGA';
+  return accountType;
+}
+
 export default function App() {
   const [url, setUrl] = useState('');
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -941,16 +956,24 @@ export default function App() {
                     <ArrowUpDown className="w-3 h-3 text-blue-500" />
                     Bandwidth Quota
                   </div>
-                  <div className="w-32 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden border border-[var(--border)]">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(accountInfo.bandwidth_used_bytes / accountInfo.bandwidth_limit_bytes) * 100}%` }}
-                      className="h-full bg-blue-500"
-                    />
-                  </div>
-                  <span className="text-[9px] text-[var(--muted-foreground)]/60 font-mono">
-                    {formatBytes(accountInfo.bandwidth_used_bytes)} / {formatBytes(accountInfo.bandwidth_limit_bytes)}
-                  </span>
+                  {accountInfo.bandwidth_limit_bytes > 0 ? (
+                    <>
+                      <div className="w-32 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden border border-[var(--border)]">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${quotaBarWidthPct(accountInfo.bandwidth_used_bytes, accountInfo.bandwidth_limit_bytes)}%` }}
+                          className="h-full bg-blue-500"
+                        />
+                      </div>
+                      <span className="text-[9px] text-[var(--muted-foreground)]/60 font-mono">
+                        {formatBytes(accountInfo.bandwidth_used_bytes)} / {formatBytes(accountInfo.bandwidth_limit_bytes)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[9px] text-[var(--muted-foreground)]/60 font-mono max-w-[10rem] text-right">
+                      {formatBytes(accountInfo.bandwidth_used_bytes)} used (quota not reported)
+                    </span>
+                  )}
                 </div>
 
                 {/* Account Info */}
@@ -961,7 +984,7 @@ export default function App() {
                     </span>
                     <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1">
                       <ShieldCheck className="w-2.5 h-2.5" />
-                      {accountInfo.account_type} Account
+                      {accountTypeLabel(accountInfo.account_type)} Account
                     </span>
                   </div>
                   <button 
@@ -1891,66 +1914,74 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-[var(--card)] border border-[var(--border)] p-6 rounded-3xl shadow-sm">
-                  <h3 className="text-sm font-bold mb-6 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-blue-500" />
-                    Download Activity (Last 7 Days)
-                  </h3>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={analytics?.daily_stats || []}>
-                        <defs>
-                          <linearGradient id="colorBytes" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis 
-                          dataKey="date" 
-                          stroke="var(--muted-foreground)" 
-                          fontSize={10} 
-                          tickFormatter={(val) => val.split('-').slice(1).join('/')}
-                        />
-                        <YAxis 
-                          stroke="var(--muted-foreground)" 
-                          fontSize={10} 
-                          tickFormatter={(val) => formatBytes(val).split(' ')[0]}
-                        />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '12px', fontSize: '12px' }}
-                          formatter={(value: number) => [formatBytes(value), 'Downloaded']}
-                        />
-                        <Area type="monotone" dataKey="bytes_downloaded" stroke="#3b82f6" fillOpacity={1} fill="url(#colorBytes)" strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                {(analytics?.daily_stats || []).some((d) => (d.bytes ?? 0) > 0 || (d.count ?? 0) > 0) ? (
+                  <>
+                    <div className="bg-[var(--card)] border border-[var(--border)] p-6 rounded-3xl shadow-sm">
+                      <h3 className="text-sm font-bold mb-6 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-blue-500" />
+                        Download Activity (Last 7 Days)
+                      </h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={analytics?.daily_stats || []}>
+                            <defs>
+                              <linearGradient id="colorBytes" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                            <XAxis 
+                              dataKey="date" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={10} 
+                              tickFormatter={(val) => val.split('-').slice(1).join('/')}
+                            />
+                            <YAxis 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={10} 
+                              tickFormatter={(val) => formatBytes(val).split(' ')[0]}
+                            />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '12px', fontSize: '12px' }}
+                              formatter={(value: number) => [formatBytes(value), 'Downloaded']}
+                            />
+                            <Area type="monotone" dataKey="bytes" stroke="#3b82f6" fillOpacity={1} fill="url(#colorBytes)" strokeWidth={2} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
 
-                <div className="bg-[var(--card)] border border-[var(--border)] p-6 rounded-3xl shadow-sm">
-                  <h3 className="text-sm font-bold mb-6 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-emerald-500" />
-                    Transfers Completed
-                  </h3>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={analytics?.daily_stats || []}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis 
-                          dataKey="date" 
-                          stroke="var(--muted-foreground)" 
-                          fontSize={10} 
-                          tickFormatter={(val) => val.split('-').slice(1).join('/')}
-                        />
-                        <YAxis stroke="var(--muted-foreground)" fontSize={10} />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '12px', fontSize: '12px' }}
-                        />
-                        <Bar dataKey="transfers_count" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div className="bg-[var(--card)] border border-[var(--border)] p-6 rounded-3xl shadow-sm">
+                      <h3 className="text-sm font-bold mb-6 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-emerald-500" />
+                        Transfers Completed
+                      </h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={analytics?.daily_stats || []}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                            <XAxis 
+                              dataKey="date" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={10} 
+                              tickFormatter={(val) => val.split('-').slice(1).join('/')}
+                            />
+                            <YAxis stroke="var(--muted-foreground)" fontSize={10} />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '12px', fontSize: '12px' }}
+                            />
+                            <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] border-dashed p-8 rounded-3xl text-center text-sm text-[var(--muted-foreground)]">
+                    Daily charts appear after completed transfers are recorded (last 7 days). Active downloads still update the summary cards above.
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -2566,7 +2597,7 @@ export default function App() {
                             <p className={`text-sm font-bold text-[var(--foreground)] ${config?.is_privacy_mode ? 'blur-sm select-none' : ''}`}>{accountInfo.email}</p>
                             <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1 mt-0.5">
                               <ShieldCheck className="w-3 h-3" />
-                              {accountInfo.account_type} Account
+                              {accountTypeLabel(accountInfo.account_type)} Account
                             </p>
                           </div>
                         </div>
@@ -2586,12 +2617,12 @@ export default function App() {
                               <HardDrive className="w-3.5 h-3.5 text-blue-500" />
                               Storage Usage
                             </div>
-                            <span>{Math.round((accountInfo.storage_used_bytes / accountInfo.storage_total_bytes) * 100)}%</span>
+                            <span>{quotaPercent(accountInfo.storage_used_bytes, accountInfo.storage_total_bytes)}%</span>
                           </div>
                           <div className="w-full h-2 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)]">
                             <motion.div 
                               initial={{ width: 0 }}
-                              animate={{ width: `${(accountInfo.storage_used_bytes / accountInfo.storage_total_bytes) * 100}%` }}
+                              animate={{ width: `${quotaBarWidthPct(accountInfo.storage_used_bytes, accountInfo.storage_total_bytes)}%` }}
                               className="h-full bg-blue-500"
                             />
                           </div>
@@ -2601,27 +2632,29 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Bandwidth Usage */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
-                            <div className="flex items-center gap-2">
-                              <ArrowUpDown className="w-3.5 h-3.5 text-blue-500" />
-                              Bandwidth Quota
+                        {/* Bandwidth Usage (settings only when quota is available) */}
+                        {accountInfo.bandwidth_limit_bytes > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
+                              <div className="flex items-center gap-2">
+                                <ArrowUpDown className="w-3.5 h-3.5 text-blue-500" />
+                                Bandwidth Quota
+                              </div>
+                              <span>{quotaPercent(accountInfo.bandwidth_used_bytes, accountInfo.bandwidth_limit_bytes)}%</span>
                             </div>
-                            <span>{Math.round((accountInfo.bandwidth_used_bytes / accountInfo.bandwidth_limit_bytes) * 100)}%</span>
+                            <div className="w-full h-2 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)]">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${quotaBarWidthPct(accountInfo.bandwidth_used_bytes, accountInfo.bandwidth_limit_bytes)}%` }}
+                                className="h-full bg-blue-500"
+                              />
+                            </div>
+                            <div className="flex justify-between text-[9px] text-[var(--muted-foreground)]/60 font-mono">
+                              <span>{formatBytes(accountInfo.bandwidth_used_bytes)} used</span>
+                              <span>{formatBytes(accountInfo.bandwidth_limit_bytes)} total</span>
+                            </div>
                           </div>
-                          <div className="w-full h-2 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)]">
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${(accountInfo.bandwidth_used_bytes / accountInfo.bandwidth_limit_bytes) * 100}%` }}
-                              className="h-full bg-blue-500"
-                            />
-                          </div>
-                          <div className="flex justify-between text-[9px] text-[var(--muted-foreground)]/60 font-mono">
-                            <span>{formatBytes(accountInfo.bandwidth_used_bytes)} used</span>
-                            <span>{formatBytes(accountInfo.bandwidth_limit_bytes)} total</span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   ) : (
