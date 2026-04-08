@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const backendDir = path.join(__dirname, "flet-app");
-const frontendDir = path.join(__dirname, "react-new");
+const backendDir = path.join(__dirname, "api");
+const frontendDir = path.join(__dirname, "web");
 
 const apiHost = process.env.API_HOST || "127.0.0.1";
 const apiPort = process.env.API_PORT || "8000";
@@ -70,7 +70,7 @@ if (!commandExists(npmCmd)) {
 }
 
 if (!existsSync(path.join(frontendDir, "node_modules"))) {
-  console.log("react-new/node_modules not found. Running npm install...");
+  console.log("web/node_modules not found. Running npm install...");
   runOrFail(npmCmd, ["install"], { cwd: frontendDir });
 }
 

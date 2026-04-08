@@ -81,7 +81,7 @@ def default_download_dir() -> str:
 
 
 def app_root_dir() -> str:
-    """Directory containing the deployed app (e.g. /app in Docker, or flet-app parent locally)."""
+    """Directory containing the deployed app (e.g. /app in Docker, or repo root parent of `api/` locally)."""
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 

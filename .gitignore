@@ -1,4 +1,10 @@
+.DS_Store
 .env
 .mega-get-history.json
 .mega-debug.log
-flet-app/ui_settings.json
+api/ui_settings.json
+archive/
+
+# Python
+__pycache__/
+*.py[cod]

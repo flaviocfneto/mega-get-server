@@ -1,9 +1,9 @@
 FROM node:22-alpine AS react-build
 
 WORKDIR /build
-COPY react-new/package.json ./
+COPY web/package.json ./
 RUN npm install
-COPY react-new/ ./
+COPY web/ ./
 RUN npm run build
 
 FROM ubuntu:24.04
@@ -31,7 +31,7 @@ RUN apt-get update && \
     mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && \
     chmod 777 "${HOME}" "${DOWNLOAD_DIR}"
 
-COPY flet-app/ /app/
+COPY api/ /app/
 COPY --from=react-build /build/dist /app/static
 RUN python3 -m venv /app/venv && \
     /app/venv/bin/pip install --no-cache-dir -r /app/requirements.txt

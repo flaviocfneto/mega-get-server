@@ -20,12 +20,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r flet-app/requirements.txt pytest
+          pip install -r api/requirements.txt pytest
 
       - name: Run tests
         run: |
-          pytest flet-app/tests -v --cov=mega_service --cov=api_main --cov=tool_diagnostics --cov-report=term-missing
+          pytest api/tests -v --cov=mega_service --cov=api_main --cov=tool_diagnostics --cov-report=term-missing
         env:
-          PYTHONPATH: flet-app
+          PYTHONPATH: api
           MEGA_SIMULATE: "1"
           UI_TEST_MODE: "1"

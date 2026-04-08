@@ -2,8 +2,8 @@
 setlocal enabledelayedexpansion
 
 set "ROOT_DIR=%~dp0"
-set "BACKEND_DIR=%ROOT_DIR%flet-app"
-set "FRONTEND_DIR=%ROOT_DIR%react-new"
+set "BACKEND_DIR=%ROOT_DIR%api"
+set "FRONTEND_DIR=%ROOT_DIR%web"
 
 if "%API_HOST%"=="" set "API_HOST=127.0.0.1"
 if "%API_PORT%"=="" set "API_PORT=8000"
@@ -28,7 +28,7 @@ if not exist "%BACKEND_DIR%\requirements.txt" (
 )
 
 if not exist "%FRONTEND_DIR%\node_modules" (
-  echo react-new\node_modules not found. Running npm install...
+  echo web\node_modules not found. Running npm install...
   pushd "%FRONTEND_DIR%"
   call npm install
   if errorlevel 1 (

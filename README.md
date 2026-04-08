@@ -2,7 +2,9 @@
 
 A simple Docker image with a web UI for downloading exported links from https://mega.nz/
 
-Deploy this image to a NAS server to facilitate direct download of files via the **React** UI in [`react-new/`](react-new/) and a **FastAPI** backend (MEGAcmd). An older minimal UI lives in [`react/`](react/). A **Flet** desktop/web prototype remains in [`flet-app/main.py`](flet-app/main.py) for local use.
+Deploy this image to a NAS server to facilitate direct download of files via the **React** UI in [`web/`](web/) and a **FastAPI** backend (MEGAcmd) in [`api/`](api/).
+
+Legacy folder names `react-new` and `flet-app` may exist as **symlinks** to `web/` and `api/` during a transition period; see [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md). The old minimal React app and the Flet prototype entrypoint were removed from the active tree (retrieve from git history or a local `archive/` copy if needed).
 
 ## Basic Set Up
 
@@ -51,8 +53,8 @@ The app does not auto-install dependencies; it only reports availability and sug
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r flet-app/requirements.txt pytest
-PYTHONPATH=flet-app MEGA_SIMULATE=1 UI_TEST_MODE=1 pytest flet-app/tests -v
+pip install -r api/requirements.txt pytest
+PYTHONPATH=api MEGA_SIMULATE=1 UI_TEST_MODE=1 pytest api/tests -v
 ```
 
 If MEGAcmd is missing, install it and set the binary path when needed:
@@ -70,8 +72,8 @@ From project root, use the cross-platform Node launcher:
 
 This launcher starts:
 
-- FastAPI backend (`flet-app/api_main.py`) on `http://127.0.0.1:8000`
-- React frontend (`react-new`) dev server on `http://localhost:5173`
+- FastAPI backend (`api/api_main.py`) on `http://127.0.0.1:8000`
+- React frontend (`web`) dev server on `http://localhost:5173`
 
 Optional overrides:
 

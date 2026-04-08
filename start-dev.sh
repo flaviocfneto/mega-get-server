@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="${ROOT_DIR}/flet-app"
-FRONTEND_DIR="${ROOT_DIR}/react-new"
+BACKEND_DIR="${ROOT_DIR}/api"
+FRONTEND_DIR="${ROOT_DIR}/web"
 API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${API_PORT:-8000}"
 UI_PORT="${UI_PORT:-5173}"
@@ -25,7 +25,7 @@ if [ ! -f "${BACKEND_DIR}/requirements.txt" ]; then
 fi
 
 if [ ! -d "${FRONTEND_DIR}/node_modules" ]; then
-  echo "react-new/node_modules not found. Running npm install..."
+  echo "web/node_modules not found. Running npm install..."
   (cd "${FRONTEND_DIR}" && npm install)
 fi
 

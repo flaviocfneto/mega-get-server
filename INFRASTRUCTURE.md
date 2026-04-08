@@ -9,8 +9,8 @@ This document describes how the **mega-get-server** project is built, deployed, 
 **mega-get-server** is a containerized service that provides a web UI for downloading files from MEGA.nz. It is intended to run on a NAS or similar host, with a configurable download directory (typically a mounted share).
 
 - **Purpose:** Download MEGA export links via a browser, with transfer control (cancel, pause, resume).
-- **Stack:** Ubuntu 24.04, MEGA CMD, Python 3, Flet (web UI).
-- **Delivery:** Single Docker image; one process serves HTTP and WebSocket on port 8080. No EXTERNAL_HOST or EXTERNAL_PORT configuration is required.
+- **Stack:** Ubuntu 24.04 (default image), MEGA CMD, Python 3, **FastAPI** (backend), **React** SPA (built from `web/`, served as static files from `/app/static`).
+- **Delivery:** Single Docker image; **Uvicorn** serves FastAPI on port **8080** (see `files/entrypoint.sh`). The browser loads the React UI from the same origin (`/`); API routes are under `/api/*`. No EXTERNAL_HOST or EXTERNAL_PORT configuration is required.
 
 ---
 
@@ -18,64 +18,59 @@ This document describes how the **mega-get-server** project is built, deployed, 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         Docker Container (Ubuntu 24.04)                  │
+│                         Docker Container                                 │
 │                                                                          │
-│  ┌──────────────┐    ┌─────────────────┐    ┌────────────────────────┐  │
-│  │ mega-cmd-    │    │  Flet app       │    │  Browser                │  │
-│  │ server       │◄───│  (port 8080)    │◄───│  (HTTP + WebSocket)     │  │
-│  └──────┬───────┘    └────────┬────────┘    └────────────────────────┘  │
-│         │                      │                         ▲               │
-│         │                      │ asyncio subprocess       │ same origin   │
-│         │                      ▼                         │               │
-│         │             mega-get / mega-transfers          │               │
-│         ▼                      │                                          │
-│  ┌──────────────────────────────────────┐     ┌───────────────────────┐  │
-│  │  /data/ (DOWNLOAD_DIR)                │     │  http://host:8080     │  │
-│  │  (mounted volume for downloads)       │     │  (user’s browser)     │  │
-│  └──────────────────────────────────────┘     └───────────────────────┘  │
+│  ┌──────────────┐    ┌─────────────────────┐    ┌──────────────────────┐ │
+│  │ mega-cmd-    │    │  FastAPI (Uvicorn)   │    │  Browser             │ │
+│  │ server       │◄───│  + static SPA        │◄───│  HTTP same origin    │ │
+│  └──────┬───────┘    │  port 8080           │    └──────────────────────┘ │
+│         │            └──────────┬───────────┘                             │
+│         │                       │ asyncio subprocess                     │
+│         │                       ▼                                        │
+│         │             mega-get / mega-transfers                            │
+│         ▼                                                                │
+│  ┌──────────────────────────────────────┐                               │
+│  │  /data/ (DOWNLOAD_DIR)                │                               │
+│  └──────────────────────────────────────┘                               │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **mega-cmd-server:** MEGA’s background service; all `mega-*` CLI commands talk to it.
-- **Flet app:** Python app (Uvicorn under the hood) that serves the web UI and WebSocket on port 8080. It runs `mega-get` and `mega-transfers` via `asyncio.create_subprocess_exec()`, polls the transfer list periodically, and updates the UI. Same origin, so no URL configuration is needed for the browser.
+- **FastAPI app (`api_main.py`):** REST API for the React UI; runs MEGAcmd via subprocesses; optional static mount for the built frontend.
 
 ---
 
 ## 3. Component Details
 
-### 3.1 Dockerfile
+### 3.1 Dockerfile (root `Dockerfile`)
 
-- **Base:** `ubuntu:24.04`
-- **External assets (at build time):**
-  - **MEGA CMD** 2.1.1 (amd64 .deb) from MEGA’s Ubuntu 24.04 repo — provides `mega-cmd-server`, `mega-get`, `mega-transfers`, `mega-permissions`.
-- **Build steps:** Install Python 3, pip, and the MEGA CMD .deb; create `HOME` (`/home/mega`) and `DOWNLOAD_DIR` (`/data/`); copy `flet-app/` to `/app` and install Python dependencies from `requirements.txt`; copy `files/` (entrypoint only) to `$HOME`.
+- **Base:** multi-stage — Node builds `web/`, then Ubuntu runtime.
+- **External assets (at build time):** MEGA CMD `.deb` for Ubuntu (version pinned in Dockerfile).
+- **Build steps:** Build React to `dist/`, copy into `/app/static`; copy `api/` to `/app`; install Python deps from `requirements.txt`; copy `files/` to `$HOME`.
 - **Expose:** 8080.
-- **Entrypoint:** `$HOME/entrypoint.sh` — starts mega-cmd-server, then runs the Flet app.
+- **Entrypoint:** `$HOME/entrypoint.sh` — starts `mega-cmd-server`, then runs Uvicorn for `api_main:app`.
 
 ### 3.2 entrypoint.sh
 
-1. **Start MEGA:** `mega-cmd-server &` — required for all `mega-get` / `mega-transfers` usage.
-2. **Permissions:** `mega-permissions` sets default file and folder permissions from `NEW_FILE_PERMISSIONS` and `NEW_FOLDER_PERMISSIONS`.
-3. **Delay:** Short sleep so mega-cmd-server can bind its socket.
-4. **Run Flet:** `exec python3 /app/main.py` — Flet serves HTTP and WebSocket on port 8080 (`FLET_FORCE_WEB_SERVER=true` and `FLET_SERVER_PORT=8080` are set in the Dockerfile).
+1. **Start MEGA:** `mega-cmd-server &`.
+2. **Permissions:** `mega-permissions` for default file/folder modes.
+3. **Delay:** Short sleep so mega-cmd-server can bind.
+4. **Run API:** `exec ... uvicorn api_main:app` with `--app-dir /app`.
 
-### 3.3 Flet app (`/app/main.py`)
+### 3.3 Application code
 
-- **UI:** URL input, Get button, transfer tag input, Cancel/Pause/Resume buttons, log/transfer area (read-only text).
-- **Actions:** On Get, runs `mega-get -q --ignore-quota-warn <url> <DOWNLOAD_DIR>` via asyncio subprocess. On Cancel/Pause/Resume, runs `mega-transfers -c/-p/-r <tag>`.
-- **Polling:** Background task runs `mega-transfers --limit=... --path-display-size=...` at a configurable interval and updates the log area.
-- **Env vars:** Reads `DOWNLOAD_DIR`, `TRANSFER_LIST_LIMIT`, `PATH_DISPLAY_SIZE`, `INPUT_TIMEOUT` from the environment.
+- **Backend:** `api/` — `api_main.py`, `mega_service.py`, tests.
+- **Frontend:** `web/` — Vite + React; production build consumed by Docker as `/app/static`.
 
 ---
 
 ## 4. Data and Request Flow
 
-1. User opens `http://host:8080` → Flet serves the web UI from the same origin.
-2. User submits a MEGA URL → Flet runs `mega-get ... "$DOWNLOAD_DIR"` in a background task → MEGA CMD downloads into `/data/` (or mounted volume).
-3. A background task periodically runs `mega-transfers ...` and updates the log area with the current transfer list.
-4. Cancel/Pause/Resume send the chosen tag to Flet, which runs `mega-transfers -c/-p/-r`.
+1. User opens `http://host:8080` → FastAPI serves the React SPA from `/` and API under `/api/*`.
+2. User submits a download URL → backend runs `mega-get` (and related) toward `DOWNLOAD_DIR`.
+3. UI polls `/api/transfers`, `/api/logs`, etc., for status.
 
-All persistent state (active transfers, queue) lives in MEGA CMD; the Flet app is stateless and only forwards commands and displays status.
+Persistent transfer state is primarily in MEGA CMD; the server adds logging, metadata, and API shaping.
 
 ---
 
@@ -84,14 +79,13 @@ All persistent state (active transfers, queue) lives in MEGA CMD; the Flet app i
 | Variable | Default | Role |
 |----------|---------|------|
 | `DOWNLOAD_DIR` | `/data/` | Where MEGA saves files; usually a volume mount. |
-| `HOME` | `/home/mega` | Used by entrypoint; MEGA CMD also uses it for session/cache. |
+| `HOME` | `/home/mega` | Used by entrypoint; MEGA CMD session/cache. |
 | `NEW_FILE_PERMISSIONS` | `600` | Default permissions for downloaded files. |
 | `NEW_FOLDER_PERMISSIONS` | `700` | Default permissions for new folders. |
-| `TRANSFER_LIST_LIMIT` | `50` | Max lines from `mega-transfers` shown in the UI. |
+| `TRANSFER_LIST_LIMIT` | `50` | Max transfers surfaced to the UI. |
 | `PATH_DISPLAY_SIZE` | `80` | Max characters for file path in transfer list. |
-| `INPUT_TIMEOUT` | `0.0166` | Poll interval lower bound (seconds); affects UI update frequency and CPU. |
-| `FLET_FORCE_WEB_SERVER` | `true` | Set in Dockerfile so Flet runs as a web server in the container. |
-| `FLET_SERVER_PORT` | `8080` | Port the Flet app listens on. |
+| `INPUT_TIMEOUT` | `0.0166` | Poll interval lower bound (seconds). |
+| `FLET_SERVER_PORT` | `8080` | Listen port (name retained for compatibility with older env files). |
 
 ---
 
@@ -101,14 +95,15 @@ All persistent state (active transfers, queue) lives in MEGA CMD; the Flet app i
 - **Trigger:** On release events `published` or `edited`.
 - **Steps:** Log in to Docker Hub, set up QEMU and Buildx, build and push with version and `latest` tags.
 
+**Tests:** `.github/workflows/test.yml` runs `pytest` against `api/tests` with `PYTHONPATH=api`.
+
 ---
 
 ## 7. Deployment Summary
 
-- **Single service:** One container; no database or external backend.
-- **Port:** One port (8080) for HTTP and WebSocket; no EXTERNAL_HOST/EXTERNAL_PORT.
-- **Persistence:** Only the mounted volume for `DOWNLOAD_DIR`.
-- **Gluetun:** Use `network_mode: "service:protonvpn"` and expose `8383:8080` on the VPN service; the Flet app listens on 8080 inside the shared network.
-- **Security:** Runs as root unless overridden with `docker run --user`; permissions for new files/folders are set via env vars. No TLS in the image (reverse proxy recommended for HTTPS/WSS).
+- **Single service:** One container; no separate database.
+- **Port:** One port (8080) for HTTP; same-origin SPA + API.
+- **Persistence:** Mounted volume for `DOWNLOAD_DIR`.
+- **Security:** Runs as root unless overridden; no TLS in the image (use a reverse proxy for HTTPS).
 
-This infrastructure document reflects the behavior of the code as of the current repository state.
+Repository layout and symlink compatibility are documented in [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md).

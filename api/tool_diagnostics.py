@@ -65,11 +65,11 @@ def _python_runtime_diagnostic() -> dict[str, Any]:
         "available": available,
         "detected_version": f"python {sys.version.split()[0]}",
         "required_for": ["backend api server"],
-        "install_instructions": "Install backend dependencies from flet-app/requirements.txt.",
+        "install_instructions": "Install backend dependencies from api/requirements.txt.",
         "suggested_install_commands": [
             "python3 -m venv .venv",
             "source .venv/bin/activate",
-            "pip install -r flet-app/requirements.txt",
+            "pip install -r api/requirements.txt",
         ],
         "details": {
             "fastapi_available": fastapi_available,
@@ -89,7 +89,7 @@ def _node_runtime_diagnostic() -> dict[str, Any]:
         "detected_version": node_version,
         "required_for": ["react frontend local dev/build"],
         "install_instructions": "Install Node.js (includes npm) for local frontend development.",
-        "suggested_install_commands": ["brew install node", "cd react-new && npm install"],
+        "suggested_install_commands": ["brew install node", "cd web && npm install"],
         "details": {
             "node_found": bool(node_bin),
             "npm_found": bool(npm_bin),

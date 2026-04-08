@@ -1,8 +1,8 @@
 $ErrorActionPreference = "Stop"
 
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$BackendDir = Join-Path $RootDir "flet-app"
-$FrontendDir = Join-Path $RootDir "react-new"
+$BackendDir = Join-Path $RootDir "api"
+$FrontendDir = Join-Path $RootDir "web"
 
 $ApiHost = if ($env:API_HOST) { $env:API_HOST } else { "127.0.0.1" }
 $ApiPort = if ($env:API_PORT) { $env:API_PORT } else { "8000" }
@@ -21,7 +21,7 @@ if (-not (Test-Path (Join-Path $BackendDir "requirements.txt"))) {
 }
 
 if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
-  Write-Host "react-new/node_modules not found. Running npm install..."
+  Write-Host "web/node_modules not found. Running npm install..."
   Push-Location $FrontendDir
   npm install
   Pop-Location
