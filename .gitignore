@@ -11,3 +11,6 @@ __pycache__/
 *.py[cod]
 TEST-downloads/ # stop it coming back
 TEST-downloads/
+commands/
+.cursor/
+.gitignore
