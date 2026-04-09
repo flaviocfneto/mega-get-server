@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r api/requirements.txt pytest
+          pip install -r api/requirements.txt pytest pytest-cov
 
       - name: Run tests
         run: |
