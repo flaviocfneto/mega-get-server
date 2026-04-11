@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
+from services.json_store import read_json_dict, write_json_atomic
 
 SETTINGS_PATH = Path(__file__).resolve().parent / "ui_settings.json"
 
@@ -27,20 +27,11 @@ DEFAULT_UI_KEYS: dict[str, Any] = {
 
 
 def load_stored() -> dict[str, Any]:
-    if not SETTINGS_PATH.is_file():
-        return {}
-    try:
-        with open(SETTINGS_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
+    return read_json_dict(SETTINGS_PATH)
 
 
 def save_stored(data: dict[str, Any]) -> None:
-    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    write_json_atomic(SETTINGS_PATH, data)
 
 
 def merge_post_into_stored(body: dict[str, Any]) -> None:

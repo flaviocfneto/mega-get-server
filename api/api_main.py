@@ -6,22 +6,27 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import shlex
 import sys
 import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
 import mega_service as ms
+import pending_correlation as pcorr
+import pending_queue as pq
 import tool_diagnostics as td
 import transfer_metadata as tm
 import ui_settings as us
-from fastapi import Body, FastAPI, HTTPException
+from routers.diagnostics_router import router as diagnostics_router
+from routers.terminal_router import router as terminal_router
+from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from security import require_csrf_boundary, require_scope, rate_limit
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 APP_STARTED = time.time()
@@ -32,6 +37,9 @@ _last_states: dict[str, str] = {}
 _last_row_snapshot: dict[str, dict[str, int]] = {}
 
 _IN_FLIGHT_STATES = frozenset({"ACTIVE", "QUEUED", "RETRYING", "PAUSED"})
+
+_last_correlation_merge_at = 0.0
+_CORRELATION_MERGE_MIN_SEC = 3.0
 
 DAILY_ANALYTICS_PATH = Path(__file__).resolve().parent / ".mega-analytics-daily.json"
 _daily_buckets: dict[str, dict[str, int]] | None = None
@@ -114,7 +122,6 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     failed_now = 0
     inflight_downloaded = 0
     total_speed = 0
-    peak_speed = 0
     active_n = 0
     current_tags: set[str] = set()
     for r in rows:
@@ -129,7 +136,6 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         downloaded_b = int(r.get("downloaded_bytes", 0) or 0)
         sp = int(r.get("speed_bps", 0) or 0)
         total_speed += sp
-        peak_speed = max(peak_speed, sp)
         prev = _last_states.get(tag)
         if state == "ACTIVE":
             active += 1
@@ -175,7 +181,6 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "total_transfers_completed": _analytics_completed if _analytics_completed else completed_now,
         "total_transfers_failed": _analytics_failed if _analytics_failed else failed_now,
         "average_speed_bps": avg_speed,
-        "peak_speed_bps": peak_speed,
         "uptime_seconds": int(time.time() - APP_STARTED),
         "daily_stats": _daily_stats_last_7_days(),
         "active_count": active,
@@ -194,20 +199,58 @@ async def _transfer_by_tag(tag: str) -> dict[str, Any]:
     return fallback
 
 
+QUEUE_START_ALL_MAX = 20
+
+
+def _redacted_client_error(raw: str | None) -> str:
+    if not raw:
+        return "Download failed"
+    return ms.redact_sensitive_text(str(raw))[:512]
+
+
+def _parse_queue_item_id(item_id: str) -> str:
+    try:
+        return str(uuid.UUID(item_id.strip()))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid queue item id") from None
+
+
+async def _execute_dispatched_queue_row(row: dict[str, Any]) -> None:
+    item_id = str(row["id"])
+    url = str(row.get("url", ""))
+    try:
+        url = ms.validate_mega_download_url(url)
+    except ValueError:
+        await pq.set_item_status(item_id, status="FAILED", last_error=_redacted_client_error("Invalid stored URL"))
+        return
+    labels = row.get("tags") if isinstance(row.get("tags"), list) else []
+    pr = str(row.get("priority") or "NORMAL")
+    ok, err = await ms.run_mega_get_with_user_meta(
+        url, [str(x) for x in labels], pr, pending_id=item_id
+    )
+    if ok:
+        await pq.remove_item(item_id)
+    else:
+        await pq.set_item_status(item_id, status="FAILED", last_error=_redacted_client_error(err))
+
+
 class DownloadBody(BaseModel):
-    url: str
-    tags: list[str] | None = None
+    url: str = Field(max_length=4096)
+    tags: list[str] | None = Field(default=None, max_length=50)
+    priority: str | None = None
+    autostart: bool = True
+
+
+class QueueAddBody(BaseModel):
+    url: str = Field(max_length=4096)
+    tags: list[str] | None = Field(default=None, max_length=50)
     priority: str | None = None
 
 
 class BulkBody(BaseModel):
-    tags: list[str]
-    action: str
+    tags: list[str] = Field(min_length=1, max_length=200)
+    action: str = Field(min_length=2, max_length=32)
     value: Any | None = None
-
-
-class TerminalBody(BaseModel):
-    command: str
 
 
 class LoginBody(BaseModel):
@@ -256,12 +299,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan, title="LinkTugger API")
+app = FastAPI(lifespan=lifespan, title="FileTugger API")
+app.include_router(diagnostics_router)
+app.include_router(terminal_router)
 
+_origins_env = os.environ.get("CORS_ALLOW_ORIGINS", "http://localhost:5173")
+_allow_origins = [o.strip() for o in _origins_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ALLOW_ORIGINS", "*").split(","),
-    allow_credentials=True,
+    allow_origins=_allow_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -273,7 +320,9 @@ async def api_config_get():
 
 
 @app.post("/api/config")
-async def api_config_post(body: dict[str, Any] = Body(default_factory=dict)):
+@rate_limit("config_post", limit=20, window_seconds=60)
+async def api_config_post(request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     us.merge_post_into_stored(body)
     if body.get("download_dir") is not None:
         ms.log_buffer.append("Note: download_dir is controlled by the server environment; UI value was not applied.")
@@ -286,7 +335,9 @@ async def api_account():
 
 
 @app.post("/api/login")
-async def api_login(body: LoginBody):
+@rate_limit("login", limit=10, window_seconds=60)
+async def api_login(body: LoginBody, request: Request):
+    require_csrf_boundary(request)
     email = (body.email or "").strip()
     password = body.password or ""
     if not email or not password:
@@ -306,7 +357,9 @@ async def api_login(body: LoginBody):
 
 
 @app.post("/api/logout")
-async def api_logout():
+@rate_limit("logout", limit=20, window_seconds=60)
+async def api_logout(request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     result = await ms.run_megacmd_command(["mega-logout"])
     account = await ms.get_account_info()
     if not account["is_logged_in"]:
@@ -330,67 +383,18 @@ async def api_analytics():
     return out
 
 
-@app.post("/api/terminal")
-async def api_terminal(body: TerminalBody):
-    raw = (body.command or "").strip()
-    if not raw:
-        raise HTTPException(status_code=400, detail="Command is required")
-
-    parts = shlex.split(raw)
-    if not parts:
-        raise HTTPException(status_code=400, detail="Command is required")
-
-    allowed = {
-        "mega-whoami",
-        "mega-version",
-        "mega-transfers",
-        "mega-get",
-        "mega-ls",
-        "mega-df",
-        "mega-export",
-        "mega-quit",
-    }
-    cmd = parts[0]
-    if cmd not in allowed:
-        return {
-            "ok": False,
-            "command": raw,
-            "exit_code": 126,
-            "output": f"Blocked command: {cmd}. Allowed: {', '.join(sorted(allowed))}",
-            "blocked_reason": "not_in_allowlist",
-        }
-
-    result = await ms.run_megacmd_command(parts)
-    return {
-        "ok": bool(result["ok"]),
-        "command": raw,
-        "exit_code": result.get("exit_code", -1),
-        "output": result.get("stdout") or result.get("output") or "(ok)",
-    }
-
-
-@app.get("/api/diag/commands")
-async def api_diag_commands():
-    return {"events": ms.get_command_events()}
-
-
-@app.post("/api/diag/probe")
-async def api_diag_probe():
-    results = await ms.command_probe()
-    return {"results": results}
-
-
-@app.get("/api/diag/tools")
-async def api_diag_tools():
-    return td.collect_tool_diagnostics()
-
-
 @app.get("/api/transfers")
 async def api_transfers():
+    global _last_correlation_merge_at
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
     rows = [ms.parsed_transfer_to_api_row(t) for t in parsed]
     _update_analytics_from_rows(rows)
+    now_m = time.monotonic()
+    if now_m - _last_correlation_merge_at >= _CORRELATION_MERGE_MIN_SEC:
+        _last_correlation_merge_at = now_m
+        current_tags = {str(t.get("tag")) for t in parsed if t.get("tag")}
+        await pcorr.try_attach_from_current_tags(current_tags)
     return rows
 
 
@@ -400,7 +404,9 @@ async def api_history():
 
 
 @app.delete("/api/history")
-async def api_history_delete():
+@rate_limit("history_delete", limit=20, window_seconds=60)
+async def api_history_delete(request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     ms.clear_history()
     ms.log_buffer.append("History cleared.")
     return {"success": True}
@@ -408,38 +414,142 @@ async def api_history_delete():
 
 @app.get("/api/logs")
 async def api_logs():
-    return ms.log_buffer.get_lines()
+    return [ms.redact_sensitive_text(line) for line in ms.log_buffer.get_lines()]
 
 
 @app.delete("/api/logs")
-async def api_logs_delete():
+@rate_limit("logs_delete", limit=20, window_seconds=60)
+async def api_logs_delete(request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     ms.log_buffer.clear()
     ms.log_buffer.append("Logs cleared.")
     return {"success": True}
 
 
+@app.get("/api/queue")
+async def api_queue_list():
+    return await pq.list_items()
+
+
+@app.post("/api/queue")
+@rate_limit("queue_add", limit=30, window_seconds=60)
+async def api_queue_add(body: QueueAddBody, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    try:
+        url = ms.validate_mega_download_url(body.url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    try:
+        item = await pq.add_item(url=url, tags=body.tags, priority=body.priority)
+    except ValueError as e:
+        msg = str(e)
+        code = 409 if "full" in msg.lower() else 400
+        raise HTTPException(status_code=code, detail=msg) from e
+    return {"success": True, "item": item}
+
+
+@app.delete("/api/queue/{item_id}")
+@rate_limit("queue_delete", limit=60, window_seconds=60)
+async def api_queue_delete(item_id: str, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    sid = _parse_queue_item_id(item_id)
+    row = await pq.get_item(sid)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Queue item not found")
+    if str(row.get("status", "")).upper() == "DISPATCHING":
+        raise HTTPException(status_code=409, detail="Queue item is starting")
+    if not await pq.remove_item(sid):
+        raise HTTPException(status_code=404, detail="Queue item not found")
+    return {"success": True}
+
+
+@app.post("/api/queue/{item_id}/start")
+@rate_limit("queue_start_item", limit=60, window_seconds=60)
+async def api_queue_start_item(item_id: str, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    sid = _parse_queue_item_id(item_id)
+    row, code = await pq.mark_dispatching(sid)
+    if code == "ok":
+        asyncio.create_task(_execute_dispatched_queue_row(row))
+        return {"success": True, "started": True, "item": pq.item_to_api_row(row)}
+    if code == "already_dispatching":
+        raise HTTPException(status_code=409, detail="Queue item is already starting")
+    if code == "not_pending":
+        raise HTTPException(status_code=409, detail="Queue item is not pending")
+    raise HTTPException(status_code=404, detail="Queue item not found")
+
+
+@app.post("/api/queue/start-next")
+@rate_limit("queue_start_next", limit=30, window_seconds=60)
+async def api_queue_start_next(request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    fid = await pq.first_pending_id()
+    if not fid:
+        return {"success": True, "started": False}
+    row, code = await pq.mark_dispatching(fid)
+    if code == "ok":
+        asyncio.create_task(_execute_dispatched_queue_row(row))
+        return {"success": True, "started": True, "item": pq.item_to_api_row(row)}
+    return {"success": True, "started": False}
+
+
+@app.post("/api/queue/start-all")
+@rate_limit("queue_start_all", limit=8, window_seconds=60)
+async def api_queue_start_all(request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    ids = (await pq.list_pending_ids_in_order())[:QUEUE_START_ALL_MAX]
+    started: list[str] = []
+    for iid in ids:
+        row, code = await pq.mark_dispatching(iid)
+        if code == "ok" and row:
+            asyncio.create_task(_execute_dispatched_queue_row(row))
+            started.append(iid)
+    return {"success": True, "startedIds": started, "count": len(started)}
+
+
 @app.post("/api/download")
-async def api_download(body: DownloadBody):
-    url = (body.url or "").strip()
-    if not url:
-        raise HTTPException(status_code=400, detail="URL is required")
+@rate_limit("download", limit=30, window_seconds=60)
+async def api_download(body: DownloadBody, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    try:
+        url = ms.validate_mega_download_url(body.url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    if not body.autostart:
+        try:
+            item = await pq.add_item(url=url, tags=body.tags, priority=body.priority)
+        except ValueError as e:
+            msg = str(e)
+            code = 409 if "full" in msg.lower() else 400
+            raise HTTPException(status_code=code, detail=msg) from e
+        return {"success": True, "message": "Added to queue.", "queued": True, "item": item}
+
     ms.add_url_to_history(url)
+    tags = [str(t).strip() for t in (body.tags or []) if str(t).strip()]
+    pr = (body.priority or "NORMAL").strip().upper()
+    if pr not in {"LOW", "NORMAL", "HIGH"}:
+        pr = "NORMAL"
 
     async def job():
-        await ms.run_mega_get(url)
+        await ms.run_mega_get_with_user_meta(url, tags, pr)
 
     asyncio.create_task(job())
     return {"success": True, "message": "Download command submitted."}
 
 
 @app.post("/api/transfers/cancel-all")
-async def api_transfers_cancel_all():
+@rate_limit("transfers_cancel_all", limit=20, window_seconds=60)
+async def api_transfers_cancel_all(request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     await ms.run_mega_transfers_cancel_all()
     return {"success": True}
 
 
 @app.post("/api/transfers/bulk")
-async def api_transfers_bulk(body: BulkBody):
+@rate_limit("transfers_bulk", limit=20, window_seconds=60)
+async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     affected = 0
     metadata_affected = 0
     for tag in body.tags:
@@ -476,7 +586,9 @@ async def api_transfers_bulk(body: BulkBody):
 
 
 @app.post("/api/transfers/{tag}/update")
-async def api_transfer_update(tag: str, body: dict[str, Any] = Body(default_factory=dict)):
+@rate_limit("transfer_update", limit=40, window_seconds=60)
+async def api_transfer_update(tag: str, request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     values: dict[str, Any] = {}
     if "priority" in body and body["priority"] is not None:
         pr = str(body["priority"]).upper()
@@ -496,7 +608,9 @@ async def api_transfer_update(tag: str, body: dict[str, Any] = Body(default_fact
 
 
 @app.post("/api/transfers/{tag}/limit")
-async def api_transfer_limit(tag: str, body: dict[str, Any] = Body(default_factory=dict)):
+@rate_limit("transfer_limit", limit=40, window_seconds=60)
+async def api_transfer_limit(tag: str, request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     if "speed_limit_kbps" not in body:
         raise HTTPException(status_code=400, detail="speed_limit_kbps is required")
     try:
@@ -517,25 +631,33 @@ async def api_transfer_limit(tag: str, body: dict[str, Any] = Body(default_facto
 
 
 @app.post("/api/transfers/{tag}/pause")
-async def api_transfer_pause(tag: str):
+@rate_limit("transfer_pause", limit=60, window_seconds=60)
+async def api_transfer_pause(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     await ms.run_mega_transfers_action("pause", tag)
     return {"success": True}
 
 
 @app.post("/api/transfers/{tag}/resume")
-async def api_transfer_resume(tag: str):
+@rate_limit("transfer_resume", limit=60, window_seconds=60)
+async def api_transfer_resume(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     await ms.run_mega_transfers_resume_for_tag(tag, log_label="Resume")
     return {"success": True}
 
 
 @app.post("/api/transfers/{tag}/retry")
-async def api_transfer_retry(tag: str):
+@rate_limit("transfer_retry", limit=60, window_seconds=60)
+async def api_transfer_retry(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     await ms.run_mega_transfers_resume_for_tag(tag, log_label="Retry")
     return {"success": True}
 
 
 @app.post("/api/transfers/{tag}/cancel")
-async def api_transfer_cancel(tag: str):
+@rate_limit("transfer_cancel", limit=60, window_seconds=60)
+async def api_transfer_cancel(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
     await ms.run_mega_transfers_action("cancel", tag)
     return {"success": True}
 

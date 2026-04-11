@@ -1,6 +1,6 @@
-# LinkTugger — FastAPI backend
+# FileTugger — FastAPI backend
 
-Python backend for LinkTugger: MEGAcmd integration, REST API (`api_main.py`), transfer list, logs, diagnostics, and tests.
+Python backend for FileTugger: MEGAcmd integration, REST API (`api_main.py`), transfer list, logs, diagnostics, and tests.
 
 ## Run locally (API only)
 
@@ -21,6 +21,12 @@ MEGA_SIMULATE=1 UI_TEST_MODE=1 PYTHONPATH=. pytest tests -v
 ## Diagnostics
 
 `GET /api/diag/tools` reports external tool availability and suggested install commands.
+
+## Saved download queue (canonical enqueue)
+
+- **Enqueue a link without starting:** `POST /api/queue` with JSON `{ "url", "tags?", "priority?" }` — uses the same URL validation, CSRF boundary, and rate limits as other write routes.
+- **Same behavior from the download form:** `POST /api/download` with `"autostart": false` enqueues an identical row (then returns `queued: true` and `item`).
+- **Starting a queued row:** `POST /api/queue/{id}/start`. A second start while the item is already dispatching returns **409** with detail `Queue item is already starting`.
 
 ## Docker
 

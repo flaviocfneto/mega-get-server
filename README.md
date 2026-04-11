@@ -1,8 +1,25 @@
-# LinkTugger
+# FileTugger
 
 A simple Docker image with a web UI for downloading exported links from https://mega.nz/
 
+![FileTugger banner](DESIGN/logos/ft-readme-banner.svg)
+
 Deploy this image to a NAS server to facilitate direct download of files via the **React** UI in [`web/`](web/) and a **FastAPI** backend (MEGAcmd) in [`api/`](api/). Folder layout notes: [docs/COMPAT-LAYOUT.md](docs/COMPAT-LAYOUT.md).
+
+## Branding
+
+Canonical design source-of-truth lives in [`DESIGN/`](DESIGN/) (see [`DESIGN/docs/BRAND.md`](DESIGN/docs/BRAND.md)).
+
+Browser/runtime assets are served from:
+- [`web/public/icons/ft-favicon.svg`](web/public/icons/ft-favicon.svg)
+- [`web/public/icons/ft-icon-app.svg`](web/public/icons/ft-icon-app.svg)
+- [`web/public/branding/ft-logo-wordmark.svg`](web/public/branding/ft-logo-wordmark.svg)
+
+Reference visuals:
+- Banner: [`DESIGN/logos/ft-readme-banner.svg`](DESIGN/logos/ft-readme-banner.svg)
+- Wordmark: [`DESIGN/logos/ft-logo-wordmark.svg`](DESIGN/logos/ft-logo-wordmark.svg)
+
+![FileTugger wordmark](DESIGN/logos/ft-logo-wordmark.svg)
 
 ## Developer tools
 
@@ -58,6 +75,22 @@ This endpoint reports:
 - install instructions and suggested commands to run manually
 
 The app does not auto-install dependencies; it only reports availability and suggests commands.
+
+## Logs & Diagnostics
+
+Use these endpoints for runtime visibility:
+
+- `GET /api/diag/tools` - external tool readiness (availability, versions, install hints)
+- `GET /api/logs` - current backend log buffer lines
+- `DELETE /api/logs` - clear backend log buffer
+
+Quick examples:
+
+```bash
+curl -s http://127.0.0.1:8000/api/diag/tools | jq
+curl -s http://127.0.0.1:8000/api/logs | jq
+curl -X DELETE http://127.0.0.1:8000/api/logs
+```
 
 ### Run backend smoke tests locally
 

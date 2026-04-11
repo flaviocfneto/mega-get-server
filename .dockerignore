@@ -1,0 +1,44 @@
+.git
+.github
+.cursor
+.vscode
+.idea
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+
+# Python/Node caches and build outputs
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/node_modules/
+**/dist/
+**/build/
+**/.cache/
+
+# Local-only artifacts and logs
+archive/
+TEST-downloads/
+commands/
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+.DS_Store
+**/.DS_Store
+
+# Screenshots and misc local artifacts
+Screenshot *.png
+
+# Keep only files required for Docker build/runtime
+!Dockerfile
+!Dockerfile.hardened
+!api/**
+!web/**
+!files/**

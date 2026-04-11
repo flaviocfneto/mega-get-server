@@ -1,0 +1,124 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  workflow-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Reject tag-based GitHub Actions refs
+        run: |
+          if rg -n "uses:\s+.+@v[0-9]" ".github/workflows"; then
+            echo "Tag-based action reference detected. Use immutable commit SHAs."
+            exit 1
+          fi
+          echo "All action references are SHA-pinned."
+
+  backend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r api/requirements.txt pytest pytest-cov
+
+      - name: Backend tests with coverage threshold
+        run: |
+          pytest api/tests -v --cov=mega_service --cov=api_main --cov=pending_correlation --cov=pending_queue --cov=tool_diagnostics --cov=transfer_metadata --cov=ui_settings --cov-report=term-missing --cov-fail-under=70
+        env:
+          PYTHONPATH: api
+          MEGA_SIMULATE: "1"
+          UI_TEST_MODE: "1"
+
+  frontend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Type checks
+        run: npm run lint && npm run lint:strict
+        working-directory: web
+
+      - name: Frontend tests with coverage
+        run: npm run test:coverage
+        working-directory: web
+
+      - name: Frontend build
+        run: npm run build
+        working-directory: web
+
+      - name: Bundle size budget
+        run: npm run check:bundle
+        working-directory: web
+
+      - name: Lighthouse CI
+        run: npm run lhci
+        working-directory: web
+
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    needs: [frontend-quality]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+        working-directory: web
+
+      - name: Run E2E smoke tests
+        run: npm run e2e
+        working-directory: web
+
+  quality-gate:
+    runs-on: ubuntu-latest
+    needs: [workflow-policy, backend-quality, frontend-quality, e2e-smoke]
+    if: always()
+    steps:
+      - name: Enforce gate
+        run: |
+          if [[ "${{ needs.workflow-policy.result }}" != "success" || "${{ needs.backend-quality.result }}" != "success" || "${{ needs.frontend-quality.result }}" != "success" || "${{ needs.e2e-smoke.result }}" != "success" ]]; then
+            echo "Quality gate failed"
+            exit 1
+          fi
+          echo "Quality gate passed"

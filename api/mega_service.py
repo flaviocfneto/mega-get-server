@@ -15,7 +15,9 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
+import pending_correlation
 import transfer_metadata as tm
 
 # #region agent log
@@ -146,6 +148,23 @@ class LogBuffer:
 log_buffer = LogBuffer()
 _command_events: list[dict[str, Any]] = []
 
+# Serialize queue-driven (and UI) mega-get correlation windows so tag snapshots stay unambiguous.
+queue_dispatch_semaphore = asyncio.Semaphore(1)
+
+
+def validate_mega_download_url(url: str) -> str:
+    """Return stripped URL or raise ValueError with the same messages as legacy /api/download checks."""
+    u = (url or "").strip()
+    if not u:
+        raise ValueError("URL is required")
+    parsed = urlparse(u)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme not in {"https", "http"}:
+        raise ValueError("Only http/https URLs are allowed")
+    if host not in {"mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz"}:
+        raise ValueError("Only MEGA URLs are allowed")
+    return u
+
 
 def _record_command_event(event: dict[str, Any]) -> None:
     _command_events.append(event)
@@ -155,6 +174,36 @@ def _record_command_event(event: dict[str, Any]) -> None:
 
 def get_command_events() -> list[dict[str, Any]]:
     return list(_command_events)
+
+
+def redact_sensitive_text(text: str) -> str:
+    masked = text
+    masked = re.sub(r"(?i)(password|token|apikey|api_key)\s*[:=]\s*\S+", r"\1=***", masked)
+    masked = re.sub(r"(?i)(mega-login\s+)\S+(\s+)\S+", r"\1***\2***", masked)
+    masked = re.sub(r"(?i)(authorization\s*:\s*bearer\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
+    # OpenAI-style and similar opaque prefixes (avoid relying on env var names).
+    masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
+    masked = re.sub(r"\b[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b", "***", masked)
+    masked = re.sub(r"(?is)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", "***", masked)
+    masked = re.sub(r"(?i)([?&](?:token|apikey|api_key|key|secret)=)[^&\s]+", r"\1***", masked)
+    return masked
+
+
+def redact_command_args(args: list[str]) -> list[str]:
+    if not args:
+        return args
+    cmd = args[0]
+    if cmd == "mega-login":
+        # redact password and email from diagnostics/event history
+        redacted = [cmd]
+        if len(args) > 1:
+            redacted.append("***")
+        if len(args) > 2:
+            redacted.append("***")
+        if len(args) > 3:
+            redacted.extend(args[3:])
+        return redacted
+    return args
 
 
 # URL history (newest first)
@@ -624,11 +673,15 @@ def parsed_transfer_to_api_row(t: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-async def run_mega_get(url: str) -> None:
+async def run_mega_get(url: str) -> tuple[bool, str | None]:
+    """
+    Run mega-get for url. Returns (success, raw_error_detail_or_none).
+    raw_error is suitable for operator logs; callers should redact before exposing to clients.
+    """
     if SIMULATE:
         log_buffer.append("URL Accepted (simulated)")
         await asyncio.sleep(1)
-        return
+        return True, None
 
     download_dir_abs = os.path.abspath(DOWNLOAD_DIR)
     _debug_log(
@@ -704,7 +757,7 @@ async def run_mega_get(url: str) -> None:
         err_l = err_msg.lower()
         if "already exists" in err_l:
             log_buffer.append("✓ File already exists at destination (MEGAcmd skipped download).")
-            return
+            return True, None
         log_buffer.append("✗ Error: Unable to start MEGA download")
         if stderr:
             if err_msg:
@@ -717,6 +770,65 @@ async def run_mega_get(url: str) -> None:
                     log_buffer.append(
                         "If it persists, run `mega-get <url> <dir>` directly in terminal to verify native MEGAcmd stability."
                     )
+        return False, err_msg or "mega-get failed"
+
+    return True, None
+
+
+async def _snapshot_transfer_tags() -> set[str]:
+    raw = await get_transfer_list()
+    parsed = parse_transfer_list(raw)
+    return {str(t.get("tag")) for t in parsed if t.get("tag")}
+
+
+async def _apply_metadata_after_mega_get(
+    url: str,
+    labels: list[str],
+    priority: str,
+    tags_before: set[str],
+) -> bool:
+    """Return True if transfer_metadata was attached to exactly one new tag."""
+    pr = (priority or "NORMAL").strip().upper()
+    if pr not in {"LOW", "NORMAL", "HIGH"}:
+        pr = "NORMAL"
+    for _ in range(5):
+        await asyncio.sleep(0.25)
+        raw = await get_transfer_list()
+        parsed = parse_transfer_list(raw)
+        tags_after = {str(t.get("tag")) for t in parsed if t.get("tag")}
+        new_tags = tags_after - tags_before
+        if len(new_tags) == 1:
+            tag = next(iter(new_tags))
+            tm.update(tag, {"url": url, "tags": list(labels), "priority": pr})
+            return True
+    return False
+
+
+async def run_mega_get_with_user_meta(
+    url: str,
+    labels: list[str],
+    priority: str,
+    pending_id: str | None = None,
+) -> tuple[bool, str | None]:
+    """
+    Run mega-get under a global semaphore, then best-effort attach transfer_metadata when
+    exactly one new MEGAcmd tag appears after the call.
+    If correlation stays ambiguous and pending_id is set, persist for later merge on transfers poll.
+    """
+    async with queue_dispatch_semaphore:
+        tags_before = await _snapshot_transfer_tags()
+        ok, err = await run_mega_get(url)
+        if ok:
+            attached = await _apply_metadata_after_mega_get(url, labels, priority, tags_before)
+            if not attached and pending_id:
+                await pending_correlation.record_after_ambiguous_mega_get(
+                    pending_id,
+                    url,
+                    list(labels),
+                    priority or "NORMAL",
+                    tags_before,
+                )
+        return ok, err
 
 
 async def _mega_transfers_exec(flag: str, target: str) -> tuple[int, str, str]:
@@ -743,6 +855,7 @@ async def run_megacmd_command(args: list[str]) -> dict[str, Any]:
     Returns {ok, command, exit_code, stdout, stderr, output, timestamp}.
     """
     started = int(time.time() * 1000)
+    safe_args = redact_command_args(args)
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -757,7 +870,7 @@ async def run_megacmd_command(args: list[str]) -> dict[str, Any]:
         output = stdout if stdout else stderr
         event = {
             "ok": code == 0,
-            "command": " ".join(args),
+            "command": " ".join(safe_args),
             "exit_code": code,
             "stdout": stdout[:2000],
             "stderr": stderr[:2000],
@@ -767,7 +880,7 @@ async def run_megacmd_command(args: list[str]) -> dict[str, Any]:
     except Exception as e:
         event = {
             "ok": False,
-            "command": " ".join(args),
+            "command": " ".join(safe_args),
             "exit_code": -1,
             "stdout": "",
             "stderr": str(e),

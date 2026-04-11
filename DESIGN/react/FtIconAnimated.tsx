@@ -1,0 +1,107 @@
+import React from "react";
+
+interface FtIconAnimatedProps extends React.SVGProps<SVGSVGElement> {
+  size?: number | string;
+  /** When true, the chain tugs continuously to indicate active downloads. */
+  downloading?: boolean;
+  title?: string | null;
+}
+
+/**
+ * Animated FileTugger icon.
+ *
+ * Hover: one-shot tug.
+ * `downloading` prop: continuous looped tug for active download state.
+ * Respects prefers-reduced-motion automatically.
+ *
+ * Usage:
+ *   <FtIconAnimated size={48} downloading={queue.activeCount > 0} />
+ */
+export const FtIconAnimated: React.FC<FtIconAnimatedProps> = ({
+  size = 48,
+  downloading = false,
+  title = "FileTugger",
+  className = "",
+  ...rest
+}) => {
+  const decorative = title === null;
+  const a11y = decorative
+    ? { "aria-hidden": true as const, focusable: false as const }
+    : { role: "img" as const, "aria-label": title as string };
+
+  const cls = `ft-icon-animated ${downloading ? "ft-downloading" : ""} ${className}`.trim();
+
+  return (
+    <>
+      <style>{`
+        .ft-icon-animated .ft-chain-gold,
+        .ft-icon-animated .ft-chain-teal {
+          transform-box: fill-box;
+          transform-origin: center;
+          transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .ft-icon-animated:hover .ft-chain-gold { transform: translate(-6px, 6px); }
+        .ft-icon-animated:hover .ft-chain-teal { transform: translate(6px, -6px); }
+        .ft-icon-animated.ft-downloading .ft-chain-gold { animation: ft-tug-gold 1.4s ease-in-out infinite; }
+        .ft-icon-animated.ft-downloading .ft-chain-teal { animation: ft-tug-teal 1.4s ease-in-out infinite; }
+        @keyframes ft-tug-gold {
+          0%, 100% { transform: translate(0, 0); }
+          40%, 60% { transform: translate(-8px, 8px); }
+        }
+        @keyframes ft-tug-teal {
+          0%, 100% { transform: translate(0, 0); }
+          40%, 60% { transform: translate(8px, -8px); }
+        }
+        .ft-icon-animated .ft-paper {
+          transform-box: fill-box;
+          transform-origin: 256px 256px;
+          transition: transform 250ms ease-out;
+        }
+        .ft-icon-animated:hover .ft-paper { transform: rotate(-1deg); }
+        .ft-icon-animated.ft-downloading .ft-paper { animation: ft-paper-wobble 1.4s ease-in-out infinite; }
+        @keyframes ft-paper-wobble {
+          0%, 100% { transform: rotate(0deg); }
+          50%      { transform: rotate(-1.5deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ft-icon-animated .ft-chain-gold,
+          .ft-icon-animated .ft-chain-teal,
+          .ft-icon-animated .ft-paper {
+            transition: none !important;
+            animation: none !important;
+            transform: none !important;
+          }
+        }
+      `}</style>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 512 512"
+        width={size}
+        height={size}
+        className={cls}
+        {...a11y}
+        {...rest}
+      >
+        <g className="ft-paper" transform="rotate(-13 256 256)">
+          <path d="M 182 66 L 358 66 Q 406 66 406 114 L 406 398 Q 406 446 358 446 L 154 446 Q 106 446 106 398 L 106 142 Z" fill="#F4F5F3" />
+          <path d="M 182 66 L 106 142 L 182 142 Z" fill="#BE123C" />
+          <path d="M 182 66 L 358 66 Q 406 66 406 114 L 406 398 Q 406 446 358 446 L 154 446 Q 106 446 106 398 L 106 142 Z" fill="none" stroke="#0F1713" strokeWidth="7" strokeLinejoin="round" />
+          <path d="M 182 66 L 182 142 L 106 142" fill="none" stroke="#0F1713" strokeWidth="7" strokeLinejoin="round" />
+        </g>
+        <g transform="rotate(-43 256 256)">
+          <g className="ft-chain-gold">
+            <rect x="-30" y="176" width="420" height="160" rx="80" fill="none" stroke="#F5B82E" strokeWidth="38" />
+          </g>
+          <g className="ft-chain-teal">
+            <rect x="122" y="176" width="420" height="160" rx="80" fill="none" stroke="#2DD4BF" strokeWidth="38" />
+          </g>
+          <g className="ft-chain-gold">
+            <path d="M -30 256 A 80 80 0 0 0 50 336 L 310 336 A 80 80 0 0 0 390 256" fill="none" stroke="#F5B82E" strokeWidth="38" />
+          </g>
+        </g>
+      </svg>
+    </>
+  );
+};
+
+export default FtIconAnimated;

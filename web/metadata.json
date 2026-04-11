@@ -1,5 +1,5 @@
 {
-  "name": "LinkTugger",
+  "name": "FileTugger",
   "description": "A web tool for adding MEGA.nz export links and downloading files using MEGAcmd.",
   "requestFramePermissions": []
 }

@@ -1,0 +1,47 @@
+{
+  "version": "v1",
+  "cases": [
+    {
+      "name": "password_pair",
+      "input": "password=supersecret",
+      "expected": "password=***",
+      "must_not_contain": ["supersecret"]
+    },
+    {
+      "name": "mega_login_line",
+      "input": "mega-login user@example.com mypass123",
+      "expected": "mega-login *** ***",
+      "must_not_contain": ["user@example.com", "mypass123"]
+    },
+    {
+      "name": "bearer_token",
+      "input": "Authorization: Bearer abc.def.ghi",
+      "expected": "Authorization: Bearer ***",
+      "must_not_contain": ["abc.def.ghi"]
+    },
+    {
+      "name": "query_secret",
+      "input": "url=https://x.test/download?token=abcdef12345&name=file",
+      "expected": "url=https://x.test/download?token=***",
+      "must_not_contain": ["abcdef12345"]
+    },
+    {
+      "name": "private_key_block",
+      "input": "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----",
+      "expected": "***",
+      "must_not_contain": ["BEGIN PRIVATE KEY", "abc123", "END PRIVATE KEY"]
+    },
+    {
+      "name": "jwt_compact_three_segments",
+      "input": "auth eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U trailing",
+      "expected": "auth *** trailing",
+      "must_not_contain": ["eyJhbGciOiJIUzI1NiJ9", "dozjgNry"]
+    },
+    {
+      "name": "openai_sk_project_key",
+      "input": "OPENAI_API_KEY=sk-proj-AbCdEfGh1234567890123456789",
+      "expected": "OPENAI_API_KEY=***",
+      "must_not_contain": ["sk-proj", "AbCdEfGh1234567890123456789"]
+    }
+  ]
+}

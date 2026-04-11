@@ -1,0 +1,57 @@
+{
+  "name": "FileTugger",
+  "short_name": "FileTugger",
+  "description": "Batch downloader for MEGA, Google Drive, and direct links.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F5F3",
+  "theme_color": "#0F1713",
+  "categories": ["utilities", "productivity"],
+  "lang": "en-GB",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/ft-icon-app.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/ft-icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/ft-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/ft-icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add link",
+      "short_name": "Add",
+      "description": "Paste a new download link",
+      "url": "/?action=add",
+      "icons": [{ "src": "/icons/ft-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Active downloads",
+      "short_name": "Queue",
+      "description": "View the active download queue",
+      "url": "/queue",
+      "icons": [{ "src": "/icons/ft-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

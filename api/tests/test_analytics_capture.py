@@ -110,3 +110,5 @@ def test_total_downloaded_persists_after_disappearance(monkeypatch):
     assert api_main._daily_buckets is not None
     today = next(iter(api_main._daily_buckets.values()))
     assert today["bytes"] == 1000
+
+

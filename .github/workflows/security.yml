@@ -1,0 +1,166 @@
+name: Security Gate
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  release-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Enforce publish workflow release-integrity controls
+        run: |
+          FILE=".github/workflows/publish.yml"
+          rg -n "id-token:\s*write" "$FILE" >/dev/null || { echo "Missing id-token: write in publish permissions"; exit 1; }
+          rg -n "attestations:\s*write" "$FILE" >/dev/null || { echo "Missing attestations: write in publish permissions"; exit 1; }
+          rg -n "sbom:\s*true" "$FILE" >/dev/null || { echo "Missing sbom: true in publish build steps"; exit 1; }
+          rg -n "provenance:\s*true" "$FILE" >/dev/null || { echo "Missing provenance: true in publish build steps"; exit 1; }
+          rg -n "Sign standard image \(keyless\)" "$FILE" >/dev/null || { echo "Missing keyless signing step for standard image"; exit 1; }
+          rg -n "Sign hardened image \(keyless\)" "$FILE" >/dev/null || { echo "Missing keyless signing step for hardened image"; exit 1; }
+          rg -n "actions/attest-build-provenance@" "$FILE" >/dev/null || { echo "Missing attest-build-provenance step(s)"; exit 1; }
+          echo "Release policy checks passed."
+
+  release-integrity-verify:
+    runs-on: ubuntu-latest
+    needs: [release-policy]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Verify digest-based attestation/signing wiring
+        run: |
+          FILE=".github/workflows/publish.yml"
+          rg -n "steps\.build_standard\.outputs\.digest" "$FILE" >/dev/null || { echo "Missing standard digest wiring"; exit 1; }
+          rg -n "steps\.build_hardened\.outputs\.digest" "$FILE" >/dev/null || { echo "Missing hardened digest wiring"; exit 1; }
+          rg -n "subject-name:\s*ghcr\.io/\$\{\{\s*github\.repository_owner\s*\}\}/linktugger" "$FILE" >/dev/null || { echo "Missing standard subject-name attestation target"; exit 1; }
+          rg -n "subject-name:\s*ghcr\.io/\$\{\{\s*github\.repository_owner\s*\}\}/linktugger-hardened" "$FILE" >/dev/null || { echo "Missing hardened subject-name attestation target"; exit 1; }
+          rg -n "subject-digest:\s*\$\{\{\s*steps\.build_standard\.outputs\.digest\s*\}\}" "$FILE" >/dev/null || { echo "Missing standard subject-digest wiring"; exit 1; }
+          rg -n "subject-digest:\s*\$\{\{\s*steps\.build_hardened\.outputs\.digest\s*\}\}" "$FILE" >/dev/null || { echo "Missing hardened subject-digest wiring"; exit 1; }
+          echo "Digest/attestation wiring checks passed."
+
+      - name: Verify workflow actions remain SHA pinned
+        run: |
+          if rg -n "uses:\s+.+@v[0-9]" ".github/workflows"; then
+            echo "Found tag-based action reference. Use immutable commit SHAs."
+            exit 1
+          fi
+          echo "All workflow action references are SHA-pinned."
+
+  release-artifact-runtime-verify:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'release' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Verify published image signatures and attestations
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          for IMAGE in "ghcr.io/${{ github.repository_owner }}/linktugger" "ghcr.io/${{ github.repository_owner }}/linktugger-hardened"; do
+            DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${TAG}" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+            if [[ -z "${DIGEST}" ]]; then
+              echo "Failed to resolve digest for ${IMAGE}:${TAG}"
+              exit 1
+            fi
+            REF="${IMAGE}@${DIGEST}"
+            echo "Verifying ${REF}"
+            cosign verify --certificate-identity-regexp ".*" --certificate-oidc-issuer-regexp ".*" "${REF}" >/dev/null
+            cosign verify-attestation --type slsaprovenance "${REF}" >/dev/null
+            # BuildKit/Docker SBOM uses in-toto SPDX predicate https://spdx.dev/Document (not legacy --type spdx string form).
+            cosign verify-attestation --type "https://spdx.dev/Document" "${REF}" >/dev/null
+          done
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+
+      - name: Python dependency audit
+        run: |
+          pip install -r api/requirements.txt pip-audit
+          pip-audit -r api/requirements.txt
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Node dependency audit
+        run: |
+          cd web
+          npm ci
+          npm audit --audit-level=high
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  container-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Build image
+        run: docker build -t mega-get-server:security-scan .
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2
+        with:
+          image-ref: mega-get-server:security-scan
+          vuln-type: "os,library"
+          severity: "HIGH,CRITICAL"
+          ignore-unfixed: true
+          exit-code: "1"
+
+  security-gate:
+    runs-on: ubuntu-latest
+    needs: [release-policy, release-integrity-verify, release-artifact-runtime-verify, dependency-audit, secret-scan, container-scan]
+    if: always()
+    steps:
+      - name: Enforce security gate
+        run: |
+          if [[ "${{ needs.release-policy.result }}" != "success" || "${{ needs.release-integrity-verify.result }}" != "success" || "${{ needs.dependency-audit.result }}" != "success" || "${{ needs.secret-scan.result }}" != "success" || "${{ needs.container-scan.result }}" != "success" ]]; then
+            echo "Security gate failed"
+            exit 1
+          fi
+          if [[ "${{ github.event_name }}" == "release" && "${{ needs.release-artifact-runtime-verify.result }}" != "success" ]]; then
+            echo "Security gate failed: runtime release artifact verification failed"
+            exit 1
+          fi
+          echo "Security gate passed"

@@ -1,5 +1,20 @@
+export type {AppSectionId} from './navigation/primaryNav';
+
 export type TransferPriority = 'LOW' | 'NORMAL' | 'HIGH';
+
+export type PendingQueueStatus = 'PENDING' | 'DISPATCHING' | 'FAILED';
+
+export interface PendingQueueItem {
+  id: string;
+  url: string;
+  tags: string[];
+  priority: TransferPriority;
+  created_at: string;
+  status: PendingQueueStatus;
+  last_error: string | null;
+}
 export type TransferState = 'ACTIVE' | 'QUEUED' | 'PAUSED' | 'RETRYING' | 'COMPLETED' | 'FAILED';
+export type TransferBulkAction = 'pause' | 'resume' | 'cancel' | 'redownload' | 'set_priority' | 'remove';
 
 export interface Transfer {
   tag: string;
@@ -53,12 +68,20 @@ export interface LogEntry {
   tag?: string; // Optional transfer tag
 }
 
+/** Client-side MEGAcmd terminal history (not server logs). */
+export type TerminalCommandSource = 'manual' | 'preset';
+
+export interface TerminalHistoryEntry {
+  cmd: string;
+  out: string;
+  source: TerminalCommandSource;
+}
+
 export interface AnalyticsData {
   total_downloaded_bytes: number;
   total_transfers_completed: number;
   total_transfers_failed: number;
   average_speed_bps: number;
-  peak_speed_bps: number;
   uptime_seconds: number;
   daily_stats: {
     date: string;

@@ -6,15 +6,18 @@ on:
   pull_request:
     branches: [master, main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
 
@@ -24,7 +27,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest api/tests -v --cov=mega_service --cov=api_main --cov=tool_diagnostics --cov-report=term-missing
+          pytest api/tests -v --cov=mega_service --cov=api_main --cov=pending_correlation --cov=pending_queue --cov=tool_diagnostics --cov=transfer_metadata --cov=ui_settings --cov-report=term-missing
         env:
           PYTHONPATH: api
           MEGA_SIMULATE: "1"

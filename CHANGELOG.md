@@ -2,7 +2,40 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased] - 2026-04-08
+## [Unreleased] - 2026-04-11
+
+### Web — section-scoped layout, session context, and navigation
+- Main column shows the download form and active transfer list only on **Transfers**; **History and Queue** hosts **History and Queue Management** (saved / app queue) and **Download History**.
+- Added `TransfersSessionProvider` (`web/src/context/TransfersSessionContext.tsx`) and wrapped the app in `web/src/main.tsx`; transfer/queue domain helpers and last-download messaging live in context.
+- Primary navigation labels: **History and Queue**, **Logs & Terminal** (`web/src/navigation/primaryNav.ts`); page title case for **History and Queue Management** and **Download History**.
+- Moved `PendingQueuePanel` from `TransfersView` to `HistoryView`; `App.tsx` wires queue props only to History.
+
+### Tests (web)
+- Vitest: global `testTimeout` in `web/vite.config.ts`; `App.test.tsx` and view tests use `TransfersSessionProvider` / hash routing helpers; `web/src/test/renderWithTransfersSession.tsx` for shared setup.
+- Playwright: `app-flows.spec.ts` updated for section gating, History queue flow, and nav labels; `e2e/visual-home.spec.ts` baseline snapshot refreshed for the current shell and per-test timeout raised for full-page screenshots; `playwright.config.ts` `webServer` timeout raised so a cold `vite build` can finish before preview binds.
+
+### Design system — typography and accessibility
+- Adopted **Atkinson Hyperlegible Next**, **Atkinson Hyperlegible Mono**, **Lora**, and **Fraunces** in `DESIGN/tokens/ft-tokens.css` (mirrored in `DESIGN/ft-tokens.css`) with new `--ft-font-serif` and `--ft-font-display` tokens; extended `DESIGN/tokens/ft-tailwind.config.js` / `DESIGN/ft-tailwind.config.js` with `serif` and `display` font families.
+- Documented type roles, scale, and WCAG 2.2 AA criteria in `docs/FRONTEND-DESIGN-PHILOSOPHY.md` (§5.3, expanded §9); added `docs/ACCESSIBILITY.md` and linked regression checks to `commands/accessibility-tester.md`.
+- Updated `DESIGN/docs/BRAND.md` wordmark/tagline typefaces and aligned SVG wordmarks/banners under `DESIGN/logos/` and root `DESIGN/*` duplicates.
+- Web app: `web/src/main.tsx` imports design tokens; `web/src/index.css` maps Tailwind font tokens to `--ft-font-*`; `web/index.html` loads Google Fonts and sets `lang="en-GB"`; `web/README.md` documents the pipeline.
+- Added a skip-to-main link and `id="main-content"` on `<main>` in `web/src/App.tsx`.
+
+### Branding
+- Renamed the app brand from `LinkTugger` to `FileTugger` across frontend runtime labels, backend API title, and repository docs.
+- Updated webpage branding in `web/index.html`:
+  - set browser tab title to `FileTugger`,
+  - added favicon wiring to `/icons/ft-favicon.svg`,
+  - added PWA manifest/theme-color metadata.
+- Integrated DESIGN assets into frontend static paths:
+  - `web/public/icons/ft-favicon.svg`
+  - `web/public/icons/ft-icon-app.svg`
+  - `web/public/branding/ft-logo-wordmark.svg`
+  - `web/public/manifest.webmanifest`
+- Updated frontend notification icon usage to the new app icon asset (`/icons/ft-icon-app.svg`).
+- Updated `README.md` with FileTugger visual assets from `DESIGN/` and added a dedicated branding assets section.
+- Aligned small in-app UX copy in `web/src/App.tsx` with FileTugger brand tone while keeping technical MEGA/MEGAcmd wording where required.
+- Expanded `README.md` with dedicated logs/diagnostics endpoint examples and refreshed branding section language.
 
 ### Repository layout
 - **Canonical folders:** active backend code lives under `api/` (formerly `flet-app/`); active frontend under `web/` (formerly `react-new/`).

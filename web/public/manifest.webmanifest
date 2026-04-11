@@ -1,0 +1,23 @@
+{
+  "name": "FileTugger",
+  "short_name": "FileTugger",
+  "description": "Batch downloader for MEGA, Google Drive, and direct links.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F5F3",
+  "theme_color": "#0F1713",
+  "categories": ["utilities", "productivity"],
+  "lang": "en-GB",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/ft-icon-app.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

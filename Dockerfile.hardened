@@ -14,6 +14,8 @@ RUN npm run build
 FROM dhi.io/python:3.12-debian13-dev AS build-stage
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG MEGACMD_DEB=megacmd_2.5.1-1.1_amd64.deb
+ARG MEGACMD_SHA256=4a4e9d9f2a4ed0f1c1f5f45284950f9bb93b828deef95d7bb4516703427d95d2
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -21,15 +23,17 @@ ENV PATH="/app/venv/bin:$PATH"
 
 WORKDIR /app
 
-ADD https://mega.nz/linux/repo/Debian_13/amd64/megacmd_2.5.1-1.1_amd64.deb ./
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSLo "/tmp/${MEGACMD_DEB}" "https://mega.nz/linux/repo/Debian_13/amd64/${MEGACMD_DEB}" && \
+    echo "${MEGACMD_SHA256}  /tmp/${MEGACMD_DEB}" | sha256sum -c -
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         python3-venv \
-        ./megacmd_2.5.1-1.1_amd64.deb && \
+        "/tmp/${MEGACMD_DEB}" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -f ./megacmd_2.5.1-1.1_amd64.deb
+    rm -f "/tmp/${MEGACMD_DEB}"
 
 RUN python3 -m venv /app/venv
 COPY api/requirements.txt .
@@ -57,19 +61,24 @@ ENV FLET_SERVER_PORT=8080
 WORKDIR /app
 
 # Install MEGA CMD again in runtime stage (simplest; keeps entrypoint.sh working)
-ADD https://mega.nz/linux/repo/Debian_13/amd64/megacmd_2.5.1-1.1_amd64.deb ./
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSLo "/tmp/${MEGACMD_DEB}" "https://mega.nz/linux/repo/Debian_13/amd64/${MEGACMD_DEB}" && \
+    echo "${MEGACMD_SHA256}  /tmp/${MEGACMD_DEB}" | sha256sum -c -
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./megacmd_2.5.1-1.1_amd64.deb && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "/tmp/${MEGACMD_DEB}" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -f ./megacmd_2.5.1-1.1_amd64.deb
+    rm -f "/tmp/${MEGACMD_DEB}"
 
+RUN useradd -m -d "${HOME}" -u 10001 -s /bin/bash mega
 COPY --from=build-stage /app/venv /app/venv
 COPY api/ /app/
 COPY --from=react-build /build/dist /app/static
-RUN mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && chmod 777 "${HOME}" "${DOWNLOAD_DIR}"
+RUN mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && chown -R mega:mega "${HOME}" "${DOWNLOAD_DIR}" /app
 
 COPY files/ "${HOME}/"
+RUN chmod +x "${HOME}/entrypoint.sh" && chown -R mega:mega "${HOME}"
 EXPOSE 8080
 
+USER mega
 ENTRYPOINT ["/home/mega/entrypoint.sh"]

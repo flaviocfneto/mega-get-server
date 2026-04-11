@@ -1,16 +1,42 @@
 .DS_Store
+**/.DS_Store
+
+# Local env and private config
 .env
+.env.local
+.env.*.local
+
+# Local tool/runtime artifacts
 .mega-get-history.json
 .mega-analytics-daily.json
+api/pending_queue.json
+api/pending_correlation.json
 .mega-debug.log
-api/ui_settings.json
-archive/
+.cursor/debug.log
 
-# Python
-__pycache__/
-*.py[cod]
-TEST-downloads/ # stop it coming back
+# Local data artifacts
 TEST-downloads/
 commands/
-.cursor/
-.gitignore
+
+# Python artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node/build/temp artifacts
+node_modules/
+dist/
+build/
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+# Editor noise
+.vscode/
+.idea/

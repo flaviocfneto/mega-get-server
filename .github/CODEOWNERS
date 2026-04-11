@@ -1,0 +1,13 @@
+# Default owners for all files
+* @flavioneto
+
+# Backend API
+/api/ @flavioneto
+
+# Frontend SPA
+/web/ @flavioneto
+
+# CI/CD and governance
+/.github/ @flavioneto
+/INFRASTRUCTURE.md @flavioneto
+/SECURITY.md @flavioneto

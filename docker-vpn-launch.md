@@ -1,6 +1,6 @@
-# Running LinkTugger behind Gluetun VPN
+# Running FileTugger behind Gluetun VPN
 
-To send all MEGA traffic through the VPN, run LinkTugger using the VPN container’s network.
+To send all MEGA traffic through the VPN, run FileTugger using the VPN container’s network.
 
 ## 1. Expose port 8080 on the VPN container
 
@@ -9,7 +9,7 @@ In your Gluetun compose file, add `8080:8080` to the `protonvpn` service `ports`
 ```yaml
     ports:
       - 49893:49893
-      - 8080:8080   # add this for LinkTugger
+      - 8080:8080   # add this for FileTugger
 ```
 
 Recreate the VPN container:
@@ -18,9 +18,9 @@ Recreate the VPN container:
 docker compose up -d protonvpn
 ```
 
-## 2. Run LinkTugger on the VPN network
+## 2. Run FileTugger on the VPN network
 
-Start LinkTugger attached to the running `protonvpn` container (no `--publish`; it uses protonvpn’s network and the port you exposed above):
+Start FileTugger attached to the running `protonvpn` container (no `--publish`; it uses protonvpn’s network and the port you exposed above):
 
 ```bash
 docker run \
@@ -38,7 +38,7 @@ Replace **/path/to/downloads** with your host path for MEGA downloads. Then open
 
 ## Optional: run both from the same compose
 
-You can define LinkTugger in the same compose and bind it to the VPN service:
+You can define FileTugger in the same compose and bind it to the VPN service:
 
 ```yaml
 version: '3.8'
@@ -90,7 +90,7 @@ docker compose up -d
 
 ## Example: same stack as qBittorrent (port 8383, /media/misatosStash)
 
-Add **LinkTugger** to your existing Gluetun + qBittorrent compose like this.
+Add **FileTugger** to your existing Gluetun + qBittorrent compose like this.
 
 **1. In `protonvpn`, add the mega-get port** (host 8383 → container 8080):
 
@@ -99,7 +99,7 @@ Add **LinkTugger** to your existing Gluetun + qBittorrent compose like this.
     # ... rest unchanged ...
     ports:
       - 49893:49893
-      - 8383:8080   # LinkTugger (same pattern as qbittorrent using 49893)
+      - 8383:8080   # FileTugger (same pattern as qbittorrent using 49893)
 ```
 
 **2. Add the `linktugger` service** (same style as qbittorrent):

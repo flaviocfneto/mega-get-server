@@ -1,10 +1,14 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import {TransfersSessionProvider} from './context/TransfersSessionContext';
+import '../../DESIGN/tokens/ft-tokens.css';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <TransfersSessionProvider>
+      <App />
+    </TransfersSessionProvider>
   </StrictMode>,
 );

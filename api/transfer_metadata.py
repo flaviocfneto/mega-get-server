@@ -2,34 +2,24 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, Callable
+from services.json_store import read_json_dict, write_json_atomic
 
 META_PATH = Path(__file__).resolve().parent / "transfer_metadata.json"
 
 
 def load_all() -> dict[str, dict[str, Any]]:
-    if not META_PATH.is_file():
-        return {}
-    try:
-        with open(META_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, dict):
-            return {}
-        out: dict[str, dict[str, Any]] = {}
-        for tag, val in data.items():
-            if isinstance(tag, str) and isinstance(val, dict):
-                out[tag] = val
-        return out
-    except Exception:
-        return {}
+    data = read_json_dict(META_PATH)
+    out: dict[str, dict[str, Any]] = {}
+    for tag, val in data.items():
+        if isinstance(tag, str) and isinstance(val, dict):
+            out[tag] = val
+    return out
 
 
 def save_all(data: dict[str, dict[str, Any]]) -> None:
-    META_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(META_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    write_json_atomic(META_PATH, data)
 
 
 def get(tag: str) -> dict[str, Any]:
