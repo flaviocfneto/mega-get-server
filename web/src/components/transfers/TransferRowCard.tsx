@@ -95,6 +95,14 @@ export function TransferRowCard({
                 #{t.tag}
               </span>
               <span className={`max-w-[200px] truncate ${privacy ? 'blur-sm select-none' : ''}`}>{t.path}</span>
+              {t.driver === 'http' && (
+                <span
+                  className="rounded border border-[var(--ft-border)] bg-[var(--muted)] px-1.5 py-0.5 text-[8px] font-bold uppercase text-[var(--muted-foreground)]"
+                  title="Direct HTTP(S) download on server"
+                >
+                  HTTP
+                </span>
+              )}
               {t.priority && t.priority !== 'NORMAL' && (
                 <span
                   className={`rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase ${

@@ -14,6 +14,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+import http_downloads as hd
 import mega_service as ms
 import pending_correlation as pcorr
 import pending_queue as pq
@@ -189,13 +190,19 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 async def _transfer_by_tag(tag: str) -> dict[str, Any]:
+    http_row = hd.get_transfer_row(tag)
+    if http_row:
+        return http_row
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
     for t in parsed:
         if str(t.get("tag")) == tag:
-            return ms.parsed_transfer_to_api_row(t)
+            row = ms.parsed_transfer_to_api_row(t)
+            row.setdefault("driver", "megacmd")
+            return row
     # Return metadata-backed fallback even if transfer is not currently listed.
     fallback = ms.parsed_transfer_to_api_row({"tag": tag, "size_display": "Unknown", "progress_pct": 0})
+    fallback.setdefault("driver", "megacmd")
     return fallback
 
 
@@ -219,19 +226,22 @@ async def _execute_dispatched_queue_row(row: dict[str, Any]) -> None:
     item_id = str(row["id"])
     url = str(row.get("url", ""))
     try:
-        url = ms.validate_mega_download_url(url)
-    except ValueError:
-        await pq.set_item_status(item_id, status="FAILED", last_error=_redacted_client_error("Invalid stored URL"))
+        kind, url = hd.normalize_download_url(url)
+    except ValueError as e:
+        await pq.set_item_status(item_id, status="FAILED", last_error=_redacted_client_error(str(e)))
         return
     labels = row.get("tags") if isinstance(row.get("tags"), list) else []
     pr = str(row.get("priority") or "NORMAL")
-    ok, err = await ms.run_mega_get_with_user_meta(
-        url, [str(x) for x in labels], pr, pending_id=item_id
-    )
-    if ok:
-        await pq.remove_item(item_id)
+    if kind == "mega":
+        ok, err = await ms.run_mega_get_with_user_meta(
+            url, [str(x) for x in labels], pr, pending_id=item_id
+        )
+        if ok:
+            await pq.remove_item(item_id)
+        else:
+            await pq.set_item_status(item_id, status="FAILED", last_error=_redacted_client_error(err))
     else:
-        await pq.set_item_status(item_id, status="FAILED", last_error=_redacted_client_error(err))
+        hd.schedule_http_download(url, [str(x) for x in labels], pr, pending_id=item_id)
 
 
 class DownloadBody(BaseModel):
@@ -377,6 +387,9 @@ async def api_analytics():
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
     rows = [ms.parsed_transfer_to_api_row(t) for t in parsed]
+    for r in rows:
+        r.setdefault("driver", "megacmd")
+    rows.extend(hd.list_api_rows())
     out = _update_analytics_from_rows(rows)
     if _analytics_parse_debug_enabled():
         out = {**out, "parse_debug": ms.summarize_transfer_parse(raw, parsed)}
@@ -389,6 +402,9 @@ async def api_transfers():
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
     rows = [ms.parsed_transfer_to_api_row(t) for t in parsed]
+    for r in rows:
+        r.setdefault("driver", "megacmd")
+    rows.extend(hd.list_api_rows())
     _update_analytics_from_rows(rows)
     now_m = time.monotonic()
     if now_m - _last_correlation_merge_at >= _CORRELATION_MERGE_MIN_SEC:
@@ -436,7 +452,7 @@ async def api_queue_list():
 async def api_queue_add(body: QueueAddBody, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
     try:
-        url = ms.validate_mega_download_url(body.url)
+        _, url = hd.normalize_download_url(body.url)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     try:
@@ -512,7 +528,7 @@ async def api_queue_start_all(request: Request, _: None = Depends(require_scope(
 async def api_download(body: DownloadBody, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
     try:
-        url = ms.validate_mega_download_url(body.url)
+        kind, url = hd.normalize_download_url(body.url)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -531,10 +547,14 @@ async def api_download(body: DownloadBody, request: Request, _: None = Depends(r
     if pr not in {"LOW", "NORMAL", "HIGH"}:
         pr = "NORMAL"
 
-    async def job():
-        await ms.run_mega_get_with_user_meta(url, tags, pr)
+    if kind == "mega":
 
-    asyncio.create_task(job())
+        async def job():
+            await ms.run_mega_get_with_user_meta(url, tags, pr)
+
+        asyncio.create_task(job())
+    else:
+        hd.schedule_http_download(url, tags, pr, pending_id=None)
     return {"success": True, "message": "Download command submitted."}
 
 
@@ -542,6 +562,7 @@ async def api_download(body: DownloadBody, request: Request, _: None = Depends(r
 @rate_limit("transfers_cancel_all", limit=20, window_seconds=60)
 async def api_transfers_cancel_all(request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    await hd.cancel_all_http_downloads()
     await ms.run_mega_transfers_cancel_all()
     return {"success": True}
 
@@ -553,6 +574,40 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
     affected = 0
     metadata_affected = 0
     for tag in body.tags:
+        if hd.is_http_driver_tag(tag):
+            if body.action == "pause":
+                ok, _err = await hd.http_pause(tag)
+                if ok:
+                    affected += 1
+            elif body.action == "resume":
+                ok, _err = await hd.http_resume(tag)
+                if ok:
+                    affected += 1
+            elif body.action in ("cancel", "remove"):
+                ok, _err = await hd.http_cancel(tag)
+                if ok:
+                    affected += 1
+            elif body.action == "set_priority":
+                pr = str(body.value or "NORMAL").upper()
+                if pr in {"LOW", "NORMAL", "HIGH"}:
+                    tm.update(tag, {"priority": pr})
+                    metadata_affected += 1
+            elif body.action == "add_tag":
+                label = str(body.value or "").strip()
+                if label:
+                    meta = tm.get(tag)
+                    tags = list(meta.get("tags", []))
+                    if label not in tags:
+                        tags.append(label)
+                    tm.update(tag, {"tags": tags})
+                    metadata_affected += 1
+            elif body.action == "remove_tag":
+                label = str(body.value or "").strip()
+                meta = tm.get(tag)
+                tags = [t for t in meta.get("tags", []) if t != label]
+                tm.update(tag, {"tags": tags})
+                metadata_affected += 1
+            continue
         if body.action == "pause":
             await ms.run_mega_transfers_action("pause", tag)
             affected += 1
@@ -634,6 +689,11 @@ async def api_transfer_limit(tag: str, request: Request, body: dict[str, Any] = 
 @rate_limit("transfer_pause", limit=60, window_seconds=60)
 async def api_transfer_pause(tag: str, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if hd.is_http_driver_tag(tag):
+        ok, err = await hd.http_pause(tag)
+        if not ok:
+            raise HTTPException(status_code=400, detail=err or "Pause failed")
+        return {"success": True}
     await ms.run_mega_transfers_action("pause", tag)
     return {"success": True}
 
@@ -642,6 +702,11 @@ async def api_transfer_pause(tag: str, request: Request, _: None = Depends(requi
 @rate_limit("transfer_resume", limit=60, window_seconds=60)
 async def api_transfer_resume(tag: str, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if hd.is_http_driver_tag(tag):
+        ok, err = await hd.http_resume(tag)
+        if not ok:
+            raise HTTPException(status_code=400, detail=err or "Resume failed")
+        return {"success": True}
     await ms.run_mega_transfers_resume_for_tag(tag, log_label="Resume")
     return {"success": True}
 
@@ -650,6 +715,11 @@ async def api_transfer_resume(tag: str, request: Request, _: None = Depends(requ
 @rate_limit("transfer_retry", limit=60, window_seconds=60)
 async def api_transfer_retry(tag: str, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if hd.is_http_driver_tag(tag):
+        ok, err = await hd.http_retry(tag)
+        if not ok:
+            raise HTTPException(status_code=400, detail=err or "Retry failed")
+        return {"success": True}
     await ms.run_mega_transfers_resume_for_tag(tag, log_label="Retry")
     return {"success": True}
 
@@ -658,6 +728,11 @@ async def api_transfer_retry(tag: str, request: Request, _: None = Depends(requi
 @rate_limit("transfer_cancel", limit=60, window_seconds=60)
 async def api_transfer_cancel(tag: str, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if hd.is_http_driver_tag(tag):
+        ok, err = await hd.http_cancel(tag)
+        if not ok:
+            raise HTTPException(status_code=400, detail=err or "Cancel failed")
+        return {"success": True}
     await ms.run_mega_transfers_action("cancel", tag)
     return {"success": True}
 

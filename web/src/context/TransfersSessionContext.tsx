@@ -23,6 +23,7 @@ import {
   normalizeSpeedLimitPostResponse,
   normalizeTransfers,
 } from '../apiNormalize';
+import {isHttpOrHttpsUrl} from '../lib/downloadUrl';
 import {apiDeleteResult, apiGet, apiPostResult, isApiFailure} from '../lib/api';
 import {useInterval} from '../hooks/useInterval';
 import type {DownloadTelemetryState, LastDownloadStatusState, TransfersSessionValue} from './transfersSessionTypes';
@@ -194,12 +195,12 @@ function useTransfersDomainState(): TransfersSessionValue {
         actionErrorRef.current('No URL detected in the download field.');
         return;
       }
-      if (!/https?:\/\/(www\.)?mega(\.co)?\.nz\//i.test(targetUrl)) {
-        actionErrorRef.current('Only MEGA URLs are allowed.');
+      if (!isHttpOrHttpsUrl(targetUrl)) {
+        actionErrorRef.current('Enter a valid http(s) URL (MEGA or a direct download link).');
         setDownloadTelemetry((prev) => ({
           ...prev,
           lastOutcome: 'failed',
-          lastErrorMessage: 'Only MEGA URLs are allowed.',
+          lastErrorMessage: 'Enter a valid http(s) URL (MEGA or a direct download link).',
         }));
         return;
       }
@@ -250,7 +251,7 @@ function useTransfersDomainState(): TransfersSessionValue {
           });
         }
       } catch (err) {
-        actionErrorRef.current('Download request failed. Check API/MEGAcmd status.');
+        actionErrorRef.current('Download request failed. Check API and server logs.');
         setDownloadTelemetry((prev) => ({
           ...prev,
           lastOutcome: 'failed',
@@ -277,8 +278,8 @@ function useTransfersDomainState(): TransfersSessionValue {
       actionErrorRef.current('No URL detected in the download field.');
       return;
     }
-    if (!/https?:\/\/(www\.)?mega(\.co)?\.nz\//i.test(targetUrl)) {
-      actionErrorRef.current('Only MEGA URLs are allowed.');
+    if (!isHttpOrHttpsUrl(targetUrl)) {
+      actionErrorRef.current('Enter a valid http(s) URL (MEGA or a direct download link).');
       return;
     }
     setIsDownloadSubmitting(true);

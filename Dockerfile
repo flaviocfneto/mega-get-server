@@ -32,6 +32,7 @@ RUN apt-get update && \
         python3 \
         python3-pip \
         python3-venv \
+        wget2 \
         "/tmp/${MEGACMD_DEB}" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \

@@ -1,0 +1,67 @@
+{
+  "h-d32bdad9-dc21-49ae-b0b5-32c4fc05ec94": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-29f0d288-4282-4785-9774-0f6c7a9c3119": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-2080638e-780d-4a79-afb0-e2ef05d24875": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-807a317f-d5de-42e2-8f6a-2167d2ddd1aa": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-09299fc3-8ccd-49f6-b720-128d0c22812d": {
+    "url": "https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-live-server-amd64.iso",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-fa10a878-b763-49e3-ba6b-968855e9105e": {
+    "url": "https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-live-server-amd64.iso",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-923f6a2d-4f2a-474d-a480-bdcc53aceb41": {
+    "url": "https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-live-server-amd64.iso",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-837b6e3b-9ad2-41de-afe2-bd6e542d420d": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-971d9be5-5a60-406e-bfc2-3896123414e4": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-c1e52466-20ca-4628-a859-64a6579da66c": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-3cdd070e-19aa-4840-b220-5217369c90ce": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-b7cad579-966b-4703-a448-776620180a8a": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  },
+  "h-cc819372-6c14-4d7b-967c-38561df5bcfe": {
+    "url": "https://example.com/file.zip",
+    "tags": [],
+    "priority": "NORMAL"
+  }
+}

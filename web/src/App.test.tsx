@@ -100,14 +100,14 @@ describe('App', () => {
 
   it('renders primary download form and starts with disabled submit', async () => {
     renderApp();
-    expect(await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/)).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText(/Paste MEGA link or direct https/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
   });
 
   it('submits a download URL and shows submitted status', async () => {
     renderApp();
 
-    const urlInput = await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+    const urlInput = await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     fireEvent.change(urlInput, { target: { value: 'https://mega.nz/file/abc' } });
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
 
@@ -143,7 +143,7 @@ describe('App', () => {
 
   it('opens settings modal and shows Advanced Settings and General sections', async () => {
     renderApp();
-    await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+    await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     fireEvent.click(screen.getByTitle('Settings'));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Advanced Settings')).toBeInTheDocument();
@@ -154,7 +154,7 @@ describe('App', () => {
 
   it('toggles download telemetry debug details', async () => {
     renderApp();
-    await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+    await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
 
     expect(screen.getByText('Download telemetry (debug)')).toBeInTheDocument();
     expect(screen.queryByText(/http_status=/i)).not.toBeInTheDocument();
@@ -170,13 +170,13 @@ describe('App', () => {
 
   it('persists telemetry visibility across remounts', async () => {
     const {unmount} = renderApp();
-    await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+    await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     fireEvent.click(screen.getByRole('button', {name: 'Show'}));
     expect(await screen.findByText(/http_status=n\/a/i)).toBeInTheDocument();
     unmount();
 
     renderApp();
-    await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+    await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     expect(await screen.findByText(/http_status=n\/a/i)).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Hide'})).toBeInTheDocument();
   });
@@ -185,7 +185,7 @@ describe('App', () => {
     'can fully hide telemetry panel from Advanced Settings',
     async () => {
       renderApp();
-      await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+      await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
       expect(screen.getByText('Download telemetry (debug)')).toBeInTheDocument();
 
       fireEvent.click(screen.getByTitle('Settings'));
@@ -208,7 +208,7 @@ describe('App', () => {
     window.localStorage.setItem('ft_download_telemetry_visible', 'garbage');
     window.localStorage.setItem('ft_download_telemetry_ui_enabled', 'garbage');
     renderApp();
-    await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+    await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     expect(screen.getByText('Download telemetry (debug)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show' })).toBeInTheDocument();
     expect(screen.queryByText(/http_status=/i)).not.toBeInTheDocument();
@@ -232,7 +232,7 @@ describe('App', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
-    const urlInput = await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+    const urlInput = await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     fireEvent.change(urlInput, { target: { value: 'https://mega.nz/file/abc' } });
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
     expect((await screen.findAllByText('Invalid payload from backend')).length).toBeGreaterThan(0);
@@ -324,7 +324,7 @@ describe('App', () => {
     'terminal Typed only filter hides preset quick-action commands',
     async () => {
       renderApp();
-      await screen.findByPlaceholderText(/Paste MEGA\.nz export link here/);
+      await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
       fireEvent.click(screen.getByRole('button', {name: 'System'}));
       expect(await screen.findByRole('tab', {name: /MEGA Terminal/i})).toBeInTheDocument();
       fireEvent.click(screen.getByRole('tab', {name: /MEGA Terminal/i}));

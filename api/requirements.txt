@@ -1,3 +1,4 @@
+# Generic HTTP(S) downloads use GNU Wget2 (system package: apt install wget2). Optional: WGET_HTTP_BIN=/path/to/wget2
 flet>=0.27.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0

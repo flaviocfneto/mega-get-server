@@ -8,7 +8,14 @@ import {
   Square,
   X,
 } from 'lucide-react';
-import type {AppConfig, Transfer, TransferBulkAction, TransferPriority, TransferState} from '../types';
+import type {
+  AppConfig,
+  PendingQueueItem,
+  Transfer,
+  TransferBulkAction,
+  TransferPriority,
+  TransferState,
+} from '../types';
 import {formatBytes} from '../lib/format';
 import {ftFocusRing} from '../lib/ftUi';
 import {TransfersKpiRow} from '../components/transfers/TransfersKpiRow';
@@ -38,6 +45,12 @@ type Props = {
   sortOrder: 'asc' | 'desc';
   setSortOrder: (v: 'asc' | 'desc') => void;
   setSelectedTransfers: (s: Set<string>) => void;
+  pendingQueue?: PendingQueueItem[];
+  queuePanelBusy?: boolean;
+  onQueueRemove?: (id: string) => void;
+  onQueueStart?: (id: string) => void;
+  onQueueStartNext?: () => void;
+  onQueueStartAll?: () => void;
 };
 
 export function TransfersView({

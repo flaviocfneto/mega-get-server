@@ -16,6 +16,8 @@ export interface PendingQueueItem {
 export type TransferState = 'ACTIVE' | 'QUEUED' | 'PAUSED' | 'RETRYING' | 'COMPLETED' | 'FAILED';
 export type TransferBulkAction = 'pause' | 'resume' | 'cancel' | 'redownload' | 'set_priority' | 'remove';
 
+export type TransferDriver = 'megacmd' | 'http';
+
 export interface Transfer {
   tag: string;
   url: string;
@@ -30,6 +32,8 @@ export interface Transfer {
   speed_limit_kbps?: number;
   tags?: string[];
   priority?: TransferPriority;
+  /** megacmd = MEGAcmd; http = direct HTTP(S) download (GNU Wget2 on server) */
+  driver?: TransferDriver;
 }
 
 export interface HistoryItem {

@@ -99,9 +99,13 @@ def test_transfer_endpoints_delegate_to_service(monkeypatch):
     async def fake_cancel_all():
         calls.append(("cancel-all", "*"))
 
+    async def fake_http_cancel_all():
+        calls.append(("http-cancel-all", "*"))
+
     monkeypatch.setattr(api_main.ms, "run_mega_transfers_action", fake_action)
     monkeypatch.setattr(api_main.ms, "run_mega_transfers_resume_for_tag", fake_resume)
     monkeypatch.setattr(api_main.ms, "run_mega_transfers_cancel_all", fake_cancel_all)
+    monkeypatch.setattr(api_main.hd, "cancel_all_http_downloads", fake_http_cancel_all)
 
     with TestClient(api_main.app) as client:
         assert client.post("/api/transfers/1/pause", headers=SAFE_HEADERS).status_code == 200
@@ -114,7 +118,31 @@ def test_transfer_endpoints_delegate_to_service(monkeypatch):
     assert ("resume", "1") in calls
     assert ("retry", "1") in calls
     assert ("cancel", "1") in calls
+    assert ("http-cancel-all", "*") in calls
     assert ("cancel-all", "*") in calls
+
+
+def test_download_http_uses_schedule(monkeypatch):
+    called: dict[str, object] = {}
+
+    def fake_hist(url):
+        called["history"] = url
+
+    def fake_schedule(url, labels, pr, pending_id=None):
+        called["schedule"] = (url, list(labels), pr, pending_id)
+
+    monkeypatch.setattr(api_main.ms, "add_url_to_history", fake_hist)
+    monkeypatch.setattr(api_main.hd, "schedule_http_download", fake_schedule)
+
+    with TestClient(api_main.app) as client:
+        res = client.post(
+            "/api/download",
+            json={"url": "https://example.com/archive.zip", "tags": ["a"], "priority": "HIGH"},
+            headers=SAFE_HEADERS,
+        )
+    assert res.status_code == 200
+    assert called["history"] == "https://example.com/archive.zip"
+    assert called["schedule"] == ("https://example.com/archive.zip", ["a"], "HIGH", None)
 
 
 def test_history_and_logs_delete(monkeypatch):

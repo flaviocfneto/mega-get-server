@@ -20,6 +20,7 @@ commands/
 
 # Python artifacts
 .venv/
+.venv-ci/
 __pycache__/
 *.py[cod]
 .pytest_cache/

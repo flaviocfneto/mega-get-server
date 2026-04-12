@@ -107,3 +107,51 @@ def test_transfer_bulk_add_tag_and_priority_update(monkeypatch):
     assert r2.status_code == 200
     assert "new" in store["7"]["tags"]
     assert store["7"]["priority"] == "HIGH"
+
+
+def test_bulk_actions_hit_megacmd_paths(monkeypatch):
+    actions: list[tuple[str, str]] = []
+
+    async def fake_action(action: str, tag: str):
+        actions.append((action, tag))
+
+    async def fake_resume(tag: str, *, log_label: str):
+        actions.append((log_label.lower(), tag))
+
+    monkeypatch.setattr(api_main.ms, "run_mega_transfers_action", fake_action)
+    monkeypatch.setattr(api_main.ms, "run_mega_transfers_resume_for_tag", fake_resume)
+
+    with TestClient(api_main.app) as client:
+        assert client.post(
+            "/api/transfers/bulk",
+            json={"tags": ["99"], "action": "pause"},
+            headers=SAFE_HEADERS,
+        ).status_code == 200
+        assert client.post(
+            "/api/transfers/bulk",
+            json={"tags": ["99"], "action": "resume"},
+            headers=SAFE_HEADERS,
+        ).status_code == 200
+        assert client.post(
+            "/api/transfers/bulk",
+            json={"tags": ["99"], "action": "cancel"},
+            headers=SAFE_HEADERS,
+        ).status_code == 200
+
+    assert ("pause", "99") in actions
+    assert ("resume", "99") in actions
+    assert ("cancel", "99") in actions
+
+
+def test_bulk_mega_remove_tag_updates_metadata(tmp_path, monkeypatch):
+    monkeypatch.setattr(api_main.tm, "META_PATH", tmp_path / "transfer_metadata.json")
+    api_main.tm.update("55", {"tags": ["x", "y"]})
+
+    with TestClient(api_main.app) as client:
+        r = client.post(
+            "/api/transfers/bulk",
+            json={"tags": ["55"], "action": "remove_tag", "value": "x"},
+            headers=SAFE_HEADERS,
+        )
+    assert r.status_code == 200
+    assert api_main.tm.get("55").get("tags") == ["y"]

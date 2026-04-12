@@ -90,6 +90,15 @@ describe('apiNormalize', () => {
     expect(normalizeTransfers({ tag: 'x' })).toEqual([]);
   });
 
+  it('preserves transfer driver when present', () => {
+    const rows = normalizeTransfers([
+      { tag: '1', driver: 'megacmd', state: 'ACTIVE', url: '', progress_pct: 0, downloaded_bytes: 0, speed_bps: 0, path: '', filename: 'a', size_bytes: 0 },
+      { tag: 'h-550e8400-e29b-41d4-a716-446655440000', driver: 'http', state: 'ACTIVE', url: 'https://x/y', progress_pct: 0, downloaded_bytes: 0, speed_bps: 0, path: '/d/f', filename: 'f', size_bytes: 0 },
+    ]);
+    expect(rows[0].driver).toBe('megacmd');
+    expect(rows[1].driver).toBe('http');
+  });
+
   it('normalizes login POST payloads from unknown shapes', () => {
     expect(normalizeLoginPostResponse(null).status).toBe('error');
     const ok = normalizeLoginPostResponse({

@@ -8,6 +8,7 @@ import type {
   ToolDiagnosticEntry,
   ToolDiagnosticsReport,
   Transfer,
+  TransferDriver,
   AccountInfo,
   PendingQueueItem,
   PendingQueueStatus,
@@ -38,7 +39,6 @@ const LOG_LEVELS = new Set<LogLevel>(['INFO', 'WARN', 'ERROR', 'SUCCESS']);
 const LOG_CATEGORIES = new Set<LogCategory>(['SYSTEM', 'TRANSFER', 'AUTOMATION', 'AUTH']);
 const PENDING_QUEUE_STATUS = new Set<PendingQueueStatus>(['PENDING', 'DISPATCHING', 'FAILED']);
 const PRIORITIES = new Set<TransferPriority>(['LOW', 'NORMAL', 'HIGH']);
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -125,21 +125,27 @@ export function normalizeTransfers(data: unknown): Transfer[] {
   if (!Array.isArray(data)) return [];
   return data
     .filter((item): item is Record<string, unknown> => isRecord(item))
-    .map((item) => ({
-      tag: asString(item.tag),
-      url: asString(item.url),
-      progress_pct: asNumber(item.progress_pct),
-      downloaded_bytes: asNumber(item.downloaded_bytes),
-      speed_bps: asNumber(item.speed_bps),
-      state: asString(item.state, 'QUEUED') as Transfer['state'],
-      path: asString(item.path),
-      filename: asString(item.filename),
-      size_bytes: asNumber(item.size_bytes),
-      retry_count: typeof item.retry_count === 'number' ? item.retry_count : undefined,
-      speed_limit_kbps: typeof item.speed_limit_kbps === 'number' ? item.speed_limit_kbps : undefined,
-      tags: Array.isArray(item.tags) ? item.tags.filter((t): t is string => typeof t === 'string') : undefined,
-      priority: ['LOW', 'NORMAL', 'HIGH'].includes(asString(item.priority)) ? (item.priority as Transfer['priority']) : undefined,
-    }))
+    .map((item) => {
+      const d = item.driver;
+      const driver: TransferDriver | undefined =
+        d === 'http' || d === 'megacmd' ? (d as TransferDriver) : undefined;
+      return {
+        tag: asString(item.tag),
+        url: asString(item.url),
+        progress_pct: asNumber(item.progress_pct),
+        downloaded_bytes: asNumber(item.downloaded_bytes),
+        speed_bps: asNumber(item.speed_bps),
+        state: asString(item.state, 'QUEUED') as Transfer['state'],
+        path: asString(item.path),
+        filename: asString(item.filename),
+        size_bytes: asNumber(item.size_bytes),
+        retry_count: typeof item.retry_count === 'number' ? item.retry_count : undefined,
+        speed_limit_kbps: typeof item.speed_limit_kbps === 'number' ? item.speed_limit_kbps : undefined,
+        tags: Array.isArray(item.tags) ? item.tags.filter((t): t is string => typeof t === 'string') : undefined,
+        priority: ['LOW', 'NORMAL', 'HIGH'].includes(asString(item.priority)) ? (item.priority as Transfer['priority']) : undefined,
+        driver,
+      };
+    })
     .filter((item) => item.tag.length > 0);
 }
 

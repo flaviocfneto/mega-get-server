@@ -41,7 +41,8 @@ export function PendingQueuePanel({
             {title}
           </HeadingTag>
           <p className="mt-1 max-w-2xl text-xs text-[var(--muted-foreground)]">
-            Links here are stored in this app and are not sent to MEGAcmd until you start them. Rows with state “Queued” on the{' '}
+            Saved links stay here until you start them: MEGA links go to MEGAcmd; direct HTTPS links use the server&apos;s HTTP downloader.
+            Rows with state “Queued” on the{' '}
             <span className="font-semibold text-[var(--foreground)]">Transfers</span> tab are already inside MEGAcmd&apos;s own queue.
           </p>
         </div>
@@ -69,7 +70,7 @@ export function PendingQueuePanel({
 
       {items.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--muted-foreground)]">
-          No saved links. Go to Transfers and use Add to queue to stash a MEGA URL without starting.
+          No saved links. Go to Transfers and use Add to queue to stash a MEGA or direct https:// URL without starting.
         </p>
       ) : (
         <ul className="mt-4 divide-y divide-[var(--ft-border-subtle)] rounded-xl border border-[var(--ft-border-subtle)]">

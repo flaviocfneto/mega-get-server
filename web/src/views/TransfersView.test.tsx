@@ -49,10 +49,44 @@ const baseProps = {
   setSelectedTransfers: noop as any,
 };
 
+const sampleTransfer: Transfer = {
+  tag: '1',
+  url: 'https://mega.nz/file/x',
+  progress_pct: 50,
+  downloaded_bytes: 500,
+  speed_bps: 100,
+  state: 'ACTIVE',
+  path: '/data/x.zip',
+  filename: 'x.zip',
+  size_bytes: 1000,
+};
+
 describe('TransfersView', () => {
   it('renders empty active transfers', () => {
     render(<TransfersView {...baseProps} />);
     expect(screen.getByText('Active transfers')).toBeInTheDocument();
     expect(screen.getByText('No active transfers')).toBeInTheDocument();
+  });
+
+  it('lists active transfer rows and completed section', () => {
+    const completed: Transfer = {
+      ...sampleTransfer,
+      tag: '9',
+      state: 'COMPLETED',
+      progress_pct: 100,
+      filename: 'done.zip',
+    };
+    render(
+      <TransfersView
+        {...baseProps}
+        transfers={[sampleTransfer, completed]}
+        sortedTransfers={[sampleTransfer]}
+        completedTransfers={[completed]}
+        selectedTransfers={new Set(['1'])}
+      />,
+    );
+    expect(screen.getByText('x.zip')).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: /completed/i})).toBeInTheDocument();
+    expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
   });
 });

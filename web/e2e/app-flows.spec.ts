@@ -14,7 +14,7 @@ test.describe('app flows (mocked API)', () => {
     await expect(primary.getByRole('button', {name: 'Analytics'})).toBeVisible();
     await primary.getByRole('button', {name: 'History and Queue'}).click();
     await expect(page.getByRole('heading', {name: 'History and Queue Management'})).toBeVisible();
-    await expect(page.getByPlaceholder('Paste MEGA.nz export link here…')).toHaveCount(0);
+    await expect(page.getByPlaceholder('Paste MEGA link or direct https:// download URL…')).toHaveCount(0);
 
     await primary.getByRole('button', {name: 'Analytics'}).click();
     await expect(page.getByText('Total downloaded')).toBeVisible();
@@ -23,7 +23,7 @@ test.describe('app flows (mocked API)', () => {
     await expect(page.getByRole('tab', {name: /System log/i})).toBeVisible();
 
     await primary.getByRole('button', {name: 'Transfers'}).click();
-    await expect(page.getByPlaceholder('Paste MEGA.nz export link here…')).toBeVisible();
+    await expect(page.getByPlaceholder('Paste MEGA link or direct https:// download URL…')).toBeVisible();
   });
 
   test('hash #/system/terminal opens MEGA Terminal', async ({page}) => {
@@ -51,7 +51,7 @@ test.describe('app flows (mocked API)', () => {
 
   test('submits a MEGA URL and shows submitted status', async ({page}) => {
     await page.goto('/');
-    await page.getByPlaceholder('Paste MEGA.nz export link here…').fill('https://mega.nz/file/abc');
+    await page.getByPlaceholder('Paste MEGA link or direct https:// download URL…').fill('https://mega.nz/file/abc');
     await page.getByRole('button', {name: 'Download'}).click();
     await expect(page.getByText(/Last download:\s*submitted/i)).toBeVisible();
   });
@@ -59,7 +59,7 @@ test.describe('app flows (mocked API)', () => {
   test('add to queue shows saved link in pending panel', async ({page}) => {
     await page.setViewportSize({width: 1280, height: 720});
     await page.goto('/');
-    await page.getByPlaceholder('Paste MEGA.nz export link here…').fill('https://mega.nz/file/queued');
+    await page.getByPlaceholder('Paste MEGA link or direct https:// download URL…').fill('https://mega.nz/file/queued');
     await page.getByRole('button', {name: /add to queue/i}).click();
     await page.getByRole('navigation', {name: 'Primary'}).getByRole('button', {name: 'History and Queue'}).click();
     await expect(page.getByRole('heading', {name: 'History and Queue Management'})).toBeVisible();
@@ -69,7 +69,7 @@ test.describe('app flows (mocked API)', () => {
   test('surfaces error when download API returns 400', async ({page}) => {
     await installApiMocks(page, {downloadShouldFail: true});
     await page.goto('/');
-    await page.getByPlaceholder('Paste MEGA.nz export link here…').fill('https://mega.nz/file/abc');
+    await page.getByPlaceholder('Paste MEGA link or direct https:// download URL…').fill('https://mega.nz/file/abc');
     await page.getByRole('button', {name: 'Download'}).click();
     await expect(page.getByText(/Last download:\s*failed/i)).toBeVisible();
   });

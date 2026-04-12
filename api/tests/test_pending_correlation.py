@@ -98,6 +98,23 @@ def test_malformed_correlation_file_treated_as_empty(isolated_correlation):
     asyncio.run(main())
 
 
+def test_max_entries_invalid_env_uses_default(monkeypatch):
+    monkeypatch.setenv("PENDING_CORRELATION_MAX_ENTRIES", "not-int")
+    assert pcorr.max_entries() == pcorr._DEFAULT_MAX_ENTRIES
+
+
+def test_record_skips_when_at_capacity(isolated_correlation, monkeypatch):
+    monkeypatch.setenv("PENDING_CORRELATION_MAX_ENTRIES", "1")
+
+    async def main():
+        await pcorr.record_after_ambiguous_mega_get("p1", "https://mega.nz/a", [], "NORMAL", {"a"})
+        await pcorr.record_after_ambiguous_mega_get("p2", "https://mega.nz/b", [], "NORMAL", {"b"})
+
+    asyncio.run(main())
+    data = json.loads(pcorr.CORRELATION_PATH.read_text(encoding="utf-8"))
+    assert len(data.get("entries", {})) == 1
+
+
 def test_invalid_tags_before_row_removed(isolated_correlation):
     pcorr.CORRELATION_PATH.write_text(
         json.dumps(

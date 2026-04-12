@@ -44,9 +44,9 @@ def test_logs_are_redacted():
     assert any("***" in line for line in body)
 
 
-def test_download_rejects_non_mega_urls():
+def test_download_rejects_disallowed_http_urls():
     with TestClient(api_main.app) as client:
-        res = client.post("/api/download", json={"url": "https://example.com/file.zip"}, headers=SAFE_HEADERS)
+        res = client.post("/api/download", json={"url": "http://127.0.0.1/file.zip"}, headers=SAFE_HEADERS)
     assert res.status_code == 400
 
 

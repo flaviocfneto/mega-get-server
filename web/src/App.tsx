@@ -26,6 +26,7 @@ import {
   History,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { isHttpOrHttpsUrl } from './lib/downloadUrl';
 import {
   AppConfig,
   HistoryItem,
@@ -272,7 +273,7 @@ export default function App() {
     e.preventDefault();
     setIsDragging(false);
     const text = e.dataTransfer.getData('text');
-    if (text && (text.includes('mega.nz') || text.includes('mega.co.nz'))) {
+    if (text && isHttpOrHttpsUrl(text)) {
       setUrl(text);
       handleSelectSection('transfers');
       handleDownload(undefined, text);

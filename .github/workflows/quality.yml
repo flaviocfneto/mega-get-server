@@ -41,7 +41,7 @@ jobs:
 
       - name: Backend tests with coverage threshold
         run: |
-          pytest api/tests -v --cov=mega_service --cov=api_main --cov=pending_correlation --cov=pending_queue --cov=tool_diagnostics --cov=transfer_metadata --cov=ui_settings --cov-report=term-missing --cov-fail-under=70
+          pytest api/tests -v --cov=mega_service --cov=api_main --cov=http_downloads --cov=pending_correlation --cov=pending_queue --cov=tool_diagnostics --cov=transfer_metadata --cov=ui_settings --cov-report=term-missing --cov-fail-under=85
         env:
           PYTHONPATH: api
           MEGA_SIMULATE: "1"

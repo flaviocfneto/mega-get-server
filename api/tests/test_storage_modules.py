@@ -62,6 +62,13 @@ def test_ui_settings_merge_post_applies_types(tmp_path, monkeypatch):
     assert "history_retention_days" not in stored
 
 
+def test_ui_settings_merge_invalid_int_is_skipped(tmp_path, monkeypatch):
+    settings_path = tmp_path / "ui_settings.json"
+    monkeypatch.setattr(us, "SETTINGS_PATH", settings_path)
+    us.merge_post_into_stored({"history_limit": "not-a-number"})
+    assert us.load_stored().get("history_limit") is None
+
+
 def test_ui_settings_load_invalid_shape_returns_empty(tmp_path, monkeypatch):
     settings_path = tmp_path / "ui_settings.json"
     settings_path.write_text(json.dumps(["not", "an", "object"]), encoding="utf-8")

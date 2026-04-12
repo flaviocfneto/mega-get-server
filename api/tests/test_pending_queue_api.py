@@ -45,9 +45,17 @@ def test_queue_post_requires_csrf(isolated_queue):
     assert r.status_code == 403
 
 
-def test_queue_rejects_bad_url(isolated_queue):
+def test_queue_accepts_generic_http_url(isolated_queue):
     with TestClient(api_main.app) as client:
         r = client.post("/api/queue", json={"url": "https://example.com/x"}, headers=SAFE_HEADERS)
+    assert r.status_code == 200
+    assert r.json().get("success") is True
+    assert r.json().get("item", {}).get("url") == "https://example.com/x"
+
+
+def test_queue_rejects_blocked_host(isolated_queue):
+    with TestClient(api_main.app) as client:
+        r = client.post("/api/queue", json={"url": "http://127.0.0.1/secret"}, headers=SAFE_HEADERS)
     assert r.status_code == 400
 
 
@@ -90,6 +98,30 @@ def test_queue_start_twice_while_dispatching_returns_409(isolated_queue, monkeyp
         s2 = client.post(f"/api/queue/{gid}/start", json={}, headers=SAFE_HEADERS)
         assert s2.status_code == 409
         assert s2.json().get("detail") == "Queue item is already starting"
+
+
+def test_queue_add_returns_409_when_full(isolated_queue, monkeypatch):
+    monkeypatch.setenv("PENDING_QUEUE_MAX_ITEMS", "1")
+    with TestClient(api_main.app) as client:
+        r1 = client.post(
+            "/api/queue",
+            json={"url": "https://mega.nz/file/a", "tags": [], "priority": "NORMAL"},
+            headers=SAFE_HEADERS,
+        )
+        assert r1.status_code == 200
+        r2 = client.post(
+            "/api/queue",
+            json={"url": "https://mega.nz/file/b", "tags": [], "priority": "NORMAL"},
+            headers=SAFE_HEADERS,
+        )
+    assert r2.status_code == 409
+
+
+def test_queue_delete_unknown_item_returns_404(isolated_queue):
+    with TestClient(api_main.app) as client:
+        rid = "00000000-0000-4000-8000-000000000001"
+        r = client.delete(f"/api/queue/{rid}", headers=SAFE_HEADERS)
+    assert r.status_code == 404
 
 
 def test_pending_queue_concurrent_adds(isolated_queue):

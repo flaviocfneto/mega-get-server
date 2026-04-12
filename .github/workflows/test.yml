@@ -27,7 +27,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest api/tests -v --cov=mega_service --cov=api_main --cov=pending_correlation --cov=pending_queue --cov=tool_diagnostics --cov=transfer_metadata --cov=ui_settings --cov-report=term-missing
+          pytest api/tests -v --cov=mega_service --cov=api_main --cov=http_downloads --cov=pending_correlation --cov=pending_queue --cov=tool_diagnostics --cov=transfer_metadata --cov=ui_settings --cov-report=term-missing
         env:
           PYTHONPATH: api
           MEGA_SIMULATE: "1"

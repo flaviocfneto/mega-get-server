@@ -65,7 +65,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 RUN curl -fsSLo "/tmp/${MEGACMD_DEB}" "https://mega.nz/linux/repo/Debian_13/amd64/${MEGACMD_DEB}" && \
     echo "${MEGACMD_SHA256}  /tmp/${MEGACMD_DEB}" | sha256sum -c -
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "/tmp/${MEGACMD_DEB}" && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget2 "/tmp/${MEGACMD_DEB}" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     rm -f "/tmp/${MEGACMD_DEB}"

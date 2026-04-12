@@ -1,4 +1,4 @@
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import {ToolDiagnosticsPanel} from './ToolDiagnosticsPanel';
 
@@ -45,5 +45,33 @@ describe('ToolDiagnosticsPanel', () => {
     );
     expect(screen.getByText('megacmd')).toBeInTheDocument();
     expect(screen.getByText(/1 missing/i)).toBeInTheDocument();
+  });
+
+  it('renders install command block for missing wget2', () => {
+    const onInstall = vi.fn();
+    render(
+      <ToolDiagnosticsPanel
+        report={{
+          ok: false,
+          missing_tools: ['wget2'],
+          tools: [
+            {
+              name: 'wget2',
+              available: false,
+              required_for: ['HTTP downloads'],
+              install_instructions: 'Install wget2.',
+              suggested_install_commands: ['sudo apt install wget2'],
+            },
+          ],
+        }}
+        loading
+        onRefresh={vi.fn()}
+        onInstallCommand={onInstall}
+      />,
+    );
+    expect(screen.getByText(/refreshing diagnostics/i)).toBeInTheDocument();
+    expect(screen.getByText('sudo apt install wget2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: /copy install command/i}));
+    expect(onInstall).toHaveBeenCalledWith('sudo apt install wget2');
   });
 });

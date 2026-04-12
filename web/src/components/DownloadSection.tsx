@@ -139,7 +139,7 @@ export function DownloadSection({
                   type="text"
                   value={url}
                   onChange={(e) => onUrlChange(e.target.value)}
-                  placeholder="Paste MEGA.nz export link here…"
+                  placeholder="Paste MEGA link or direct https:// download URL…"
                   className={`${ftInput} ${ftFocusRing} py-3.5`}
                 />
               </div>

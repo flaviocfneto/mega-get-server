@@ -11,7 +11,7 @@ This document describes the **current** quality posture of the repository (CI, t
 | Job | Purpose |
 |-----|---------|
 | `workflow-policy` | Rejects tag-based `uses: ...@v*` in `.github/workflows` |
-| `backend-quality` | `pytest api/tests` with coverage fail-under 70%; `PYTHONPATH=api`, `MEGA_SIMULATE=1`, `UI_TEST_MODE=1` |
+| `backend-quality` | `pytest api/tests` with coverage fail-under **85%** on `mega_service`, `api_main`, `http_downloads`, `pending_correlation`, `pending_queue`, `tool_diagnostics`, `transfer_metadata`, `ui_settings`; `PYTHONPATH=api`, `MEGA_SIMULATE=1`, `UI_TEST_MODE=1` |
 | `frontend-quality` | `web/`: `npm ci`, `npm run lint`, `npm run lint:strict`, `npm run test:coverage`, `npm run build`, `npm run check:bundle`, `npm run lhci` |
 | `e2e-smoke` | Playwright Chromium (smoke + flows + a11y + visual); `vite preview` with route mocks for `/api/*` (see `web/e2e/helpers/api-mocks.ts`) |
 | `quality-gate` | Fails the workflow if any required job failed |
@@ -36,7 +36,7 @@ Security and supply-chain checks are documented in [docs/security/VERIFICATION-P
 
 ### Testing
 
-- **Backend:** `api/tests/` with coverage threshold in CI.
+- **Backend:** `api/tests/` with coverage threshold in CI (85% combined on the modules listed in `quality.yml`, including `http_downloads`).
 - **Frontend unit/integration:** Vitest under `web/src/**/*.test.ts(x)` (e.g. `App.test.tsx`, `apiNormalize.test.ts`, `lib/api.test.ts`, component tests).
 - **E2E:** `web/e2e/` — Playwright; preview has no backend `/api`, so tests use `page.route` mocks (`helpers/api-mocks.ts`). Optional integration-style runs can target a real API via env (see `web/README.md`).
 - **A11y:** `e2e/a11y.spec.ts` — `@axe-core/playwright` (serious/critical violations fail the run).
