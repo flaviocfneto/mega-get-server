@@ -207,8 +207,7 @@ root [logo.png](logo.png) is a raster mark for README and social previews.
 ## Contributing
 
 Issues and PRs are welcome. Match existing patterns; run Python tests and
-`web/` lint/tests when you touch those areas. Follow [CODEOWNERS](.github/CODEOWNERS)
-for review routing.
+`web/` lint/tests when you touch those areas. Follow [CODEOWNERS](.github/CODEOWNERS) for review routing.
 
 ## License
 
