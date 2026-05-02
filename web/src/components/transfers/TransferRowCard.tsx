@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {motion} from 'motion/react';
 import {
   AlertCircle,
@@ -37,6 +38,7 @@ export function TransferRowCard({
   onSetSpeedLimit,
   reduceMotion,
 }: Props) {
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const compact = !!config?.is_compact_mode;
   const privacy = !!config?.is_privacy_mode;
 
@@ -82,7 +84,7 @@ export function TransferRowCard({
               <button
                 type="button"
                 onClick={() => void copyToClipboard(t.filename)}
-                className="rounded p-1 opacity-0 transition-opacity group-hover/title:opacity-100 focus-visible:opacity-100 hover:bg-[var(--muted)]"
+                className="rounded p-1 opacity-0 transition-opacity group-hover/title:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:bg-[var(--muted)]"
                 title="Copy filename"
                 aria-label="Copy filename"
               >
@@ -214,18 +216,52 @@ export function TransferRowCard({
                   <Pause className="h-4 w-4 fill-current" />
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => onAction('cancel')}
-                className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)] ${ftFocusRing}`}
-                title="Cancel"
-                aria-label="Cancel"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {showCancelConfirm ? (
+                <div className="flex items-center gap-1 rounded-lg bg-[var(--ft-danger-bg)] p-1 animate-in fade-in zoom-in duration-200">
+                  <span className="px-1 text-[9px] font-bold uppercase text-[var(--ft-danger)]">Confirm?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAction('cancel');
+                      setShowCancelConfirm(false);
+                    }}
+                    className={`rounded bg-[var(--ft-danger)] p-1 text-white hover:bg-[var(--ft-danger)]/80 ${ftFocusRing}`}
+                    title="Yes, cancel"
+                    aria-label="Confirm cancel"
+                  >
+                    <CheckSquare className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelConfirm(false)}
+                    className={`rounded p-1 text-[var(--ft-danger)] hover:bg-black/5 ${ftFocusRing}`}
+                    title="No, keep it"
+                    aria-label="Abort cancel"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(true)}
+                  className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)] ${ftFocusRing}`}
+                  title="Cancel"
+                  aria-label="Cancel"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
-          <div className="relative h-2 overflow-hidden rounded-full bg-[var(--muted)]">
+          <div
+            className="relative h-2 overflow-hidden rounded-full bg-[var(--muted)]"
+            role="progressbar"
+            aria-valuenow={t.progress_pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Transfer progress: ${t.progress_pct}%`}
+          >
             <motion.div
               className={`relative h-full rounded-full ${t.state === 'FAILED' ? 'bg-[var(--ft-danger)]' : 'bg-[var(--ft-accent)]'}`}
               initial={{width: 0}}

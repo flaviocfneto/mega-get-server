@@ -1,5 +1,6 @@
+import {useState} from 'react';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
-import {Pause, Play, RefreshCw, X} from 'lucide-react';
+import {CheckSquare, Pause, Play, RefreshCw, X} from 'lucide-react';
 import {ftFocusRing} from '../../lib/ftUi';
 
 type Props = {
@@ -21,6 +22,7 @@ export function TransfersBulkBar({
   onSetPriority,
   onDeselectAll,
 }: Props) {
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const reduceMotion = useReducedMotion();
 
   return (
@@ -44,6 +46,7 @@ export function TransfersBulkBar({
                   onClick={onPause}
                   className={`rounded-lg p-2 text-[var(--ft-accent)] hover:bg-[color-mix(in_srgb,var(--ft-accent)_15%,transparent)] ${ftFocusRing}`}
                   title="Pause selected"
+                  aria-label="Pause selected transfers"
                 >
                   <Pause className="h-4 w-4" />
                 </button>
@@ -52,22 +55,52 @@ export function TransfersBulkBar({
                   onClick={onResume}
                   className={`rounded-lg p-2 text-[var(--ft-accent)] hover:bg-[color-mix(in_srgb,var(--ft-accent)_15%,transparent)] ${ftFocusRing}`}
                   title="Resume selected"
+                  aria-label="Resume selected transfers"
                 >
                   <Play className="h-4 w-4" />
                 </button>
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  className={`rounded-lg p-2 text-[var(--ft-danger)] hover:bg-[var(--ft-danger-bg)] ${ftFocusRing}`}
-                  title="Cancel selected"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                {showCancelConfirm ? (
+                  <div className="flex items-center gap-1 rounded-lg bg-[var(--ft-danger-bg)] p-1 animate-in fade-in zoom-in duration-200">
+                    <span className="px-1 text-[9px] font-bold uppercase text-[var(--ft-danger)]">Confirm?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCancel();
+                        setShowCancelConfirm(false);
+                      }}
+                      className={`rounded bg-[var(--ft-danger)] p-1 text-white hover:bg-[var(--ft-danger)]/80 ${ftFocusRing}`}
+                      title="Yes, cancel selected"
+                      aria-label="Confirm cancel selected"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelConfirm(false)}
+                      className={`rounded p-1 text-[var(--ft-danger)] hover:bg-black/5 ${ftFocusRing}`}
+                      title="No, keep them"
+                      aria-label="Abort cancel selected"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelConfirm(true)}
+                    className={`rounded-lg p-2 text-[var(--ft-danger)] hover:bg-[var(--ft-danger-bg)] ${ftFocusRing}`}
+                    title="Cancel selected"
+                    aria-label="Cancel selected transfers"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onRedownload}
                   className={`rounded-lg p-2 text-[var(--ft-accent)] hover:bg-[color-mix(in_srgb,var(--ft-accent)_15%,transparent)] ${ftFocusRing}`}
                   title="Redownload selected"
+                  aria-label="Redownload selected transfers"
                 >
                   <RefreshCw className="h-4 w-4" />
                 </button>

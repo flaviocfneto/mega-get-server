@@ -159,10 +159,10 @@ describe('App', () => {
     expect(screen.getByText('Download telemetry (debug)')).toBeInTheDocument();
     expect(screen.queryByText(/http_status=/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', {name: 'Show'}));
+    fireEvent.click(screen.getByRole('button', {name: /Show/}));
     expect(await screen.findByText(/http_status=n\/a/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', {name: 'Hide'}));
+    fireEvent.click(screen.getByRole('button', {name: /Hide/}));
     await waitFor(() => {
       expect(screen.queryByText(/http_status=/i)).not.toBeInTheDocument();
     });
@@ -171,14 +171,14 @@ describe('App', () => {
   it('persists telemetry visibility across remounts', async () => {
     const {unmount} = renderApp();
     await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
-    fireEvent.click(screen.getByRole('button', {name: 'Show'}));
+    fireEvent.click(screen.getByRole('button', {name: /Show/}));
     expect(await screen.findByText(/http_status=n\/a/i)).toBeInTheDocument();
     unmount();
 
     renderApp();
     await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     expect(await screen.findByText(/http_status=n\/a/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Hide'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /Hide/})).toBeInTheDocument();
   });
 
   it(
@@ -210,7 +210,7 @@ describe('App', () => {
     renderApp();
     await screen.findByPlaceholderText(/Paste MEGA link or direct https/);
     expect(screen.getByText('Download telemetry (debug)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Show' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show/ })).toBeInTheDocument();
     expect(screen.queryByText(/http_status=/i)).not.toBeInTheDocument();
   });
 

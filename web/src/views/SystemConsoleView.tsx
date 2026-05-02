@@ -168,6 +168,7 @@ export function SystemConsoleView({
               onClick={exportLogs}
               className="rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--ft-accent)]"
               title="Export Logs"
+              aria-label="Export Logs"
             >
               <FileText className="h-4 w-4" aria-hidden />
             </button>
@@ -338,8 +339,9 @@ export function SystemConsoleView({
                     <button
                       type="button"
                       onClick={() => void copyToClipboard(entry.out)}
-                      className="absolute right-0 top-0 rounded p-1 opacity-0 transition-opacity hover:bg-white/10 group-hover/entry:opacity-100"
+                      className="absolute right-0 top-0 rounded p-1 opacity-0 transition-opacity hover:bg-white/10 group-hover/entry:opacity-100 group-focus-within:opacity-100"
                       title="Copy output"
+                      aria-label="Copy output"
                     >
                       <Copy className="h-3 w-3 text-white/40" />
                     </button>
@@ -364,7 +366,11 @@ export function SystemConsoleView({
                 placeholder="Enter MEGAcmd command..."
                 className="flex-1 border-none bg-transparent text-white placeholder:text-white/20 focus:outline-none"
               />
-              <button type="submit" className="rounded-lg p-1 text-emerald-500 transition-colors hover:bg-white/10">
+              <button
+                type="submit"
+                className="rounded-lg p-1 text-emerald-500 transition-colors hover:bg-white/10"
+                aria-label="Execute command"
+              >
                 <Send className="h-4 w-4" />
               </button>
             </form>
