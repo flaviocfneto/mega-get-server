@@ -43,10 +43,10 @@ jobs:
           FILE=".github/workflows/publish.yml"
           grep -F 'steps.build_standard.outputs.digest' "$FILE" >/dev/null || { echo "Missing standard digest wiring"; exit 1; }
           grep -F 'steps.build_hardened.outputs.digest' "$FILE" >/dev/null || { echo "Missing hardened digest wiring"; exit 1; }
-          grep -F 'subject-name: ghcr.io/${{ '{{' }} github.repository_owner ${{ '}}' }}/linktugger' "$FILE" >/dev/null || { echo "Missing standard subject-name attestation target"; exit 1; }
-          grep -F 'subject-name: ghcr.io/${{ '{{' }} github.repository_owner ${{ '}}' }}/linktugger-hardened' "$FILE" >/dev/null || { echo "Missing hardened subject-name attestation target"; exit 1; }
-          grep -F 'subject-digest: ${{ '{{' }} steps.build_standard.outputs.digest ${{ '}}' }}' "$FILE" >/dev/null || { echo "Missing standard subject-digest wiring"; exit 1; }
-          grep -F 'subject-digest: ${{ '{{' }} steps.build_hardened.outputs.digest ${{ '}}' }}' "$FILE" >/dev/null || { echo "Missing hardened subject-digest wiring"; exit 1; }
+          grep -F 'subject-name: ghcr.io/${{ github.repository_owner }}/linktugger' "$FILE" >/dev/null || { echo "Missing standard subject-name attestation target"; exit 1; }
+          grep -F 'subject-name: ghcr.io/${{ github.repository_owner }}/linktugger-hardened' "$FILE" >/dev/null || { echo "Missing hardened subject-name attestation target"; exit 1; }
+          grep -F 'subject-digest: ${{ steps.build_standard.outputs.digest }}' "$FILE" >/dev/null || { echo "Missing standard subject-digest wiring"; exit 1; }
+          grep -F 'subject-digest: ${{ steps.build_hardened.outputs.digest }}' "$FILE" >/dev/null || { echo "Missing hardened subject-digest wiring"; exit 1; }
           echo "Digest/attestation wiring checks passed."
 
       - name: Verify workflow actions remain SHA pinned
