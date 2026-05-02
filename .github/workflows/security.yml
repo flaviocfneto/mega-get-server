@@ -135,10 +135,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
+      - name: Login to DHI registry
+        if: ${{ secrets.DHI_REGISTRY_USERNAME != '' && secrets.DHI_REGISTRY_TOKEN != '' }}
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DHI_REGISTRY_USERNAME }}
+          password: ${{ secrets.DHI_REGISTRY_TOKEN }}
+
       - name: Build image
+        if: ${{ secrets.DHI_REGISTRY_USERNAME != '' && secrets.DHI_REGISTRY_TOKEN != '' }}
         run: docker build -t mega-get-server:security-scan .
 
       - name: Trivy image scan
+        if: ${{ secrets.DHI_REGISTRY_USERNAME != '' && secrets.DHI_REGISTRY_TOKEN != '' }}
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           image-ref: mega-get-server:security-scan
@@ -154,7 +164,7 @@ jobs:
     steps:
       - name: Enforce security gate
         run: |
-          if [[ "${{ needs.release-policy.result }}" != "success" || "${{ needs.release-integrity-verify.result }}" != "success" || "${{ needs.dependency-audit.result }}" != "success" || "${{ needs.secret-scan.result }}" != "success" || "${{ needs.container-scan.result }}" != "success" ]]; then
+          if [[ "${{ needs.release-policy.result }}" != "success" || "${{ needs.release-integrity-verify.result }}" != "success" || "${{ needs.dependency-audit.result }}" != "success" || "${{ needs.secret-scan.result }}" != "success" || ("${{ needs.container-scan.result }}" != "success" && "${{ needs.container-scan.result }}" != "skipped") ]]; then
             echo "Security gate failed"
             exit 1
           fi
