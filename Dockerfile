@@ -5,6 +5,7 @@ COPY web/package.json ./
 COPY web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
+COPY DESIGN/ ../DESIGN/
 RUN npm run build
 
 FROM ubuntu:24.04

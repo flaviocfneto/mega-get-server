@@ -42,3 +42,4 @@ Screenshot *.png
 !api/**
 !web/**
 !files/**
+!DESIGN/**
