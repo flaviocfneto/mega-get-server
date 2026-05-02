@@ -13,6 +13,7 @@ import {
   Terminal,
   Timer,
   User,
+  X,
   Zap,
 } from 'lucide-react';
 import type {AppConfig, LogCategory, LogEntry, LogLevel, TerminalHistoryEntry} from '../types';
@@ -68,6 +69,7 @@ export function SystemConsoleView({
   updateConfig,
 }: SystemConsoleViewProps) {
   const [manualOnly, setManualOnly] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const displayedTerminal = useMemo(() => {
     if (!manualOnly) return terminalOutput;
@@ -172,13 +174,37 @@ export function SystemConsoleView({
             >
               <FileText className="h-4 w-4" aria-hidden />
             </button>
-            <button
-              type="button"
-              onClick={() => void clearLogs()}
-              className="text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400"
-            >
-              Clear
-            </button>
+            {showClearConfirm ? (
+              <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                <span className="text-[9px] font-bold uppercase text-rose-400">Clear logs?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void clearLogs();
+                    setShowClearConfirm(false);
+                  }}
+                  className="rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-bold text-white hover:bg-rose-600"
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowClearConfirm(false)}
+                  className="rounded p-0.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5"
+                  aria-label="Cancel clear"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(true)}
+                className="text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400"
+              >
+                Clear
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
@@ -211,13 +237,37 @@ export function SystemConsoleView({
                 Typed only
               </button>
             </div>
-            <button
-              type="button"
-              onClick={clearTerminalOutput}
-              className="text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400"
-            >
-              Clear terminal
-            </button>
+            {showClearConfirm ? (
+              <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                <span className="text-[9px] font-bold uppercase text-rose-400">Clear terminal?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearTerminalOutput();
+                    setShowClearConfirm(false);
+                  }}
+                  className="rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-bold text-white hover:bg-rose-600"
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowClearConfirm(false)}
+                  className="rounded p-0.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5"
+                  aria-label="Cancel clear"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(true)}
+                className="text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400"
+              >
+                Clear terminal
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -366,11 +416,8 @@ export function SystemConsoleView({
                 placeholder="Enter MEGAcmd command..."
                 className="flex-1 border-none bg-transparent text-white placeholder:text-white/20 focus:outline-none"
               />
-              <button
-                type="submit"
-                className="rounded-lg p-1 text-emerald-500 transition-colors hover:bg-white/10"
-                aria-label="Execute command"
-              >
+              <button type="submit" className="rounded-lg p-1 text-emerald-500 transition-colors hover:bg-white/10"
+                aria-label="Execute command">
                 <Send className="h-4 w-4" />
               </button>
             </form>

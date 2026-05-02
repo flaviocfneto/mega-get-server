@@ -60,29 +60,34 @@ export function TransfersBulkBar({
                   <Play className="h-4 w-4" />
                 </button>
                 {showCancelConfirm ? (
-                  <div className="flex items-center gap-1 rounded-lg bg-[var(--ft-danger-bg)] p-1 animate-in fade-in zoom-in duration-200">
-                    <span className="px-1 text-[9px] font-bold uppercase text-[var(--ft-danger)]">Confirm?</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onCancel();
-                        setShowCancelConfirm(false);
-                      }}
-                      className={`rounded bg-[var(--ft-danger)] p-1 text-white hover:bg-[var(--ft-danger)]/80 ${ftFocusRing}`}
-                      title="Yes, cancel selected"
-                      aria-label="Confirm cancel selected"
-                    >
-                      <CheckSquare className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowCancelConfirm(false)}
-                      className={`rounded p-1 text-[var(--ft-danger)] hover:bg-black/5 ${ftFocusRing}`}
-                      title="No, keep them"
-                      aria-label="Abort cancel selected"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  <div className="flex items-center gap-2 rounded-xl bg-[var(--ft-danger-bg)] px-2 py-1 animate-in fade-in zoom-in duration-200 shadow-sm border border-[var(--ft-danger)]/20">
+                    <span className="text-[10px] font-bold text-[var(--ft-danger)] whitespace-nowrap">
+                      Cancel all {count}?
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onCancel();
+                          setShowCancelConfirm(false);
+                        }}
+                        className={`flex items-center gap-1 rounded-lg bg-[var(--ft-danger)] px-2 py-1 text-[9px] font-bold text-white hover:bg-[var(--ft-danger)]/90 ${ftFocusRing}`}
+                        title="Yes, cancel selected"
+                        aria-label="Confirm cancel selected"
+                      >
+                        <CheckSquare className="h-4 w-4" />
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCancelConfirm(false)}
+                        className={`rounded-lg p-1 text-[var(--ft-danger)] hover:bg-[var(--ft-danger)]/10 ${ftFocusRing}`}
+                        title="No, keep them"
+                        aria-label="Abort cancel selected"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <button

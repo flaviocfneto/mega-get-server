@@ -1,4 +1,4 @@
-import type {Dispatch, SetStateAction} from 'react';
+import {type Dispatch, type SetStateAction, useState} from 'react';
 import {CheckSquare, DownloadCloud, History, Plus, Square, Trash2, X} from 'lucide-react';
 import type {HistoryItem, PendingQueueItem} from '../types';
 import {ftFocusRing} from '../lib/ftUi';
@@ -39,6 +39,8 @@ export function HistoryView({
   onQueueStartNext,
   onQueueStartAll,
 }: Props) {
+  const [showClearConfirm, setShowCancelConfirm] = useState(false);
+
   return (
     <div className="space-y-6">
       <PendingQueuePanel
@@ -67,14 +69,40 @@ export function HistoryView({
             <DownloadCloud className="h-4 w-4" />
           </button>
           {history.length > 0 && (
-            <button
-              type="button"
-              onClick={clearHistory}
-              className="flex items-center gap-1 text-[10px] font-bold uppercase text-[var(--muted-foreground)] transition-colors hover:text-[var(--ft-danger)]"
-            >
-              <Trash2 className="h-3 w-3" aria-hidden />
-              {selectedHistory.size > 0 ? 'Clear selected' : 'Clear all'}
-            </button>
+            showClearConfirm ? (
+              <div className="flex items-center gap-2 rounded-lg bg-[var(--ft-danger-bg)] px-2 py-1 animate-in fade-in zoom-in duration-200">
+                <span className="text-[9px] font-bold uppercase text-[var(--ft-danger)]">
+                  {selectedHistory.size > 0 ? `Clear ${selectedHistory.size}?` : 'Clear all?'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearHistory();
+                    setShowCancelConfirm(false);
+                  }}
+                  className={`rounded bg-[var(--ft-danger)] px-1.5 py-0.5 text-[9px] font-bold text-white hover:bg-[var(--ft-danger)]/80 ${ftFocusRing}`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(false)}
+                  className={`rounded p-0.5 text-[var(--ft-danger)] hover:bg-black/5 ${ftFocusRing}`}
+                  aria-label="Cancel clear"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(true)}
+                className="flex items-center gap-1 text-[10px] font-bold uppercase text-[var(--muted-foreground)] transition-colors hover:text-[var(--ft-danger)]"
+              >
+                <Trash2 className="h-3 w-3" aria-hidden />
+                {selectedHistory.size > 0 ? 'Clear selected' : 'Clear all'}
+              </button>
+            )
           )}
         </div>
       </div>
