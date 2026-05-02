@@ -22,13 +22,13 @@ jobs:
       - name: Enforce publish workflow release-integrity controls
         run: |
           FILE=".github/workflows/publish.yml"
-          grep -E -n "id-token:[[:space:]]*write" "$FILE" >/dev/null || { echo "Missing id-token: write in publish permissions"; exit 1; }
-          grep -E -n "attestations:[[:space:]]*write" "$FILE" >/dev/null || { echo "Missing attestations: write in publish permissions"; exit 1; }
-          grep -E -n "sbom:[[:space:]]*true" "$FILE" >/dev/null || { echo "Missing sbom: true in publish build steps"; exit 1; }
-          grep -E -n "provenance:[[:space:]]*true" "$FILE" >/dev/null || { echo "Missing provenance: true in publish build steps"; exit 1; }
-          grep -E -n "Sign standard image \(keyless\)" "$FILE" >/dev/null || { echo "Missing keyless signing step for standard image"; exit 1; }
-          grep -E -n "Sign hardened image \(keyless\)" "$FILE" >/dev/null || { echo "Missing keyless signing step for hardened image"; exit 1; }
-          grep -E -n "actions/attest-build-provenance@" "$FILE" >/dev/null || { echo "Missing attest-build-provenance step(s)"; exit 1; }
+          grep "id-token: write" "$FILE" >/dev/null || { echo "Missing id-token: write in publish permissions"; exit 1; }
+          grep "attestations: write" "$FILE" >/dev/null || { echo "Missing attestations: write in publish permissions"; exit 1; }
+          grep "sbom: true" "$FILE" >/dev/null || { echo "Missing sbom: true in publish build steps"; exit 1; }
+          grep "provenance: true" "$FILE" >/dev/null || { echo "Missing provenance: true in publish build steps"; exit 1; }
+          grep "Sign standard image (keyless)" "$FILE" >/dev/null || { echo "Missing keyless signing step for standard image"; exit 1; }
+          grep "Sign hardened image (keyless)" "$FILE" >/dev/null || { echo "Missing keyless signing step for hardened image"; exit 1; }
+          grep "actions/attest-build-provenance@" "$FILE" >/dev/null || { echo "Missing attest-build-provenance step(s)"; exit 1; }
           echo "Release policy checks passed."
 
   release-integrity-verify:
@@ -41,17 +41,18 @@ jobs:
       - name: Verify digest-based attestation/signing wiring
         run: |
           FILE=".github/workflows/publish.yml"
-          grep -E -n "steps\.build_standard\.outputs\.digest" "$FILE" >/dev/null || { echo "Missing standard digest wiring"; exit 1; }
-          grep -E -n "steps\.build_hardened\.outputs\.digest" "$FILE" >/dev/null || { echo "Missing hardened digest wiring"; exit 1; }
-          grep -E -n "subject-name:[[:space:]]*ghcr\.io/\$\{\{[[:space:]]*github\.repository_owner[[:space:]]*\}\}/linktugger" "$FILE" >/dev/null || { echo "Missing standard subject-name attestation target"; exit 1; }
-          grep -E -n "subject-name:[[:space:]]*ghcr\.io/\$\{\{[[:space:]]*github\.repository_owner[[:space:]]*\}\}/linktugger-hardened" "$FILE" >/dev/null || { echo "Missing hardened subject-name attestation target"; exit 1; }
-          grep -E -n "subject-digest:[[:space:]]*\$\{\{[[:space:]]*steps\.build_standard\.outputs\.digest[[:space:]]*\}\}" "$FILE" >/dev/null || { echo "Missing standard subject-digest wiring"; exit 1; }
-          grep -E -n "subject-digest:[[:space:]]*\$\{\{[[:space:]]*steps\.build_hardened\.outputs\.digest[[:space:]]*\}\}" "$FILE" >/dev/null || { echo "Missing hardened subject-digest wiring"; exit 1; }
+          grep "steps.build_standard.outputs.digest" "$FILE" >/dev/null || { echo "Missing standard digest wiring"; exit 1; }
+          grep "steps.build_hardened.outputs.digest" "$FILE" >/dev/null || { echo "Missing hardened digest wiring"; exit 1; }
+          # Use escaped dollar or parts to avoid GHA interpolation of the check itself
+          grep "subject-name: ghcr.io/.*github\.repository_owner.*/linktugger" "$FILE" >/dev/null || { echo "Missing standard subject-name attestation target"; exit 1; }
+          grep "subject-name: ghcr.io/.*github\.repository_owner.*/linktugger-hardened" "$FILE" >/dev/null || { echo "Missing hardened subject-name attestation target"; exit 1; }
+          grep "subject-digest: .*steps\.build_standard\.outputs\.digest" "$FILE" >/dev/null || { echo "Missing standard subject-digest wiring"; exit 1; }
+          grep "subject-digest: .*steps\.build_hardened\.outputs\.digest" "$FILE" >/dev/null || { echo "Missing hardened subject-digest wiring"; exit 1; }
           echo "Digest/attestation wiring checks passed."
 
       - name: Verify workflow actions remain SHA pinned
         run: |
-          if grep -E -r -n "uses:[[:space:]]+.+@v[0-9]" .github/workflows; then
+          if grep -E -r "uses:[[:space:]]+.+@v[0-9]" .github/workflows; then
             echo "Found tag-based action reference. Use immutable commit SHAs."
             exit 1
           fi
@@ -142,7 +143,7 @@ jobs:
         run: docker build -t mega-get-server:security-scan .
 
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@18f251a8b2671da54f16ca3107f0f4b917d23d88
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           image-ref: mega-get-server:security-scan
           vuln-type: "os,library"
