@@ -78,6 +78,7 @@ export function AppHeader({
                 onClick={onLogout}
                 className={`shrink-0 rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)] ${ftFocusRing}`}
                 title="Log out"
+                aria-label="Log out"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -94,6 +95,7 @@ export function AppHeader({
             onClick={toggleTheme}
             className={`rounded-xl border border-[var(--ft-border)] bg-[var(--muted)] p-2 text-[var(--foreground)] transition-colors hover:bg-[var(--border)] ${ftFocusRing}`}
             title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </button>
@@ -103,6 +105,7 @@ export function AppHeader({
             onClick={onOpenSettings}
             className={`rounded-xl border border-[var(--ft-border)] bg-[var(--muted)] p-2 text-[var(--foreground)] transition-colors hover:bg-[var(--border)] ${ftFocusRing}`}
             title="Settings"
+            aria-label="Settings"
           >
             <Settings className="h-5 w-5" />
           </button>

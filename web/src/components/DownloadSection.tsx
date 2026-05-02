@@ -106,6 +106,7 @@ export function DownloadSection({
                   type="button"
                   onClick={onToggleDownloadTelemetry}
                   className={`rounded-md border border-[var(--ft-border)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide hover:bg-[var(--muted)] ${ftFocusRing}`}
+                  aria-expanded={showDownloadTelemetry}
                 >
                   {showDownloadTelemetry ? 'Hide' : 'Show'}
                 </button>

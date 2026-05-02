@@ -837,6 +837,7 @@ export default function App() {
                 <button 
                   onClick={() => setIsLoginOpen(false)}
                   className="p-2 hover:bg-[var(--muted)] rounded-xl text-[var(--muted-foreground)] transition-colors"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -923,6 +924,7 @@ export default function App() {
                 <button 
                   onClick={() => setIsSettingsOpen(false)}
                   className="p-2 hover:bg-[var(--muted)] rounded-xl transition-colors"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
