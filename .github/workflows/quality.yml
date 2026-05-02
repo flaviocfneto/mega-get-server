@@ -18,7 +18,8 @@ jobs:
 
       - name: Reject tag-based GitHub Actions refs
         run: |
-          if grep -E -r -n "uses:[[:space:]]+.+@v[0-9]" .github/workflows; then
+          # Use a pattern that doesn't match itself
+          if grep -E -r -n "uses:[[:space:]]+.+@[v][0-9]" .github/workflows; then
             echo "Tag-based action reference detected. Use immutable commit SHAs."
             exit 1
           fi
