@@ -1,18 +1,58 @@
+# Hardened image: dhi.io/python (Debian 13) + MEGA CMD. Requires: docker login dhi.io
+# See docs/HARDENED-IMAGE.md and .env.example for login.
+
 FROM node:22-alpine AS react-build
 
 WORKDIR /build
-COPY web/package.json ./
-COPY web/package-lock.json ./
+COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM ubuntu:24.04
+# Build stage: install MEGA CMD and Python venv
+FROM dhi.io/python:3.12-debian13-dev AS build-stage
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG MEGACMD_DEB=megacmd-xUbuntu_24.04_amd64.deb
-ARG MEGACMD_SHA256=639681cafd8544913d85cc82c2b2f82b47348857832c69c202977013763f39eb
+ARG MEGACMD_DEB=megacmd-Debian_13_amd64.deb
+ARG MEGACMD_SHA256=43907f450e13e712b61c87105eeab9c3568338c36895ad6de9599a3facf43659
 
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/app/venv/bin:$PATH"
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSLo "/tmp/${MEGACMD_DEB}" "https://mega.nz/linux/repo/Debian_13/amd64/${MEGACMD_DEB}" && \
+    echo "${MEGACMD_SHA256}  /tmp/${MEGACMD_DEB}" | sha256sum -c -
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        python3-venv \
+        "/tmp/${MEGACMD_DEB}" && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -f "/tmp/${MEGACMD_DEB}"
+
+RUN python3 -m venv /app/venv
+COPY api/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Runtime stage: same -dev base so shell and MEGA CMD are available for entrypoint
+FROM dhi.io/python:3.12-debian13-dev AS runtime-stage
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG MEGACMD_DEB=megacmd-Debian_13_amd64.deb
+ARG MEGACMD_SHA256=43907f450e13e712b61c87105eeab9c3568338c36895ad6de9599a3facf43659
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/app/venv/bin:$PATH"
 ENV DOWNLOAD_DIR=/data/
 ENV HOME=/home/mega
 ENV NEW_FILE_PERMISSIONS=600
@@ -23,30 +63,28 @@ ENV INPUT_TIMEOUT=0.0166
 ENV FLET_FORCE_WEB_SERVER=true
 ENV FLET_SERVER_PORT=8080
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSLo "/tmp/${MEGACMD_DEB}" "https://mega.nz/linux/repo/xUbuntu_24.04/amd64/${MEGACMD_DEB}" && \
+WORKDIR /app
+
+# Install MEGA CMD again in runtime stage
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSLo "/tmp/${MEGACMD_DEB}" "https://mega.nz/linux/repo/Debian_13/amd64/${MEGACMD_DEB}" && \
     echo "${MEGACMD_SHA256}  /tmp/${MEGACMD_DEB}" | sha256sum -c -
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        python3 \
-        python3-pip \
-        python3-venv \
-        wget2 \
-        "/tmp/${MEGACMD_DEB}" && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget2 "/tmp/${MEGACMD_DEB}" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -f "/tmp/${MEGACMD_DEB}" && \
-    useradd -m -d "${HOME}" -u 10001 -s /bin/bash mega && \
-    mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && \
-    chown -R mega:mega "${HOME}" "${DOWNLOAD_DIR}"
+    rm -f "/tmp/${MEGACMD_DEB}"
 
+RUN useradd -m -d "${HOME}" -u 10001 -s /bin/bash mega
+COPY --from=build-stage /app/venv /app/venv
 COPY api/ /app/
 COPY --from=react-build /build/dist /app/static
-RUN python3 -m venv /app/venv && \
-    /app/venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /app/venv/bin/pip install --no-cache-dir -r /app/requirements.txt && \
-    chown -R mega:mega /app
+RUN mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && chown -R mega:mega "${HOME}" "${DOWNLOAD_DIR}" /app
 
 COPY files/ "${HOME}/"
 RUN chmod +x "${HOME}/entrypoint.sh" && chown -R mega:mega "${HOME}"
