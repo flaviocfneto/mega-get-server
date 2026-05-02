@@ -35,6 +35,7 @@ export function ToolDiagnosticsPanel({report, loading, onRefresh, onInstallComma
           type="button"
           onClick={onRefresh}
           className={`rounded-lg border border-[var(--ft-border)] px-2 py-1 text-[11px] font-bold text-[var(--foreground)] hover:bg-[var(--muted)] ${ftFocusRing}`}
+          aria-label="Refresh diagnostics"
         >
           Refresh
         </button>

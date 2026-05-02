@@ -82,8 +82,9 @@ export function TransferRowCard({
               <button
                 type="button"
                 onClick={() => void copyToClipboard(t.filename)}
-                className="rounded p-1 opacity-0 transition-opacity group-hover/title:opacity-100 hover:bg-[var(--muted)]"
+                className="rounded p-1 opacity-0 transition-opacity group-hover/title:opacity-100 focus-visible:opacity-100 hover:bg-[var(--muted)]"
                 title="Copy filename"
+                aria-label="Copy filename"
               >
                 <Copy className="h-3 w-3 text-[var(--muted-foreground)]" />
               </button>
@@ -180,13 +181,14 @@ export function TransferRowCard({
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
               {(t.state === 'FAILED' || t.state === 'RETRYING') && (
                 <button
                   type="button"
                   onClick={() => onAction('retry')}
                   className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] ${ftFocusRing}`}
                   title="Retry"
+                  aria-label="Retry"
                 >
                   <RotateCcw className="h-4 w-4" />
                 </button>
@@ -197,6 +199,7 @@ export function TransferRowCard({
                   onClick={() => onAction('resume')}
                   className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] ${ftFocusRing}`}
                   title="Resume"
+                  aria-label="Resume"
                 >
                   <Play className="h-4 w-4 fill-current" />
                 </button>
@@ -206,6 +209,7 @@ export function TransferRowCard({
                   onClick={() => onAction('pause')}
                   className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] ${ftFocusRing}`}
                   title="Pause"
+                  aria-label="Pause"
                 >
                   <Pause className="h-4 w-4 fill-current" />
                 </button>
@@ -215,6 +219,7 @@ export function TransferRowCard({
                 onClick={() => onAction('cancel')}
                 className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)] ${ftFocusRing}`}
                 title="Cancel"
+                aria-label="Cancel"
               >
                 <X className="h-4 w-4" />
               </button>
