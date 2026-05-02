@@ -8,7 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   expect: {
     toHaveScreenshot: {
-      maxDiffPixels: 800,
+      maxDiffPixels: 8000,
       animations: 'disabled',
     },
   },

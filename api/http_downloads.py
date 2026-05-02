@@ -10,6 +10,7 @@ import ipaddress
 import os
 import re
 import shutil
+import socket
 import signal
 import uuid
 from dataclasses import dataclass, field
@@ -68,16 +69,35 @@ def validate_http_download_url(url: str) -> str:
 
 
 def _host_is_blocked(hostname: str) -> bool:
+    """Check if a hostname resolves to a blocked (private/local) IP address to prevent SSRF."""
     h = (hostname or "").lower().rstrip(".")
     if not h:
         return True
     if h == "localhost" or h.endswith(".localhost"):
         return True
+
+    # First, try if it's already an IP address
     try:
         ip = ipaddress.ip_address(h)
         return bool(ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved)
     except ValueError:
         pass
+
+    # If it's a hostname, resolve it and check all resulting IPs
+    try:
+        # We use socket.getaddrinfo to get all IP addresses for the host
+        # This prevents DNS rebinding or multihomed host bypasses.
+        addr_info = socket.getaddrinfo(h, None)
+        for _, _, _, _, sockaddr in addr_info:
+            ip_str = sockaddr[0]
+            ip = ipaddress.ip_address(ip_str)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return True
+    except (socket.gaierror, ValueError):
+        # If we can't resolve it, we should probably block it to be safe,
+        # or at least we know it's not a valid public host.
+        return True
+
     return False
 
 
