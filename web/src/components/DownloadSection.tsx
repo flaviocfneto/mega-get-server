@@ -107,6 +107,7 @@ export function DownloadSection({
                   onClick={onToggleDownloadTelemetry}
                   className={`rounded-md border border-[var(--ft-border)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide hover:bg-[var(--muted)] ${ftFocusRing}`}
                   aria-expanded={showDownloadTelemetry}
+                  aria-label={showDownloadTelemetry ? 'Hide telemetry' : 'Show telemetry'}
                 >
                   {showDownloadTelemetry ? 'Hide' : 'Show'}
                 </button>
@@ -161,6 +162,7 @@ export function DownloadSection({
                     type="button"
                     onClick={() => onSearchQueryChange('')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+                    title="Clear search"
                     aria-label="Clear search"
                   >
                     <X className="h-4 w-4" />
