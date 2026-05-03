@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+
+import http_downloads as hd
 from services.json_store import read_json_dict, write_json_atomic
 
 SETTINGS_PATH = Path(__file__).resolve().parent / "ui_settings.json"
@@ -42,6 +45,19 @@ def merge_post_into_stored(body: dict[str, Any]) -> None:
         val = body[key]
         if val is None:
             continue
+
+        if key == "webhook_url":
+            url = str(val).strip()
+            if url:
+                parsed = urlparse(url)
+                if parsed.scheme not in {"http", "https"}:
+                    continue
+                host = (parsed.hostname or "").lower()
+                if not host or hd._host_is_blocked(host):
+                    continue
+            stored[key] = url
+            continue
+
         default = DEFAULT_UI_KEYS[key]
         if isinstance(default, bool):
             stored[key] = bool(val)

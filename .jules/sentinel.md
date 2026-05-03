@@ -10,3 +10,13 @@
 **Prevention:**
 1. Use `socket.getaddrinfo` to resolve and validate all IP addresses for a given hostname against a blocklist of private/reserved ranges.
 2. Implement path validation and normalization (e.g., `os.path.abspath`) for all user-provided file paths, even in administrative tools.
+
+## 2025-05-16 - [Path Traversal via Default CWD in mega-get]
+**Vulnerability:**
+MEGAcmd's `mega-get` command defaults to downloading files into the current working directory (CWD) if no local path is specified. In the server context, this allowed users to download files directly into the `/app` directory, potentially overwriting application source code or sensitive configuration.
+
+**Learning:**
+Application-level path traversal checks must account for default behaviors of underlying tools. Even if explicit paths are validated, "no path" can be equally dangerous if it implies an insecure default.
+
+**Prevention:**
+Always enforce explicit, absolute, and validated destination paths when invoking external download tools from the backend.

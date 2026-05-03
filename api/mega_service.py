@@ -706,12 +706,6 @@ async def run_mega_get(url: str) -> tuple[bool, str | None]:
 
     base_args = ["mega-get", "--ignore-quota-warn", url.strip(), download_dir_abs]
     rc, stdout, stderr = await _run_get(base_args)
-    err_msg_l = stderr.decode(errors="replace").lower()
-    # Some macOS MEGAcmd installations intermittently segfault when destination is provided.
-    # Retry once without destination to match the behavior users observe in terminal usage.
-    if rc != 0 and ("segmentation fault" in err_msg_l or "signal 11" in err_msg_l or "mega-exec" in err_msg_l):
-        log_buffer.append("MEGAcmd crashed on first attempt; retrying without explicit destination...")
-        rc, stdout, stderr = await _run_get(["mega-get", "--ignore-quota-warn", url.strip()])
 
     _debug_log(
         "mega_service:run_mega_get:exit",

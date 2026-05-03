@@ -324,6 +324,23 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Basic CSP: allow self, and data: for images (favicons/logos)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:8000 http://127.0.0.1:8000"
+    )
+    return response
+
+
 @app.get("/api/config")
 async def api_config_get():
     return _full_config()
