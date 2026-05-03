@@ -20,3 +20,16 @@ Application-level path traversal checks must account for default behaviors of un
 
 **Prevention:**
 Always enforce explicit, absolute, and validated destination paths when invoking external download tools from the backend.
+
+## 2026-05-03 - [Exposure of Sensitive Data in Command Output and Ambiguous Terminal Arguments]
+**Vulnerability:**
+1. MEGAcmd command outputs (stdout/stderr) were recorded and returned via API without redaction, potentially leaking session IDs or login details.
+2. The admin terminal's `mega-get` implementation allowed for ambiguous argument counts, which could be exploited to bypass path traversal checks if multiple remote/local paths were provided.
+
+**Learning:**
+1. Redacting command arguments is insufficient if the tool's output itself contains echoed secrets or session-specific tokens. Redaction must be applied to the entire execution lifecycle (input AND output) in production.
+2. Strict argument count validation (e.g., requiring exactly N paths) is a powerful defense-in-depth measure against command-line ambiguity and bypass attempts.
+
+**Prevention:**
+1. Implement a centralized command execution wrapper that applies multi-pattern regex redaction to all output streams by default.
+2. In administrative interfaces, strictly parse and validate the number of positional arguments for critical commands to ensure validation logic cannot be confused by unexpected inputs.

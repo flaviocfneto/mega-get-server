@@ -177,15 +177,25 @@ def get_command_events() -> list[dict[str, Any]]:
 
 
 def redact_sensitive_text(text: str) -> str:
+    if not text:
+        return text
     masked = text
-    masked = re.sub(r"(?i)(password|token|apikey|api_key)\s*[:=]\s*\S+", r"\1=***", masked)
+    # Standard secret patterns (preserves separator)
+    masked = re.sub(r"(?i)(password|token|apikey|api_key|secret|sid)(\s*[:=]\s*)\S+", r"\1\2***", masked)
+    # MEGAcmd login specific redaction
     masked = re.sub(r"(?i)(mega-login\s+)\S+(\s+)\S+", r"\1***\2***", masked)
+    # Bearer tokens
     masked = re.sub(r"(?i)(authorization\s*:\s*bearer\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
-    # OpenAI-style and similar opaque prefixes (avoid relying on env var names).
+    # Opaque API keys (like sk-...)
     masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
+    # Likely JWTs or similar dot-separated tokens
     masked = re.sub(r"\b[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b", "***", masked)
+    # Private keys
     masked = re.sub(r"(?is)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", "***", masked)
-    masked = re.sub(r"(?i)([?&](?:token|apikey|api_key|key|secret)=)[^&\s]+", r"\1***", masked)
+    # URL query parameters
+    masked = re.sub(r"(?i)([?&](?:token|apikey|api_key|key|secret|sid|password)=)[^&\s#]+", r"\1***", masked)
+    # MEGAcmd session IDs (often look like alphanumeric strings after 'Session:')
+    masked = re.sub(r"(?i)\bSession\s*:\s*[A-Za-z0-9+/=]{6,}\b", "Session:***", masked)
     return masked
 
 
@@ -850,6 +860,8 @@ async def run_megacmd_command(args: list[str]) -> dict[str, Any]:
     """
     started = int(time.time() * 1000)
     safe_args = redact_command_args(args)
+    redact_output = os.environ.get("MEGA_REDACT_OUTPUT", "1").strip().lower() in ("1", "true", "yes")
+
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -862,6 +874,12 @@ async def run_megacmd_command(args: list[str]) -> dict[str, Any]:
         stdout = (stdout_b or b"").decode(errors="replace").strip()
         stderr = (stderr_b or b"").decode(errors="replace").strip()
         output = stdout if stdout else stderr
+
+        if redact_output:
+            stdout = redact_sensitive_text(stdout)
+            stderr = redact_sensitive_text(stderr)
+            output = redact_sensitive_text(output)
+
         event = {
             "ok": code == 0,
             "command": " ".join(safe_args),
