@@ -18,8 +18,7 @@ def test_redact_sensitive_text_extended():
     # URL params
     assert ms.redact_sensitive_text("http://localhost?sid=secret") == "http://localhost?sid=***"
 
-@pytest.mark.asyncio
-async def test_run_megacmd_command_redaction(monkeypatch):
+def test_run_megacmd_command_redaction(monkeypatch):
     monkeypatch.setenv("MEGA_REDACT_OUTPUT", "1")
 
     # Mock create_subprocess_exec to return sensitive output
@@ -42,12 +41,11 @@ async def test_run_megacmd_command_redaction(monkeypatch):
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", mock_create_subprocess_exec)
 
-    result = await ms.run_megacmd_command(["mega-whoami"])
+    result = asyncio.run(ms.run_megacmd_command(["mega-whoami"]))
     assert "Session:***" in result["stdout"]
     assert "SECRET123" not in result["stdout"]
 
-@pytest.mark.asyncio
-async def test_run_megacmd_command_no_redaction(monkeypatch):
+def test_run_megacmd_command_no_redaction(monkeypatch):
     monkeypatch.setenv("MEGA_REDACT_OUTPUT", "0")
 
     class MockProcess:
@@ -69,7 +67,7 @@ async def test_run_megacmd_command_no_redaction(monkeypatch):
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", mock_create_subprocess_exec)
 
-    result = await ms.run_megacmd_command(["mega-whoami"])
+    result = asyncio.run(ms.run_megacmd_command(["mega-whoami"]))
     assert "Session: SECRET123" in result["stdout"]
 
 def test_terminal_mega_get_argument_count_restrictions(monkeypatch):
