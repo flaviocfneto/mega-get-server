@@ -63,5 +63,10 @@
     "url": "https://example.com/file.zip",
     "tags": [],
     "priority": "NORMAL"
+  },
+  "h-2f7e5a82-76ec-4cce-a475-45b3f8a79e81": {
+    "url": "https://example.com/test.zip",
+    "tags": [],
+    "priority": "NORMAL"
   }
 }

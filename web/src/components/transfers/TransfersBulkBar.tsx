@@ -1,3 +1,4 @@
+import {useEffect, useState} from 'react';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Pause, Play, RefreshCw, X} from 'lucide-react';
 import {ftFocusRing} from '../../lib/ftUi';
@@ -21,7 +22,29 @@ export function TransfersBulkBar({
   onSetPriority,
   onDeselectAll,
 }: Props) {
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (showConfirmCancel) {
+      const timer = setTimeout(() => setShowConfirmCancel(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showConfirmCancel]);
+
+  // Reset confirmation state if selection changes
+  useEffect(() => {
+    setShowConfirmCancel(false);
+  }, [count]);
+
+  const handleCancelClick = () => {
+    if (showConfirmCancel) {
+      onCancel();
+      setShowConfirmCancel(false);
+    } else {
+      setShowConfirmCancel(true);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -44,6 +67,7 @@ export function TransfersBulkBar({
                   onClick={onPause}
                   className={`rounded-lg p-2 text-[var(--ft-accent)] hover:bg-[color-mix(in_srgb,var(--ft-accent)_15%,transparent)] ${ftFocusRing}`}
                   title="Pause selected"
+                  aria-label="Pause selected"
                 >
                   <Pause className="h-4 w-4" />
                 </button>
@@ -52,22 +76,32 @@ export function TransfersBulkBar({
                   onClick={onResume}
                   className={`rounded-lg p-2 text-[var(--ft-accent)] hover:bg-[color-mix(in_srgb,var(--ft-accent)_15%,transparent)] ${ftFocusRing}`}
                   title="Resume selected"
+                  aria-label="Resume selected"
                 >
                   <Play className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={onCancel}
-                  className={`rounded-lg p-2 text-[var(--ft-danger)] hover:bg-[var(--ft-danger-bg)] ${ftFocusRing}`}
-                  title="Cancel selected"
+                  onClick={handleCancelClick}
+                  className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-[var(--ft-danger)] transition-all ${
+                    showConfirmCancel
+                      ? 'bg-[var(--ft-danger-bg)] ring-1 ring-[var(--ft-danger)]/30'
+                      : 'hover:bg-[var(--ft-danger-bg)]'
+                  } ${ftFocusRing}`}
+                  title={showConfirmCancel ? 'Confirm cancel selected?' : 'Cancel selected'}
+                  aria-label={showConfirmCancel ? 'Confirm cancel selected?' : 'Cancel selected'}
                 >
                   <X className="h-4 w-4" />
+                  {showConfirmCancel && (
+                    <span className="pr-1 text-[10px] font-bold uppercase">Confirm cancel?</span>
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={onRedownload}
                   className={`rounded-lg p-2 text-[var(--ft-accent)] hover:bg-[color-mix(in_srgb,var(--ft-accent)_15%,transparent)] ${ftFocusRing}`}
                   title="Redownload selected"
+                  aria-label="Redownload selected"
                 >
                   <RefreshCw className="h-4 w-4" />
                 </button>
@@ -83,6 +117,7 @@ export function TransfersBulkBar({
                       type="button"
                       onClick={() => onSetPriority(p)}
                       className={`rounded-md px-2 py-1 text-[9px] font-bold hover:bg-[var(--border)] ${ftFocusRing}`}
+                      aria-label={`Set priority to ${p.toLowerCase()}`}
                     >
                       {p}
                     </button>
