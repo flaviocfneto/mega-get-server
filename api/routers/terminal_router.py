@@ -91,10 +91,11 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
                 "blocked_reason": "invalid_path",
             }
 
-    # Additional hardening: block common injection characters if shlex didn't catch them
-    # Though shlex.split is used, we double check the parts don't contain shell metacharacters
+    # Additional hardening: block common injection characters if shlex didn't catch them.
+    # Though shlex.split is used, we double check the parts don't contain shell metacharacters.
+    # Added $, (), \, {}, *, ? for defense-in-depth against variable expansion and globbing.
     for part in parts:
-        if any(c in part for c in ";&|><`"):
+        if any(c in part for c in ";&|><`$()\\{}*?"):
             return {
                 "ok": False,
                 "command": raw,

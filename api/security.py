@@ -4,6 +4,7 @@ import os
 import secrets
 import time
 from collections import defaultdict, deque
+from urllib.parse import urlparse
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
@@ -106,11 +107,15 @@ def require_csrf_boundary(request: Request) -> None:
         if origin not in trusted:
             raise HTTPException(status_code=403, detail="CSRF boundary violation: untrusted origin")
     if referer:
-        for allowed in trusted:
-            if referer.startswith(allowed):
-                break
-        else:
-            raise HTTPException(status_code=403, detail="CSRF boundary violation: untrusted referer")
+        try:
+            ref_parsed = urlparse(referer)
+            ref_origin = f"{ref_parsed.scheme}://{ref_parsed.netloc}".lower()
+        except ValueError:
+            raise HTTPException(status_code=403, detail="CSRF boundary violation: invalid referer")
+        if ref_origin not in trusted:
+            # Also check if it's a trusted origin without a path, as urlparse might vary
+            if referer.lower().rstrip("/") not in trusted:
+                raise HTTPException(status_code=403, detail="CSRF boundary violation: untrusted referer")
     elif not origin:
         # We allow requests without origin/referer if they are not from a browser (e.g. CLI),
         # but in a browser context, one of these is typically present for CORS/POST.

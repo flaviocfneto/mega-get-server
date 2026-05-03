@@ -52,3 +52,19 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 2. Manually follow and validate redirects before passing URLs to external downloaders.
 3. Block shell metacharacters in administrative command inputs.
 4. Enforce strict CSP by removing `unsafe-inline`.
+
+## 2026-05-03 - [CSRF Referer Bypass and Terminal Hardening]
+**Vulnerability:**
+1. CSRF Referer Bypass: The CSRF check used `referer.startswith(allowed)`, which could be bypassed by an attacker using a domain that starts with the trusted origin (e.g., `http://localhost:5173.attacker.com`).
+2. Administrative Endpoint Exposure: The `/api/logs` endpoint was missing authentication and rate limiting, allowing unauthorized access to sensitive server activity.
+3. Terminal Injection Surface: The terminal command character blacklist was missing common shell metacharacters like $\, \(\), and \.
+
+**Learning:**
+1. String prefix checks are insufficient for URL-based security validation; exact origin matching (scheme + netloc) is required.
+2. Administrative and diagnostic endpoints should follow the same security protocols (authentication, authorization, rate limiting) as functional API endpoints.
+3. Defense-in-depth for command execution should include character-level blacklisting even when using supposedly safe APIs like `shlex.split` and `create_subprocess_exec`.
+
+**Prevention:**
+1. Always parse URLs and compare origins (scheme + host + port) for security-critical domain validation.
+2. Ensure every API endpoint has appropriate scope dependencies and rate limits.
+3. Maintain a comprehensive list of restricted shell metacharacters for any interface that executes system commands.

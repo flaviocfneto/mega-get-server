@@ -330,6 +330,16 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # CSP connect-src: allow self and configured trusted origins
+    trusted_origins = os.environ.get("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")
+    connect_src = ["'self'"]
+    for o in trusted_origins:
+        o = o.strip()
+        if o:
+            connect_src.append(o)
+    connect_src_str = " ".join(connect_src)
+
     # Basic CSP: allow self, and data: for images (favicons/logos)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
@@ -337,7 +347,7 @@ async def add_security_headers(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
-        "connect-src 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:8000 http://127.0.0.1:8000"
+        f"connect-src {connect_src_str}"
     )
     return response
 
@@ -448,7 +458,8 @@ async def api_history_delete(request: Request, _: None = Depends(require_scope("
 
 
 @app.get("/api/logs")
-async def api_logs():
+@rate_limit("logs_get", limit=20, window_seconds=60)
+async def api_logs(request: Request, _: None = Depends(require_scope("write"))):
     return [ms.redact_sensitive_text(line) for line in ms.log_buffer.get_lines()]
 
 
