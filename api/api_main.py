@@ -23,11 +23,11 @@ import transfer_metadata as tm
 import ui_settings as us
 from routers.diagnostics_router import router as diagnostics_router
 from routers.terminal_router import router as terminal_router
-from fastapi import Body, Depends, FastAPI, HTTPException, Request
+from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from security import require_csrf_boundary, require_scope, rate_limit
+from security import require_csrf_boundary, require_scope, rate_limit, set_csrf_cookie
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 APP_STARTED = time.time()
@@ -333,8 +333,9 @@ async def add_security_headers(request: Request, call_next):
     # Basic CSP: allow self, and data: for images (favicons/logos)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
         "connect-src 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:8000 http://127.0.0.1:8000"
     )
@@ -342,7 +343,8 @@ async def add_security_headers(request: Request, call_next):
 
 
 @app.get("/api/config")
-async def api_config_get():
+async def api_config_get(response: Response):
+    set_csrf_cookie(response)
     return _full_config()
 
 

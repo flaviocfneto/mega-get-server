@@ -101,32 +101,45 @@ def test_rate_limit_resets_after_window(monkeypatch):
         assert reset.status_code != 429
 
 
-def test_cookie_session_mode_requires_origin_plus_token(monkeypatch):
+def test_cookie_session_mode_requires_token_mismatch(monkeypatch):
     monkeypatch.setenv("API_AUTH_TRANSPORT", "cookie_session")
-    monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_only")
+    monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_plus_token")
     with TestClient(api_main.app) as client:
-        res = client.post("/api/download", json={"url": "https://mega.nz/file/abc"}, headers=SAFE_HEADERS)
-    assert res.status_code == 503
-    assert "cookie_session requires origin_plus_token" in res.json()["detail"]
+        # Initial request to get CSRF cookie
+        client.get("/api/config")
+        # Explicitly set mismatched header vs cookie
+        res = client.post(
+            "/api/download",
+            json={"url": "https://mega.nz/file/abc"},
+            headers={**SAFE_HEADERS, "x-csrf-token": "wrong-token"},
+        )
+    assert res.status_code == 403
+    assert "token mismatch" in res.json()["detail"].lower()
 
 
 def test_cookie_session_mode_rejects_missing_csrf_token(monkeypatch):
     monkeypatch.setenv("API_AUTH_TRANSPORT", "cookie_session")
     monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_plus_token")
     with TestClient(api_main.app) as client:
+        # No header, even if cookie exists
+        client.get("/api/config")
         res = client.post("/api/download", json={"url": "https://mega.nz/file/abc"}, headers=SAFE_HEADERS)
     assert res.status_code == 403
-    assert "missing csrf token" in res.json()["detail"].lower()
+    assert "missing csrf token header" in res.json()["detail"].lower()
 
 
 def test_cookie_session_mode_accepts_valid_csrf_token(monkeypatch):
     monkeypatch.setenv("API_AUTH_TRANSPORT", "cookie_session")
     monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_plus_token")
     with TestClient(api_main.app) as client:
+        # Get cookie
+        res_cfg = client.get("/api/config")
+        token = res_cfg.cookies.get("csrftoken")
+        assert token
         res = client.post(
             "/api/download",
             json={"url": "https://mega.nz/file/abc"},
-            headers={**SAFE_HEADERS, "x-csrf-token": "ok-token"},
+            headers={**SAFE_HEADERS, "x-csrf-token": token},
         )
     assert res.status_code == 200
 

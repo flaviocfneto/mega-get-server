@@ -13,10 +13,11 @@ import shutil
 import socket
 import signal
 import uuid
+import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Literal
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from urllib.request import Request, urlopen
 
 import mega_service as ms
@@ -132,17 +133,38 @@ def parse_wget_stderr_progress(line: str) -> tuple[float | None, int | None]:
         return None, None
 
 
-def fetch_content_length_head(url: str, timeout: float = 12.0) -> int | None:
-    """Best-effort Content-Length via HEAD."""
-    try:
-        req = Request(url, method="HEAD", headers={"User-Agent": "FileTugger-HTTP-download/1.0"})
-        with urlopen(req, timeout=timeout) as resp:  # noqa: S310 — URL validated by caller
-            cl = resp.headers.get("Content-Length")
-            if cl and str(cl).isdigit():
-                return int(cl)
-    except (HTTPError, URLError, OSError, ValueError, TypeError):
-        pass
-    return None
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+        return None
+
+
+async def _resolve_and_validate_url(url: str, timeout: float = 10.0) -> tuple[str | None, int | None]:
+    """Manually follow redirects and validate each hop against SSRF blocklist. Returns (final_url, content_length)."""
+    current_url = url
+    for _ in range(5):
+        try:
+            parsed = urlparse(current_url)
+            host = (parsed.hostname or "").lower()
+            if _host_is_blocked(host):
+                return None, None
+
+            req = Request(current_url, method="HEAD", headers={"User-Agent": "FileTugger-HTTP-download/1.0"})
+            opener = urllib.request.build_opener(_NoRedirectHandler)
+            # Use asyncio.to_thread for blocking urllib calls
+            resp = await asyncio.to_thread(opener.open, req, timeout=timeout)
+            with resp:
+                if resp.status in (301, 302, 303, 307, 308):
+                    new_url = resp.headers.get("Location")
+                    if not new_url:
+                        return None, None
+                    current_url = urljoin(current_url, new_url)
+                    continue
+                cl = resp.headers.get("Content-Length")
+                content_length = int(cl) if cl and str(cl).isdigit() else None
+                return current_url, content_length
+        except (HTTPError, URLError, OSError, ValueError, TypeError):
+            break
+    return None, None
 
 
 def _download_dir_realpath() -> str:
@@ -234,7 +256,7 @@ def _http_download_argv(exe: str, url: str, out_path: str, speed_limit_kbps: int
         "--compression=gzip,deflate,br",
         "--timeout=60",
         "--tries=3",
-        "--max-redirect=10",
+        "--max-redirect=0",
         "--trust-server-names",
         "--content-disposition",
         "-O",
@@ -401,7 +423,17 @@ async def _run_job_inner(job: HttpJob, pending_id: str | None) -> None:
         _schedule_prune(job.tag, _COMPLETED_PRUNE_SEC)
         return
 
-    cl = await asyncio.to_thread(fetch_content_length_head, job.url)
+    final_url, cl = await _resolve_and_validate_url(job.url)
+    if not final_url:
+        job.state = "FAILED"
+        job.last_error = "SSRF validation failed or URL unreachable"
+        job.done_event.set()
+        if pending_id:
+            await pq.set_item_status(pending_id, status="FAILED", last_error="SSRF validation failed")
+        _schedule_prune(job.tag, _FAILED_PRUNE_SEC)
+        return
+
+    job.url = final_url
     if cl is not None and cl > 0:
         job.size_bytes = cl
 

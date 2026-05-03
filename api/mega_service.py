@@ -196,6 +196,10 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(r"(?i)([?&](?:token|apikey|api_key|key|secret|sid|password)=)[^&\s#]+", r"\1***", masked)
     # MEGAcmd session IDs (often look like alphanumeric strings after 'Session:')
     masked = re.sub(r"(?i)\bSession\s*:\s*[A-Za-z0-9+/=]{6,}\b", "Session:***", masked)
+    # Raw MEGA session IDs (often 43-58 chars base64-like)
+    masked = re.sub(r"\b[A-Za-z0-9+/=]{40,60}\b", "***", masked)
+    # AWS Access Key IDs
+    masked = re.sub(r"\bAKIA[A-Z0-9]{16}\b", "***", masked)
     return masked
 
 

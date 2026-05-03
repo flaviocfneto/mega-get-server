@@ -37,6 +37,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function getCsrfTokenFromCookie(): string {
+  const name = 'csrftoken=';
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const ca = decodedCookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) === 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return '';
+}
+
 function extractErrorMessage(payload: unknown, status: number): { message: string; details?: string } {
   if (isRecord(payload)) {
     const detail = typeof payload.detail === 'string' ? payload.detail : undefined;
@@ -82,7 +98,10 @@ export async function apiGet(url: string): Promise<unknown> {
 export async function apiPost(url: string, body?: unknown): Promise<unknown> {
   const res = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': getCsrfTokenFromCookie(),
+    },
     body: JSON.stringify(body ?? {}),
   });
   if (!res.ok) {
@@ -106,7 +125,10 @@ export async function apiPostResult(url: string, body?: unknown): Promise<ApiRes
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': getCsrfTokenFromCookie(),
+      },
       body: JSON.stringify(body ?? {}),
     });
     if (!res.ok) {
@@ -129,7 +151,12 @@ export async function apiPostResult(url: string, body?: unknown): Promise<ApiRes
 /** DELETE; success body is `unknown` — normalize before use (same as `apiPostResult`). */
 export async function apiDeleteResult(url: string): Promise<ApiResult<unknown>> {
   try {
-    const res = await fetch(url, { method: 'DELETE' });
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': getCsrfTokenFromCookie(),
+      },
+    });
     if (!res.ok) {
       let parsed: unknown = null;
       try {
