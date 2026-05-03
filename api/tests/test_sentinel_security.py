@@ -7,6 +7,9 @@ import mega_service as ms
 client = TestClient(app)
 
 def test_redact_sensitive_text_extended():
+    # Test email redaction
+    assert ms.redact_sensitive_text("user@example.com") == "***@***"
+    assert ms.redact_sensitive_text("Login for admin@mega.nz") == "Login for ***@***"
     # Test new patterns
     assert "password=***" in ms.redact_sensitive_text("password=mysecret")
     assert "sid=***" in ms.redact_sensitive_text("sid=ABC123XYZ")

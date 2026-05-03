@@ -49,37 +49,37 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
     # Harden terminal commands: prevent arbitrary path access
     path_args = [p for p in parts[1:] if not p.startswith("-")]
 
-    if cmd == "mega-get":
-        # mega-get [OPTIONS] <remotepath> [localpath]
-        if len(path_args) != 2:
-            return {
-                "ok": False,
-                "command": raw,
-                "exit_code": 126,
-                "output": f"Blocked: mega-get requires exactly one remote path and one local path within {ms.DOWNLOAD_DIR}",
-                "blocked_reason": "invalid_arguments",
-            }
-        local_path = path_args[1]
-    elif cmd in ("mega-ls", "mega-export"):
-        # For mega-ls and mega-export, ensure they don't use absolute local paths if we ever support them,
-        # but primarily we want to block command injection via unusual arguments.
-        # Currently we just allow them but we can add more checks if they start taking local paths.
-        local_path = None
-    else:
-        local_path = None
+    # General path validation for all allowed commands.
+    # We want to block local filesystem access outside DOWNLOAD_DIR.
+    # Remote paths in MEGAcmd often start with '/' (e.g. /Root) or 'mega:/'.
+    abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
+    for arg in path_args:
+        # Heuristic: if it looks like a remote path, don't apply local traversal checks.
+        if arg.startswith("mega:/"):
+            continue
 
-    if local_path:
-        # Ensure it's not trying to escape DOWNLOAD_DIR using a safer commonpath check
-        abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
-        abs_local_path = os.path.abspath(local_path)
+        # If it's an absolute path but NOT a remote path (starts with / but isn't /Root, etc)
+        # In MEGAcmd, /Root, /Bin, /Incoming are the standard remote roots.
+        if os.path.isabs(arg):
+            is_likely_remote = any(arg.startswith(r) for r in ("//", "/Root", "/Bin", "/Incoming"))
+            if is_likely_remote:
+                continue
+
+            # It's an absolute local path. Must be within DOWNLOAD_DIR.
+            abs_arg = os.path.abspath(arg)
+        else:
+            # It's a relative path. Check if it resolves outside DOWNLOAD_DIR.
+            # We resolve it relative to DOWNLOAD_DIR if it's meant to be a local path,
+            # but here we just check if it tries to escape via ../
+            abs_arg = os.path.abspath(os.path.join(abs_download_dir, arg))
+
         try:
-            # Use os.path.commonpath to prevent /data vs /data_private prefix bypasses
-            if os.path.commonpath([abs_local_path, abs_download_dir]) != abs_download_dir:
+            if os.path.commonpath([abs_arg, abs_download_dir]) != abs_download_dir:
                 return {
                     "ok": False,
                     "command": raw,
                     "exit_code": 126,
-                    "output": f"Blocked: local path must be within {ms.DOWNLOAD_DIR}",
+                    "output": f"Blocked: local path access outside {ms.DOWNLOAD_DIR}",
                     "blocked_reason": "path_traversal_attempt",
                 }
         except ValueError:
@@ -89,6 +89,17 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
                 "exit_code": 126,
                 "output": "Invalid path.",
                 "blocked_reason": "invalid_path",
+            }
+
+    if cmd == "mega-get":
+        # mega-get [OPTIONS] <remotepath> [localpath]
+        if len(path_args) != 2:
+            return {
+                "ok": False,
+                "command": raw,
+                "exit_code": 126,
+                "output": f"Blocked: mega-get requires exactly one remote path and one local path within {ms.DOWNLOAD_DIR}",
+                "blocked_reason": "invalid_arguments",
             }
 
     # Additional hardening: block common injection characters if shlex didn't catch them.

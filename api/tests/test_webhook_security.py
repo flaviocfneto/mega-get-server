@@ -1,0 +1,37 @@
+from __future__ import annotations
+import asyncio
+import pytest
+from services.webhook_service import send_webhook_notification
+import mega_service as ms
+import ui_settings as us
+
+class MockResponse:
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+@pytest.mark.asyncio
+async def test_webhook_blocked_private_ip(monkeypatch):
+    monkeypatch.setattr(us, "load_stored", lambda: {"webhook_url": "http://127.0.0.1/callback"})
+    ms.log_buffer.clear()
+
+    await send_webhook_notification({"test": "data"})
+
+    lines = ms.log_buffer.get_lines()
+    assert any("Webhook notification blocked" in line for line in lines)
+
+@pytest.mark.asyncio
+async def test_webhook_success(monkeypatch):
+    monkeypatch.setattr(us, "load_stored", lambda: {"webhook_url": "http://example.com/callback"})
+    ms.log_buffer.clear()
+
+    async def mock_post(*args, **kwargs):
+        return MockResponse(200)
+
+    import httpx
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+    await send_webhook_notification({"test": "data"})
+
+    lines = ms.log_buffer.get_lines()
+    assert not any("Webhook notification blocked" in line for line in lines)
+    assert not any("Webhook notification failed" in line for line in lines)

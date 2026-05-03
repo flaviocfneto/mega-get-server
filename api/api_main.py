@@ -21,6 +21,7 @@ import pending_queue as pq
 import tool_diagnostics as td
 import transfer_metadata as tm
 import ui_settings as us
+from services.webhook_service import notify_download_completed
 from routers.diagnostics_router import router as diagnostics_router
 from routers.terminal_router import router as terminal_router
 from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
@@ -133,6 +134,7 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             _last_row_snapshot[tag] = {
                 "size_bytes": int(r.get("size_bytes", 0) or 0),
                 "downloaded_bytes": int(r.get("downloaded_bytes", 0) or 0),
+                "filename": str(r.get("filename", "unknown")),
             }
         downloaded_b = int(r.get("downloaded_bytes", 0) or 0)
         sp = int(r.get("speed_bps", 0) or 0)
@@ -155,6 +157,12 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 _analytics_completed += 1
                 done_bytes = int(r.get("size_bytes", 0) or r.get("downloaded_bytes", 0) or 0)
                 _bump_daily_on_completed(done_bytes)
+                asyncio.create_task(notify_download_completed(
+                    tag,
+                    str(r.get("filename", "unknown")),
+                    done_bytes,
+                    str(r.get("driver", "megacmd"))
+                ))
         elif state == "FAILED":
             failed_now += 1
             if prev != "FAILED":
@@ -174,6 +182,12 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if prev in _IN_FLIGHT_STATES:
             _analytics_completed += 1
             _bump_daily_on_completed(bytes_done)
+            asyncio.create_task(notify_download_completed(
+                tag,
+                str(snap.get("filename", "unknown")),
+                bytes_done,
+                "megacmd"
+            ))
 
     total_downloaded = _total_persisted_downloaded_bytes() + inflight_downloaded
     avg_speed = total_speed // active_n if active_n else 0
@@ -374,7 +388,7 @@ async def api_account():
 
 
 @app.post("/api/login")
-@rate_limit("login", limit=10, window_seconds=60)
+@rate_limit("login", limit=5, window_seconds=60)
 async def api_login(body: LoginBody, request: Request):
     require_csrf_boundary(request)
     email = (body.email or "").strip()
