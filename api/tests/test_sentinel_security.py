@@ -1,6 +1,4 @@
 from __future__ import annotations
-import pytest
-import os
 import asyncio
 from fastapi.testclient import TestClient
 from api_main import app
@@ -18,28 +16,23 @@ def test_redact_sensitive_text_extended():
     # URL params
     assert ms.redact_sensitive_text("http://localhost?sid=secret") == "http://localhost?sid=***"
 
+class _FakeProc:
+    def __init__(self, stdout=b"", stderr=b"", returncode=0):
+        self._stdout = stdout
+        self._stderr = stderr
+        self.returncode = returncode
+    async def communicate(self):
+        return self._stdout, self._stderr
+    async def wait(self):
+        return self.returncode
+
 def test_run_megacmd_command_redaction(monkeypatch):
     monkeypatch.setenv("MEGA_REDACT_OUTPUT", "1")
 
-    # Mock create_subprocess_exec to return sensitive output
-    class MockProcess:
-        def __init__(self, stdout, stderr):
-            self.stdout = asyncio.StreamReader()
-            self.stdout.feed_data(stdout)
-            self.stdout.feed_eof()
-            self.stderr = asyncio.StreamReader()
-            self.stderr.feed_data(stderr)
-            self.stderr.feed_eof()
-            self.returncode = 0
-        async def communicate(self):
-            return await self.stdout.read(), await self.stderr.read()
-        async def wait(self):
-            return 0
-
     async def mock_create_subprocess_exec(*args, **kwargs):
-        return MockProcess(b"Login successful. Session: SECRET123", b"")
+        return _FakeProc(b"Login successful. Session: SECRET123", b"")
 
-    monkeypatch.setattr(asyncio, "create_subprocess_exec", mock_create_subprocess_exec)
+    monkeypatch.setattr(ms.asyncio, "create_subprocess_exec", mock_create_subprocess_exec)
 
     result = asyncio.run(ms.run_megacmd_command(["mega-whoami"]))
     assert "Session:***" in result["stdout"]
@@ -48,24 +41,10 @@ def test_run_megacmd_command_redaction(monkeypatch):
 def test_run_megacmd_command_no_redaction(monkeypatch):
     monkeypatch.setenv("MEGA_REDACT_OUTPUT", "0")
 
-    class MockProcess:
-        def __init__(self, stdout, stderr):
-            self.stdout = asyncio.StreamReader()
-            self.stdout.feed_data(stdout)
-            self.stdout.feed_eof()
-            self.stderr = asyncio.StreamReader()
-            self.stderr.feed_data(stderr)
-            self.stderr.feed_eof()
-            self.returncode = 0
-        async def communicate(self):
-            return await self.stdout.read(), await self.stderr.read()
-        async def wait(self):
-            return 0
-
     async def mock_create_subprocess_exec(*args, **kwargs):
-        return MockProcess(b"Login successful. Session: SECRET123", b"")
+        return _FakeProc(b"Login successful. Session: SECRET123", b"")
 
-    monkeypatch.setattr(asyncio, "create_subprocess_exec", mock_create_subprocess_exec)
+    monkeypatch.setattr(ms.asyncio, "create_subprocess_exec", mock_create_subprocess_exec)
 
     result = asyncio.run(ms.run_megacmd_command(["mega-whoami"]))
     assert "Session: SECRET123" in result["stdout"]
