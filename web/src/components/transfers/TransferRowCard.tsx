@@ -1,6 +1,8 @@
+import {useEffect, useState} from 'react';
 import {motion} from 'motion/react';
 import {
   AlertCircle,
+  Check,
   CheckSquare,
   Clock,
   Copy,
@@ -37,8 +39,38 @@ export function TransferRowCard({
   onSetSpeedLimit,
   reduceMotion,
 }: Props) {
+  const [copied, setCopied] = useState(false);
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const compact = !!config?.is_compact_mode;
   const privacy = !!config?.is_privacy_mode;
+
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => setCopied(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
+
+  useEffect(() => {
+    if (showConfirmCancel) {
+      const timer = setTimeout(() => setShowConfirmCancel(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showConfirmCancel]);
+
+  const handleCopy = () => {
+    void copyToClipboard(t.filename);
+    setCopied(true);
+  };
+
+  const handleCancelClick = () => {
+    if (showConfirmCancel) {
+      onAction('cancel');
+      setShowConfirmCancel(false);
+    } else {
+      setShowConfirmCancel(true);
+    }
+  };
 
   return (
     <motion.div
@@ -81,12 +113,16 @@ export function TransferRowCard({
               </h3>
               <button
                 type="button"
-                onClick={() => void copyToClipboard(t.filename)}
+                onClick={handleCopy}
                 className="rounded p-1 opacity-0 transition-opacity group-hover/title:opacity-100 focus-visible:opacity-100 hover:bg-[var(--muted)]"
-                title="Copy filename"
-                aria-label="Copy filename"
+                title={copied ? 'Copied!' : 'Copy filename'}
+                aria-label={copied ? 'Copied!' : 'Copy filename'}
               >
-                <Copy className="h-3 w-3 text-[var(--muted-foreground)]" />
+                {copied ? (
+                  <Check className="h-3 w-3 text-[var(--ft-success)]" />
+                ) : (
+                  <Copy className="h-3 w-3 text-[var(--muted-foreground)]" />
+                )}
               </button>
             </div>
             <div
@@ -216,12 +252,19 @@ export function TransferRowCard({
               ) : null}
               <button
                 type="button"
-                onClick={() => onAction('cancel')}
-                className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)] ${ftFocusRing}`}
-                title="Cancel"
-                aria-label="Cancel"
+                onClick={handleCancelClick}
+                className={`flex items-center gap-1 rounded-lg px-1.5 py-1.5 text-[var(--muted-foreground)] transition-all ${
+                  showConfirmCancel
+                    ? 'bg-[var(--ft-danger-bg)] text-[var(--ft-danger)] ring-1 ring-[var(--ft-danger)]/30'
+                    : 'hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)]'
+                } ${ftFocusRing}`}
+                title={showConfirmCancel ? 'Confirm cancel?' : 'Cancel'}
+                aria-label={showConfirmCancel ? 'Confirm cancel?' : 'Cancel'}
               >
                 <X className="h-4 w-4" />
+                {showConfirmCancel && (
+                  <span className="pr-1 text-[10px] font-bold uppercase">Confirm?</span>
+                )}
               </button>
             </div>
           </div>

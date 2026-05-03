@@ -100,6 +100,7 @@ export function TransfersFilterBar({
             onClick={onToggleSortOrder}
             className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--border)] ${ftFocusRing}`}
             title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+            aria-label={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
           >
             {sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />}
           </button>

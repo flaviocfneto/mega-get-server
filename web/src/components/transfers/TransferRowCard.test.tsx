@@ -77,4 +77,30 @@ describe('TransferRowCard', () => {
     fireEvent.click(screen.getByTitle('Retry'));
     expect(onAction).toHaveBeenCalledWith('retry');
   });
+
+  it('requires two clicks to cancel (confirmation pattern)', () => {
+    const onAction = vi.fn();
+    render(
+      <TransferRowCard
+        transfer={baseTransfer}
+        config={config}
+        selected={false}
+        onToggleSelect={vi.fn()}
+        onAction={onAction}
+        onSetSpeedLimit={vi.fn()}
+        reduceMotion
+      />,
+    );
+
+    const cancelButton = screen.getByRole('button', {name: /cancel/i});
+
+    // First click: should show confirmation
+    fireEvent.click(cancelButton);
+    expect(onAction).not.toHaveBeenCalled();
+    expect(screen.getByText(/confirm\?/i)).toBeInTheDocument();
+
+    // Second click: should trigger action
+    fireEvent.click(cancelButton);
+    expect(onAction).toHaveBeenCalledWith('cancel');
+  });
 });
