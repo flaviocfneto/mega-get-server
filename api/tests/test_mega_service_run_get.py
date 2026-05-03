@@ -46,27 +46,21 @@ def test_run_mega_get_success_path(monkeypatch):
     assert any(c[0] == "mega-transfers" for c in calls)
 
 
-def test_run_mega_get_retries_on_segfault(monkeypatch):
+def test_run_mega_get_fails_on_segfault_without_insecure_fallback(monkeypatch):
     monkeypatch.setattr(ms, "SIMULATE", False)
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/tmp")
-    _orig_sleep = ms.asyncio.sleep
-    monkeypatch.setattr(ms.asyncio, "sleep", lambda _s: _orig_sleep(0))
-
-    responses = [
-        _FakeProc(b"", b"segmentation fault", 1),
-        _FakeProc(b"ok", b"", 0),
-        _FakeProc(b"", b"", 0),
-    ]
 
     async def fake_exec(*args, **kwargs):
-        return responses.pop(0)
+        return _FakeProc(b"", b"segmentation fault", 1)
 
     monkeypatch.setattr(ms.asyncio, "create_subprocess_exec", fake_exec)
     ms.log_buffer.clear()
     ok, err = asyncio.run(ms.run_mega_get("https://mega.nz/file/retry"))
-    assert ok is True
+    # Insecure fallback removed; should now fail on segfault.
+    assert ok is False
     logs = "\n".join(ms.log_buffer.get_lines()).lower()
-    assert "retrying without explicit destination" in logs
+    assert "segmentation fault" in logs
+    assert "retrying without explicit destination" not in logs
 
 
 def test_run_mega_get_already_exists_message(monkeypatch):
