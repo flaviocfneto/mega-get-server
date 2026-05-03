@@ -49,23 +49,20 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
     # Harden mega-get: ensure it doesn't write to arbitrary paths
     if cmd == "mega-get":
         # mega-get [OPTIONS] <remotepath> [localpath]
-        # We need to ensure that if localpath is provided, it's within DOWNLOAD_DIR
-        # Also ensure we don't allow default path (CWD) bypass if it's not the download dir.
-        args = [p for p in parts[1:] if not p.startswith("-")]
+        # We need to ensure that an explicit localpath is provided and it's within DOWNLOAD_DIR.
+        # To avoid ambiguity with multiple remote paths, we strictly require exactly two path arguments.
+        path_args = [p for p in parts[1:] if not p.startswith("-")]
 
-        # If no local path is provided, MEGAcmd defaults to CWD.
-        # We must either block this or force it to DOWNLOAD_DIR.
-        # Blocking is safer for the terminal router to prevent accidental overwrites in /app.
-        if len(args) <= 1:
+        if len(path_args) != 2:
             return {
                 "ok": False,
                 "command": raw,
                 "exit_code": 126,
-                "output": f"Blocked: an explicit local path within {ms.DOWNLOAD_DIR} must be provided",
-                "blocked_reason": "path_traversal_attempt",
+                "output": f"Blocked: mega-get requires exactly one remote path and one local path within {ms.DOWNLOAD_DIR}",
+                "blocked_reason": "invalid_arguments",
             }
 
-        local_path = args[1]
+        local_path = path_args[1]
         # Ensure it's not trying to escape DOWNLOAD_DIR using a safer commonpath check
         abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
         abs_local_path = os.path.abspath(local_path)
