@@ -41,13 +41,10 @@ function getCsrfTokenFromCookie(): string {
   const name = 'csrftoken=';
   const decodedCookie = decodeURIComponent(document.cookie);
   const ca = decodedCookie.split(';');
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i];
-    while (c.charAt(0) === ' ') {
-      c = c.substring(1);
-    }
-    if (c.indexOf(name) === 0) {
-      return c.substring(name.length, c.length);
+  for (let c of ca) {
+    const trimmed = c.trim();
+    if (trimmed.startsWith(name)) {
+      return trimmed.substring(name.length);
     }
   }
   return '';

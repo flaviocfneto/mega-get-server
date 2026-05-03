@@ -65,11 +65,10 @@ def test_parse_wget_stderr_no_percent():
     assert hd.parse_wget_stderr_progress("no match") == (None, None)
 
 
-@pytest.mark.asyncio
-async def test_resolve_and_validate_url_none(monkeypatch):
+def test_resolve_and_validate_url_none(monkeypatch):
     # Mocking opener.open via asyncio.to_thread is tricky, so we mock _host_is_blocked
     monkeypatch.setattr(hd, "_host_is_blocked", lambda h: True)
-    url, cl = await hd._resolve_and_validate_url("https://example.com/x")
+    url, cl = asyncio.run(hd._resolve_and_validate_url("https://example.com/x"))
     assert url is None
     assert cl is None
 
@@ -373,8 +372,7 @@ def test_parse_wget_stderr_clamps_percent():
     assert hd.parse_wget_stderr_progress(" 0% ")[0] == 0.0
 
 
-@pytest.mark.asyncio
-async def test_resolve_and_validate_url_success(monkeypatch):
+def test_resolve_and_validate_url_success(monkeypatch):
     class _Resp:
         def __init__(self):
             self.status = 200
@@ -387,7 +385,7 @@ async def test_resolve_and_validate_url_success(monkeypatch):
     mock_opener.open.return_value = _Resp()
     monkeypatch.setattr(hd.urllib.request, "build_opener", lambda *a: mock_opener)
 
-    url, cl = await hd._resolve_and_validate_url("https://example.com/x")
+    url, cl = asyncio.run(hd._resolve_and_validate_url("https://example.com/x"))
     assert url == "https://example.com/x"
     assert cl == 2048
 
