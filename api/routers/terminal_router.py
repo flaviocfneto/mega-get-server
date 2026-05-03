@@ -46,13 +46,11 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
             "blocked_reason": "not_in_allowlist",
         }
 
-    # Harden mega-get: ensure it doesn't write to arbitrary paths
+    # Harden terminal commands: prevent arbitrary path access
+    path_args = [p for p in parts[1:] if not p.startswith("-")]
+
     if cmd == "mega-get":
         # mega-get [OPTIONS] <remotepath> [localpath]
-        # We need to ensure that an explicit localpath is provided and it's within DOWNLOAD_DIR.
-        # To avoid ambiguity with multiple remote paths, we strictly require exactly two path arguments.
-        path_args = [p for p in parts[1:] if not p.startswith("-")]
-
         if len(path_args) != 2:
             return {
                 "ok": False,
@@ -61,8 +59,16 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
                 "output": f"Blocked: mega-get requires exactly one remote path and one local path within {ms.DOWNLOAD_DIR}",
                 "blocked_reason": "invalid_arguments",
             }
-
         local_path = path_args[1]
+    elif cmd in ("mega-ls", "mega-export"):
+        # For mega-ls and mega-export, ensure they don't use absolute local paths if we ever support them,
+        # but primarily we want to block command injection via unusual arguments.
+        # Currently we just allow them but we can add more checks if they start taking local paths.
+        local_path = None
+    else:
+        local_path = None
+
+    if local_path:
         # Ensure it's not trying to escape DOWNLOAD_DIR using a safer commonpath check
         abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
         abs_local_path = os.path.abspath(local_path)
@@ -83,6 +89,18 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
                 "exit_code": 126,
                 "output": "Invalid path.",
                 "blocked_reason": "invalid_path",
+            }
+
+    # Additional hardening: block common injection characters if shlex didn't catch them
+    # Though shlex.split is used, we double check the parts don't contain shell metacharacters
+    for part in parts:
+        if any(c in part for c in ";&|><`"):
+            return {
+                "ok": False,
+                "command": raw,
+                "exit_code": 126,
+                "output": "Blocked: command contains restricted characters.",
+                "blocked_reason": "injection_attempt",
             }
 
     result = await ms.run_megacmd_command(parts)

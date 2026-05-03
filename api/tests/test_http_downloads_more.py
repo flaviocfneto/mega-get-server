@@ -65,9 +65,12 @@ def test_parse_wget_stderr_no_percent():
     assert hd.parse_wget_stderr_progress("no match") == (None, None)
 
 
-def test_fetch_content_length_head_none(monkeypatch):
-    monkeypatch.setattr(hd, "urlopen", MagicMock(side_effect=OSError("nope")))
-    assert hd.fetch_content_length_head("https://example.com/x") is None
+def test_resolve_and_validate_url_none(monkeypatch):
+    # Mocking opener.open via asyncio.to_thread is tricky, so we mock _host_is_blocked
+    monkeypatch.setattr(hd, "_host_is_blocked", lambda h: True)
+    url, cl = asyncio.run(hd._resolve_and_validate_url("https://example.com/x"))
+    assert url is None
+    assert cl is None
 
 
 def test_safe_output_basename_empty_path():
@@ -182,6 +185,8 @@ def test_run_job_inner_missing_client(tmp_path, monkeypatch, meta_path):
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", str(tmp_path))
     monkeypatch.setattr(ms, "SIMULATE", False)
     monkeypatch.setattr(hd, "_resolved_http_download_executable", lambda: None)
+    monkeypatch.setattr(hd, "_resolve_and_validate_url", AsyncMock(return_value=("https://example.com/file.bin", 1024)))
+
     async def immediate_to_thread(fn, /, *a, **kw):
         return fn(*a, **kw)
 
@@ -203,6 +208,7 @@ def test_run_job_inner_wget2_success(tmp_path, monkeypatch, meta_path):
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", str(tmp_path))
     monkeypatch.setattr(ms, "SIMULATE", False)
     monkeypatch.setattr(hd, "_resolved_http_download_executable", lambda: "/bin/true")
+    monkeypatch.setattr(hd, "_resolve_and_validate_url", AsyncMock(return_value=("https://example.com/z.bin", 1024)))
 
     async def immediate_to_thread(fn, /, *a, **kw):
         return fn(*a, **kw)
@@ -249,6 +255,7 @@ def test_run_job_inner_wget2_nonzero_exit(tmp_path, monkeypatch, meta_path):
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", str(tmp_path))
     monkeypatch.setattr(ms, "SIMULATE", False)
     monkeypatch.setattr(hd, "_resolved_http_download_executable", lambda: "/bin/false")
+    monkeypatch.setattr(hd, "_resolve_and_validate_url", AsyncMock(return_value=("https://example.com/bad.bin", 1024)))
 
     async def immediate_to_thread(fn, /, *a, **kw):
         return fn(*a, **kw)
@@ -365,18 +372,22 @@ def test_parse_wget_stderr_clamps_percent():
     assert hd.parse_wget_stderr_progress(" 0% ")[0] == 0.0
 
 
-def test_fetch_content_length_head_success(monkeypatch):
+def test_resolve_and_validate_url_success(monkeypatch):
     class _Resp:
-        def __enter__(self):
-            return self
+        def __init__(self):
+            self.status = 200
+            self.headers = {"Content-Length": "2048"}
+        def __enter__(self): return self
+        def __exit__(self, *exc): pass
+        def close(self): pass
 
-        def __exit__(self, *exc):
-            return False
+    mock_opener = MagicMock()
+    mock_opener.open.return_value = _Resp()
+    monkeypatch.setattr(hd.urllib.request, "build_opener", lambda *a: mock_opener)
 
-        headers = {"Content-Length": "2048"}
-
-    monkeypatch.setattr(hd, "urlopen", MagicMock(return_value=_Resp()))
-    assert hd.fetch_content_length_head("https://example.com/x") == 2048
+    url, cl = asyncio.run(hd._resolve_and_validate_url("https://example.com/x"))
+    assert url == "https://example.com/x"
+    assert cl == 2048
 
 
 def test_safe_unlink_skips_path_outside_download_dir(tmp_path, monkeypatch):

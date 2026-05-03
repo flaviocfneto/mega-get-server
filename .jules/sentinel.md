@@ -33,3 +33,22 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 **Prevention:**
 1. Implement a centralized command execution wrapper that applies multi-pattern regex redaction to all output streams by default.
 2. In administrative interfaces, strictly parse and validate the number of positional arguments for critical commands to ensure validation logic cannot be confused by unexpected inputs.
+
+## 2026-05-04 - [Comprehensive Security Hardening: CSRF, SSRF, Redaction, Terminal, and CSP]
+**Vulnerability:**
+1. CSRF: The `origin_plus_token` mode only checked for header presence, not token validity.
+2. SSRF: Redirects were not validated against private IP blocklists.
+3. Sensitive Data: MEGA session IDs and AWS keys were not fully redacted.
+4. Terminal: Administrative commands like `mega-ls` had no character-level hardening against injection.
+5. CSP: Overly permissive `unsafe-inline` policy.
+
+**Learning:**
+1. CSRF protection must link the request header to a client-side secret (cookie) to be effective against cross-site attacks.
+2. SSRF protection is incomplete if redirects are followed by the underlying tool without re-validating the target IP.
+3. Defense-in-depth requires hardening even administrative interfaces against shell metacharacters, even when using `shlex`.
+
+**Prevention:**
+1. Use a double-submit cookie pattern for CSRF validation.
+2. Manually follow and validate redirects before passing URLs to external downloaders.
+3. Block shell metacharacters in administrative command inputs.
+4. Enforce strict CSP by removing `unsafe-inline`.

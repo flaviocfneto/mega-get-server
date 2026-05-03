@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
+import secrets
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
-from fastapi import Header, HTTPException, Request
+from fastapi import Header, HTTPException, Request, Response
 
 
 def _auth_mode() -> str:
@@ -95,9 +96,9 @@ def require_csrf_boundary(request: Request) -> None:
     if request.method.upper() not in {"POST", "PUT", "PATCH", "DELETE"}:
         return
     mode = _csrf_mode()
-    transport = _auth_transport()
     if mode == "disabled":
         raise HTTPException(status_code=503, detail="CSRF enforcement disabled for unsafe methods")
+
     trusted = _trusted_origins()
     origin = (request.headers.get("origin") or "").strip().lower()
     referer = (request.headers.get("referer") or "").strip().lower()
@@ -111,28 +112,38 @@ def require_csrf_boundary(request: Request) -> None:
         else:
             raise HTTPException(status_code=403, detail="CSRF boundary violation: untrusted referer")
     elif not origin:
+        # We allow requests without origin/referer if they are not from a browser (e.g. CLI),
+        # but in a browser context, one of these is typically present for CORS/POST.
+        # For better security, we'll keep the strict check for now.
         raise HTTPException(status_code=403, detail="CSRF boundary violation: missing origin/referer")
 
-    if transport == "cookie_session":
-        if mode != "origin_plus_token":
-            raise HTTPException(
-                status_code=503,
-                detail="CSRF policy misconfigured: cookie_session requires origin_plus_token mode",
-            )
+    if mode == "origin_plus_token" or _auth_transport() == "cookie_session":
         header_name = _csrf_header_name()
-        token = (request.headers.get(header_name) or "").strip()
-        if not token:
-            raise HTTPException(status_code=403, detail="CSRF boundary violation: missing csrf token")
-        return
+        header_token = (request.headers.get(header_name) or "").strip()
+        cookie_token = request.cookies.get("csrftoken", "").strip()
 
-    if mode == "origin_plus_token":
-        header_name = _csrf_header_name()
-        token = (request.headers.get(header_name) or "").strip()
-        if not token:
-            raise HTTPException(status_code=403, detail="CSRF boundary violation: missing csrf token")
+        if not header_token:
+            raise HTTPException(status_code=403, detail="CSRF boundary violation: missing csrf token header")
+        if not cookie_token:
+            raise HTTPException(status_code=403, detail="CSRF boundary violation: missing csrf cookie")
+        if not secrets.compare_digest(header_token, cookie_token):
+            raise HTTPException(status_code=403, detail="CSRF boundary violation: token mismatch")
         return
 
     if mode == "origin_only":
         return
 
     raise HTTPException(status_code=503, detail=f"CSRF policy misconfigured: unsupported mode '{mode}'")
+
+
+def set_csrf_cookie(response: Response) -> str:
+    """Generate and set a new CSRF cookie on the response."""
+    token = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key="csrftoken",
+        value=token,
+        httponly=False,  # Frontend needs to read it to put it in the header
+        samesite="lax",
+        secure=os.environ.get("SECURE_COOKIES", "0") == "1",
+    )
+    return token
