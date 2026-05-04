@@ -151,3 +151,8 @@ def set_csrf_cookie(response: Response) -> str:
         secure=os.environ.get("SECURE_COOKIES", "0") == "1",
     )
     return token
+
+
+def generate_nonce(length: int = 16) -> str:
+    """Generate a cryptographically secure nonce for CSP."""
+    return secrets.token_urlsafe(length)

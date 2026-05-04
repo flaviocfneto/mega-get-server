@@ -28,11 +28,8 @@ export function AnalyticsView({analytics}: Props) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-3xl border border-[var(--ft-border)] bg-[var(--card)] p-6 shadow-sm">
           <div className="mb-4 flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{background: `color-mix(in_srgb, ${ACCENT} 12%, var(--ft-surface))`}}
-            >
-              <DownloadCloud className="h-5 w-5" style={{color: ACCENT}} aria-hidden />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--ft-accent)_12%,var(--ft-surface))]">
+              <DownloadCloud className="h-5 w-5 text-[var(--ft-accent)]" aria-hidden />
             </div>
             <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
               Total downloaded
@@ -91,7 +88,7 @@ export function AnalyticsView({analytics}: Props) {
           <>
             <div className="rounded-3xl border border-[var(--ft-border)] bg-[var(--card)] p-6 shadow-sm">
               <h3 className="mb-6 flex items-center gap-2 text-sm font-bold text-[var(--foreground)]">
-                <Activity className="h-4 w-4" style={{color: ACCENT}} aria-hidden />
+                <Activity className="h-4 w-4 text-[var(--ft-accent)]" aria-hidden />
                 Download activity (last 7 days)
               </h3>
               <div className="h-[300px] w-full">

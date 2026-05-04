@@ -12,8 +12,7 @@ export function BottomNav({activeId, onSelect}: Props) {
   return (
     <nav
       aria-label="Primary"
-      className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-[var(--ft-border)] bg-[var(--card)]/95 backdrop-blur-md lg:hidden"
-      style={{paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'}}
+      className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-[var(--ft-border)] bg-[var(--card)]/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden"
     >
       <div className="mx-auto flex h-14 w-full max-w-2xl items-stretch justify-around px-1">
         {PRIMARY_NAV.map(({id, label, shortLabel, icon: Icon}) => {

@@ -824,10 +824,7 @@ export default function App() {
             >
               <div className="flex items-center justify-between px-8 py-6 border-b border-[var(--border)]">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{background: 'color-mix(in srgb, var(--ft-accent) 14%, var(--ft-surface))'}}
-                  >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--ft-accent)_14%,var(--ft-surface))]">
                     <User className="h-5 w-5 text-[var(--ft-accent)]" aria-hidden />
                   </div>
                   <h2 id="login-modal-title" className="text-xl font-bold">
@@ -911,10 +908,7 @@ export default function App() {
             >
               <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] px-8 py-6">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{background: 'color-mix(in srgb, var(--ft-accent) 14%, var(--ft-surface))'}}
-                  >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--ft-accent)_14%,var(--ft-surface))]">
                     <Settings className="h-5 w-5 text-[var(--ft-accent)]" aria-hidden />
                   </div>
                   <h2 id="settings-modal-title" className="text-xl font-bold">
@@ -1198,10 +1192,7 @@ export default function App() {
                     <div className="bg-[var(--muted)]/30 border border-[var(--border)] rounded-2xl p-6 space-y-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div
-                            className="flex h-12 w-12 items-center justify-center rounded-full"
-                            style={{background: 'color-mix(in srgb, var(--ft-accent) 14%, var(--ft-surface))'}}
-                          >
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--ft-accent)_14%,var(--ft-surface))]">
                             <User className="h-6 w-6 text-[var(--ft-accent)]" aria-hidden />
                           </div>
                           <div>
