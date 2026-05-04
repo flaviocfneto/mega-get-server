@@ -1221,8 +1221,15 @@ export default function App() {
                             </div>
                             <span>{quotaPercent(accountInfo.storage_used_bytes, accountInfo.storage_total_bytes)}%</span>
                           </div>
-                          <div className="w-full h-2 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)]">
-                            <motion.div 
+                          <div
+                            className="w-full h-2 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)]"
+                            role="progressbar"
+                            aria-valuenow={quotaPercent(accountInfo.storage_used_bytes, accountInfo.storage_total_bytes)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label="Storage Usage"
+                          >
+                            <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${quotaBarWidthPct(accountInfo.storage_used_bytes, accountInfo.storage_total_bytes)}%` }}
                               className="h-full bg-[var(--ft-accent)]"
@@ -1244,7 +1251,14 @@ export default function App() {
                               </div>
                               <span>{quotaPercent(accountInfo.bandwidth_used_bytes, accountInfo.bandwidth_limit_bytes)}%</span>
                             </div>
-                            <div className="w-full h-2 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)]">
+                            <div
+                              className="w-full h-2 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)]"
+                              role="progressbar"
+                              aria-valuenow={quotaPercent(accountInfo.bandwidth_used_bytes, accountInfo.bandwidth_limit_bytes)}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-label="Bandwidth Quota"
+                            >
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${quotaBarWidthPct(accountInfo.bandwidth_used_bytes, accountInfo.bandwidth_limit_bytes)}%` }}
