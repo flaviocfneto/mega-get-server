@@ -13,6 +13,9 @@ import sys
 import threading
 import time
 from collections.abc import Callable
+
+from dotenv import find_dotenv
+from dotenv_vault import load_dotenv
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -48,28 +51,6 @@ def _debug_log(location: str, message: str, data: dict | None = None, hypothesis
 # #endregion
 
 
-def load_dotenv_if_present() -> None:
-    """Load .env from project root when keys are not already set."""
-    try:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        env_path = os.path.join(project_root, ".env")
-        if not os.path.isfile(env_path):
-            return
-        with open(env_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, _, value = line.partition("=")
-                    key = key.strip()
-                    value = value.strip()
-                    if key and key not in os.environ:
-                        os.environ[key] = value
-    except Exception:
-        pass
-
-
 def in_docker() -> bool:
     return os.path.exists("/.dockerenv") or bool(os.environ.get("container"))
 
@@ -91,7 +72,12 @@ def default_history_path() -> str:
     return os.path.join(app_root_dir(), ".mega-get-history.json")
 
 
-load_dotenv_if_present()
+# load_dotenv from python-dotenv-vault automatically finds .env or .env.vault
+# but it might fail if find_dotenv() returns empty string and it tries to open it.
+try:
+    load_dotenv()
+except Exception:
+    pass
 
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR") or default_download_dir()
 TRANSFER_LIST_LIMIT = os.environ.get("TRANSFER_LIST_LIMIT", "50")
