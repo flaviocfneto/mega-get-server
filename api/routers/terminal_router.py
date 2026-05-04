@@ -35,6 +35,7 @@ async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(r
         "mega-ls",
         "mega-df",
         "mega-export",
+        "wget2",
     }
     cmd = parts[0]
     if cmd not in allowed:

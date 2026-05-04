@@ -375,7 +375,7 @@ async def add_security_headers(request: Request, call_next):
 
 
 @app.get("/api/config")
-async def api_config_get(response: Response):
+async def api_config_get(response: Response, _: None = Depends(require_scope("write"))):
     set_csrf_cookie(response)
     return _full_config()
 
