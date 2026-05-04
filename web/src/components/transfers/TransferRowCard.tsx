@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, memo} from 'react';
 import {motion} from 'motion/react';
 import {
   AlertCircle,
@@ -30,7 +30,7 @@ type Props = {
   reduceMotion: boolean;
 };
 
-export function TransferRowCard({
+export const TransferRowCard = memo(function TransferRowCard({
   transfer: t,
   config,
   selected,
@@ -313,4 +313,4 @@ export function TransferRowCard({
       </div>
     </motion.div>
   );
-}
+});
