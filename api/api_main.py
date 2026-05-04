@@ -28,7 +28,13 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from security import require_csrf_boundary, require_scope, rate_limit, set_csrf_cookie
+from security import (
+    require_csrf_boundary,
+    require_scope,
+    rate_limit,
+    set_csrf_cookie,
+    generate_nonce,
+)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 APP_STARTED = time.time()
@@ -348,6 +354,9 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
+    nonce = generate_nonce()
+    request.state.csp_nonce = nonce
+
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -362,11 +371,15 @@ async def add_security_headers(request: Request, call_next):
             connect_src.append(o)
     connect_src_str = " ".join(connect_src)
 
-    # Basic CSP: allow self, and data: for images (favicons/logos)
+    # CSP: remove 'unsafe-inline' and use nonces for scripts and styles.
+    # We still allow https://fonts.googleapis.com for external stylesheets.
+    # style-src-attr 'unsafe-inline' is used to allow Framer Motion and other libraries
+    # that inject dynamic styles via attributes, while blocking <style> tag injection.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        f"script-src 'self' 'nonce-{nonce}'; "
+        f"style-src 'self' 'nonce-{nonce}' https://fonts.googleapis.com; "
+        "style-src-attr 'unsafe-inline'; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
         f"connect-src {connect_src_str}"
@@ -790,4 +803,21 @@ async def api_transfer_cancel(tag: str, request: Request, _: None = Depends(requ
 
 
 if STATIC_DIR.is_dir():
-    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+
+    @app.get("/", include_in_schema=False)
+    @app.get("/index.html", include_in_schema=False)
+    async def serve_index(request: Request):
+        index_path = STATIC_DIR / "index.html"
+        if not index_path.is_file():
+            raise HTTPException(status_code=404)
+        content = index_path.read_text(encoding="utf-8")
+        nonce = getattr(request.state, "csp_nonce", "")
+        # Inject nonce into HTML placeholders.
+        content = content.replace("{{CSP_NONCE}}", nonce)
+        # Ensure the main module script also gets the nonce if it was built with it
+        # (Vite might have removed it during build if it didn't recognize the placeholder).
+        if 'src="/assets/index-' in content and 'nonce="' not in content:
+            content = content.replace('<script type="module"', f'<script type="module" nonce="{nonce}"')
+        return Response(content=content, media_type="text/html")
+
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR)), name="static")

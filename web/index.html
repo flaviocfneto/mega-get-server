@@ -13,10 +13,13 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0F1713" />
     <title>FileTugger</title>
+    <script nonce="{{CSP_NONCE}}">
+      window.__CSP_NONCE__ = "{{CSP_NONCE}}";
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx" nonce="{{CSP_NONCE}}"></script>
   </body>
 </html>
 
