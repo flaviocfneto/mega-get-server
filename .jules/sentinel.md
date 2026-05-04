@@ -68,3 +68,19 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 1. Always parse URLs and compare origins (scheme + host + port) for security-critical domain validation.
 2. Ensure every API endpoint has appropriate scope dependencies and rate limits.
 3. Maintain a comprehensive list of restricted shell metacharacters for any interface that executes system commands.
+
+## 2026-05-05 - [Terminal Path Confusion and Secure Webhook SSRF]
+**Vulnerability:**
+1. Terminal Path Confusion: Attempting to harden local filesystem access in MEGAcmd terminal commands can inadvertently block standard remote MEGA paths (which also start with '/') if the heuristic for distinguishing them is too broad.
+2. Webhook SSRF: Saving a webhook URL in settings is insufficient; SSRF protection must also be applied at the moment of execution to prevent bypasses if the target resolves to a restricted IP at runtime or if the URL was manipulated.
+3. CSRF suppression: Allowing state-changing requests without both Origin and Referer headers (to accommodate CLI clients) creates a risk if a browser-based attack can suppress these headers.
+
+**Learning:**
+1. In tools like MEGAcmd where remote and local path syntax overlaps, path validation must use specific heuristics (e.g., checking for standard remote roots like /Root, /Bin, /Incoming) to avoid breaking core functionality while still blocking local traversal (e.g., ../).
+2. Defense-in-depth for webhooks requires validating the hostname against a blocklist IMMEDIATELY before sending the request, disabling redirects, and using strict timeouts.
+3. For applications primarily served as a web SPA, enforcing the presence of either Origin or Referer for all mutating requests is a safer default.
+
+**Prevention:**
+1. Implement context-aware path validation that identifies and permits expected remote path patterns before applying strict local filesystem traversal checks.
+2. Use a dedicated webhook service that encapsulates SSRF protection logic (host validation, redirect suppression) and is called by the application's event loop.
+3. Set a strict CSRF policy that requires security headers for all state-changing methods, rejecting requests where both Origin and Referer are absent.

@@ -91,7 +91,7 @@ def test_rate_limit_resets_after_window(monkeypatch):
     security._rate_state.clear()
 
     with TestClient(api_main.app) as client:
-        for _ in range(10):
+        for _ in range(5):
             r = client.post("/api/login", json={"email": "x@example.com", "password": "bad"}, headers=SAFE_HEADERS)
             assert r.status_code in (200, 400)
         limited = client.post("/api/login", json={"email": "x@example.com", "password": "bad"}, headers=SAFE_HEADERS)

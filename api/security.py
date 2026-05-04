@@ -117,9 +117,8 @@ def require_csrf_boundary(request: Request) -> None:
             if referer.lower().rstrip("/") not in trusted:
                 raise HTTPException(status_code=403, detail="CSRF boundary violation: untrusted referer")
     elif not origin:
-        # We allow requests without origin/referer if they are not from a browser (e.g. CLI),
-        # but in a browser context, one of these is typically present for CORS/POST.
-        # For better security, we'll keep the strict check for now.
+        # Strict mode: one of Origin or Referer MUST be present for state-changing requests.
+        # This protects against some edge-case CSRF bypasses in specific browser configurations.
         raise HTTPException(status_code=403, detail="CSRF boundary violation: missing origin/referer")
 
     if mode == "origin_plus_token" or _auth_transport() == "cookie_session":

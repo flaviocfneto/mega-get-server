@@ -180,6 +180,8 @@ def redact_sensitive_text(text: str) -> str:
     if not text:
         return text
     masked = text
+    # Email redaction: redact most of the local part and the domain to hide PII
+    masked = re.sub(r"\b[A-Za-z0-9._%+-]{1,3}[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "***@***", masked)
     # Standard secret patterns (preserves separator)
     masked = re.sub(r"(?i)(password|token|apikey|api_key|secret|sid)(\s*[:=]\s*)\S+", r"\1\2***", masked)
     # MEGAcmd login specific redaction

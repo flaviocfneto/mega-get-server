@@ -23,6 +23,7 @@ from urllib.request import Request, urlopen
 import mega_service as ms
 import pending_queue as pq
 import transfer_metadata as tm
+from services.webhook_service import notify_download_completed
 
 MEGA_HOSTS = frozenset({"mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz"})
 
@@ -512,6 +513,16 @@ async def _run_job_inner(job: HttpJob, pending_id: str | None) -> None:
             job.progress_pct = 100.0
             job.state = "COMPLETED"
             ms.log_buffer.append(f"HTTP download completed: {os.path.basename(out_path)}")
+            try:
+                asyncio.get_running_loop()
+                asyncio.create_task(notify_download_completed(
+                    job.tag,
+                    os.path.basename(out_path),
+                    job.downloaded_bytes,
+                    "http"
+                ))
+            except RuntimeError:
+                pass
             if pending_id:
                 await pq.remove_item(pending_id)
             _schedule_prune(job.tag, _COMPLETED_PRUNE_SEC)
