@@ -84,10 +84,25 @@ export function AppHeader({
               </button>
             </div>
           ) : (
-            <button type="button" onClick={onOpenLogin} className={`hidden sm:flex ${ftBtnPrimarySm} ${ftFocusRing} gap-2`}>
-              <LogIn className="h-4 w-4" />
-              Log in to MEGA
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className={`flex sm:hidden ${ftBtnPrimarySm} ${ftFocusRing} px-2.5`}
+                title="Log in to MEGA"
+                aria-label="Log in to MEGA"
+              >
+                <LogIn className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className={`hidden sm:flex ${ftBtnPrimarySm} ${ftFocusRing} gap-2`}
+              >
+                <LogIn className="h-4 w-4" />
+                Log in to MEGA
+              </button>
+            </>
           )}
 
           <button

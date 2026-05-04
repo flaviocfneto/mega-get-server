@@ -1,0 +1,3 @@
+## 2025-05-15 - [History View Consistency & Progress Accessibility]
+**Learning:** Replicating successful UX patterns (like "Select All" and inline "Confirm?" buttons) across similar list views (Transfers vs. History) improves user predictability. Additionally, standardizing ARIA progress bar attributes (`role="progressbar"`, `aria-valuenow`) ensures a consistent experience for screen reader users across both active transfer lists and static account quota displays.
+**Action:** When adding a selection or destructive action pattern to one view, always audit related views for consistency. Ensure all visual progress indicators are accompanied by standard ARIA attributes.

@@ -1,4 +1,4 @@
-import type {Dispatch, SetStateAction} from 'react';
+import {type Dispatch, type SetStateAction, useState, useEffect} from 'react';
 import {CheckSquare, DownloadCloud, History, Plus, Square, Trash2, X} from 'lucide-react';
 import type {HistoryItem, PendingQueueItem} from '../types';
 import {ftFocusRing} from '../lib/ftUi';
@@ -39,6 +39,34 @@ export function HistoryView({
   onQueueStartNext,
   onQueueStartAll,
 }: Props) {
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
+
+  useEffect(() => {
+    if (showConfirmClear) {
+      const timer = setTimeout(() => setShowConfirmClear(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showConfirmClear]);
+
+  const handleClearClick = () => {
+    if (showConfirmClear) {
+      clearHistory();
+      setShowConfirmClear(false);
+    } else {
+      setShowConfirmClear(true);
+    }
+  };
+
+  const allSelected = filteredHistory.length > 0 && filteredHistory.every((h) => selectedHistory.has(h.url));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedHistory(new Set());
+    } else {
+      setSelectedHistory(new Set(filteredHistory.map((h) => h.url)));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PendingQueuePanel
@@ -54,6 +82,19 @@ export function HistoryView({
 
       <div className="mb-2 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--foreground)]">
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className={`rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] ${ftFocusRing}`}
+            title={allSelected ? 'Deselect all' : 'Select all history'}
+            aria-label={allSelected ? 'Deselect all' : 'Select all history'}
+          >
+            {allSelected ? (
+              <CheckSquare className="h-5 w-5 text-[var(--ft-accent)]" aria-hidden />
+            ) : (
+              <Square className="h-5 w-5" aria-hidden />
+            )}
+          </button>
           Download History
           <History className="h-4 w-4 text-[var(--muted-foreground)]" aria-hidden />
         </h2>
@@ -63,17 +104,24 @@ export function HistoryView({
             onClick={exportHistory}
             className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--ft-accent)] ${ftFocusRing}`}
             title="Export history"
+            aria-label="Export history"
           >
             <DownloadCloud className="h-4 w-4" />
           </button>
           {history.length > 0 && (
             <button
               type="button"
-              onClick={clearHistory}
-              className="flex items-center gap-1 text-[10px] font-bold uppercase text-[var(--muted-foreground)] transition-colors hover:text-[var(--ft-danger)]"
+              onClick={handleClearClick}
+              className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase transition-all ${
+                showConfirmClear
+                  ? 'bg-[var(--ft-danger-bg)] text-[var(--ft-danger)] ring-1 ring-[var(--ft-danger)]/30'
+                  : 'text-[var(--muted-foreground)] hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)]'
+              } ${ftFocusRing}`}
+              title={showConfirmClear ? 'Confirm clear history?' : (selectedHistory.size > 0 ? 'Clear selected' : 'Clear all')}
+              aria-label={showConfirmClear ? 'Confirm clear history?' : (selectedHistory.size > 0 ? 'Clear selected' : 'Clear all')}
             >
-              <Trash2 className="h-3 w-3" aria-hidden />
-              {selectedHistory.size > 0 ? 'Clear selected' : 'Clear all'}
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              <span>{showConfirmClear ? 'Confirm?' : (selectedHistory.size > 0 ? 'Clear selected' : 'Clear all')}</span>
             </button>
           )}
         </div>

@@ -119,9 +119,8 @@ describe('App', () => {
 
   it('opens login modal and performs login flow', async () => {
     renderApp();
-    fireEvent.click(
-      await screen.findByRole('button', {name: /Log in to MEGA/i, hidden: true}),
-    );
+    const loginButtons = await screen.findAllByRole('button', {name: /Log in to MEGA/i, hidden: true});
+    fireEvent.click(loginButtons[0]);
     expect(await screen.findByPlaceholderText('your@email.com')).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText('your@email.com'), { target: { value: 'user@example.com' } });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'secret' } });

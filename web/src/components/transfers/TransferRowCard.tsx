@@ -268,7 +268,14 @@ export const TransferRowCard = memo(function TransferRowCard({
               </button>
             </div>
           </div>
-          <div className="relative h-2 overflow-hidden rounded-full bg-[var(--muted)]">
+          <div
+            className="relative h-2 overflow-hidden rounded-full bg-[var(--muted)]"
+            role="progressbar"
+            aria-valuenow={t.progress_pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Transfer progress for ${t.filename}`}
+          >
             <motion.div
               className={`relative h-full rounded-full ${t.state === 'FAILED' ? 'bg-[var(--ft-danger)]' : 'bg-[var(--ft-accent)]'}`}
               initial={{width: 0}}
