@@ -73,6 +73,7 @@ def test_wait_for_mega_server_ready_success(monkeypatch):
 
 
 def test_get_transfer_list_uses_stderr_when_stdout_empty(monkeypatch):
+    ms.clear_transfer_list_cache()
     monkeypatch.setattr(ms, "SIMULATE", False)
     monkeypatch.setattr(ms, "UI_TEST_MODE", False)
 
@@ -91,6 +92,7 @@ def test_get_transfer_list_uses_stderr_when_stdout_empty(monkeypatch):
 
 
 def test_get_transfer_list_merges_stderr_when_stdout_present(monkeypatch):
+    ms.clear_transfer_list_cache()
     monkeypatch.setattr(ms, "SIMULATE", False)
     monkeypatch.setattr(ms, "UI_TEST_MODE", False)
 

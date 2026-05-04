@@ -109,7 +109,19 @@ if not MEGACMD_PATH and sys.platform == "darwin":
 POLL_INTERVAL = max(INPUT_TIMEOUT, 0.5)
 URL_HISTORY_MAX = 50
 LOG_MAX_LINES = 500
+
+# Cache for mega-transfers output to avoid redundant subprocess spawns
+# when multiple endpoints (transfers, analytics) poll simultaneously.
+_transfer_list_cache: str | None = None
+_transfer_list_cache_time: float = 0
+_TRANSFER_LIST_CACHE_TTL = 0.8  # 800ms cache to cover concurrent API polls
 CMD_HISTORY_MAX = 100
+
+
+def clear_transfer_list_cache() -> None:
+    global _transfer_list_cache, _transfer_list_cache_time
+    _transfer_list_cache = None
+    _transfer_list_cache_time = 0
 
 _log_notify: Callable[[], None] | None = None
 
@@ -378,6 +390,11 @@ def _get_test_transfer_output() -> str:
 
 
 async def get_transfer_list() -> str:
+    global _transfer_list_cache, _transfer_list_cache_time
+    now = time.monotonic()
+    if _transfer_list_cache is not None and (now - _transfer_list_cache_time) < _TRANSFER_LIST_CACHE_TTL:
+        return _transfer_list_cache
+
     if SIMULATE:
         return (
             "\n"
@@ -426,6 +443,8 @@ async def get_transfer_list() -> str:
         },
         hypothesis_id="H5",
     )
+    _transfer_list_cache = out
+    _transfer_list_cache_time = now
     return out
 
 
