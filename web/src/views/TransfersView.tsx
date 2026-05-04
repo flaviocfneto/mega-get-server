@@ -1,5 +1,5 @@
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
-import type {FormEvent} from 'react';
+import {useState, useEffect, type FormEvent} from 'react';
 import {
   CheckCircle2,
   CheckSquare,
@@ -84,6 +84,20 @@ export function TransfersView({
   setSelectedTransfers,
 }: Props) {
   const reduceMotion = !!useReducedMotion();
+  const [confirmCancelTag, setConfirmCancelTag] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (confirmCancelTag) {
+      const timer = setTimeout(() => setConfirmCancelTag(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [confirmCancelTag]);
+
+  const allActiveSelected =
+    sortedTransfers.length > 0 && sortedTransfers.every((t) => selectedTransfers.has(t.tag));
+
+  const allCompletedSelected =
+    completedTransfers.length > 0 && completedTransfers.every((t) => selectedTransfers.has(t.tag));
 
   return (
     <div className="space-y-6">
@@ -97,9 +111,10 @@ export function TransfersView({
               type="button"
               onClick={() => selectAll('active')}
               className={`rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] ${ftFocusRing}`}
-              title="Select all active"
+              title={allActiveSelected ? 'Deselect all active' : 'Select all active'}
+              aria-label={allActiveSelected ? 'Deselect all active' : 'Select all active'}
             >
-              {sortedTransfers.length > 0 && sortedTransfers.every((t) => selectedTransfers.has(t.tag)) ? (
+              {allActiveSelected ? (
                 <CheckSquare className="h-5 w-5 text-[var(--ft-accent)]" aria-hidden />
               ) : (
                 <Square className="h-5 w-5" aria-hidden />
@@ -179,9 +194,10 @@ export function TransfersView({
                 type="button"
                 onClick={() => selectAll('completed')}
                 className={`rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] ${ftFocusRing}`}
-                title="Select all completed"
+                title={allCompletedSelected ? 'Deselect all completed' : 'Select all completed'}
+                aria-label={allCompletedSelected ? 'Deselect all completed' : 'Select all completed'}
               >
-                {completedTransfers.every((t) => selectedTransfers.has(t.tag)) ? (
+                {allCompletedSelected ? (
                   <CheckSquare className="h-5 w-5 text-[var(--ft-accent)]" aria-hidden />
                 ) : (
                   <Square className="h-5 w-5" aria-hidden />
@@ -210,6 +226,7 @@ export function TransfersView({
                     onClick={() => toggleSelect(t.tag)}
                     className={`rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] ${ftFocusRing}`}
                     aria-pressed={selectedTransfers.has(t.tag)}
+                    aria-label={selectedTransfers.has(t.tag) ? 'Deselect transfer' : 'Select transfer'}
                   >
                     {selectedTransfers.has(t.tag) ? (
                       <CheckSquare className="h-5 w-5 text-[var(--ft-accent)]" />
@@ -231,16 +248,32 @@ export function TransfersView({
                     onClick={() => handleDownload(undefined, t.url)}
                     className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[color-mix(in_srgb,var(--ft-accent)_12%,transparent)] hover:text-[var(--ft-accent)] ${ftFocusRing}`}
                     title="Download again"
+                    aria-label="Download again"
                   >
                     <Download className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleAction(t.tag, 'cancel')}
-                    className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] ${ftFocusRing}`}
-                    title="Remove from list"
+                    onClick={() => {
+                      if (confirmCancelTag === t.tag) {
+                        handleAction(t.tag, 'cancel');
+                        setConfirmCancelTag(null);
+                      } else {
+                        setConfirmCancelTag(t.tag);
+                      }
+                    }}
+                    className={`flex items-center gap-1 rounded-lg px-1.5 py-1.5 text-[var(--muted-foreground)] transition-all ${
+                      confirmCancelTag === t.tag
+                        ? 'bg-[var(--ft-danger-bg)] text-[var(--ft-danger)] ring-1 ring-[var(--ft-danger)]/30'
+                        : 'hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)]'
+                    } ${ftFocusRing}`}
+                    title={confirmCancelTag === t.tag ? 'Confirm remove?' : 'Remove from list'}
+                    aria-label={confirmCancelTag === t.tag ? 'Confirm remove?' : 'Remove from list'}
                   >
                     <X className="h-4 w-4" />
+                    {confirmCancelTag === t.tag && (
+                      <span className="pr-1 text-[10px] font-bold uppercase">Confirm?</span>
+                    )}
                   </button>
                 </div>
               </div>
