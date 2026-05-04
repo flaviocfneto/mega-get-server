@@ -81,7 +81,14 @@ def _host_is_blocked(hostname: str) -> bool:
     # First, try if it's already an IP address
     try:
         ip = ipaddress.ip_address(h)
-        return bool(ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved)
+        return bool(
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or (ip.version == 6 and ip.is_site_local)
+            or (ip.version == 6 and str(ip).startswith("f"))  # ULA and other unique local
+        )
     except ValueError:
         pass
 
@@ -93,7 +100,14 @@ def _host_is_blocked(hostname: str) -> bool:
         for _, _, _, _, sockaddr in addr_info:
             ip_str = sockaddr[0]
             ip = ipaddress.ip_address(ip_str)
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or (ip.version == 6 and ip.is_site_local)
+                or (ip.version == 6 and str(ip).startswith("f"))
+            ):
                 return True
     except (socket.gaierror, ValueError):
         # If we can't resolve it, we should probably block it to be safe,

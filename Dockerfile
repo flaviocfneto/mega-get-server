@@ -49,6 +49,8 @@ FROM dhi.io/python:3.12-debian13-dev AS runtime-stage
 ARG DEBIAN_FRONTEND=noninteractive
 ARG MEGACMD_DEB=megacmd-Debian_13_amd64.deb
 ARG MEGACMD_SHA256=43907f450e13e712b61c87105eeab9c3568338c36895ad6de9599a3facf43659
+ARG WGET2_DEB=wget2_2.2.0+ds-1+deb13u1_amd64.deb
+ARG WGET2_SHA256=ac88985c4be0bdc72bdfcaac1e2a9b1789fcda017aee75643e9440317d31c05c
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -72,13 +74,18 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSLo "/tmp/${MEGACMD_DEB}" "https://mega.nz/linux/repo/Debian_13/amd64/${MEGACMD_DEB}" && \
-    echo "${MEGACMD_SHA256}  /tmp/${MEGACMD_DEB}" | sha256sum -c -
+    echo "${MEGACMD_SHA256}  /tmp/${MEGACMD_DEB}" | sha256sum -c - && \
+    curl -fsSLo "/tmp/${WGET2_DEB}" "http://ftp.debian.org/debian/pool/main/w/wget2/${WGET2_DEB}" && \
+    echo "${WGET2_SHA256}  /tmp/${WGET2_DEB}" | sha256sum -c -
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget2 "/tmp/${MEGACMD_DEB}" && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        libwget3 \
+        "/tmp/${WGET2_DEB}" \
+        "/tmp/${MEGACMD_DEB}" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -f "/tmp/${MEGACMD_DEB}"
+    rm -f "/tmp/${MEGACMD_DEB}" "/tmp/${WGET2_DEB}"
 
 RUN useradd -m -d "${HOME}" -u 10001 -s /bin/bash mega
 COPY --from=build-stage /app/venv /app/venv

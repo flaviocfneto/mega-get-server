@@ -84,3 +84,22 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 1. Implement context-aware path validation that identifies and permits expected remote path patterns before applying strict local filesystem traversal checks.
 2. Use a dedicated webhook service that encapsulates SSRF protection logic (host validation, redirect suppression) and is called by the application's event loop.
 3. Set a strict CSRF policy that requires security headers for all state-changing methods, rejecting requests where both Origin and Referer are absent.
+
+## 2026-05-04 - [Defense in Depth: SSRF, Redaction, and Dependency Pinning]
+**Vulnerability:**
+1. IPv6 SSRF: SSRF protection was missing explicit checks for IPv6 Unique Local Addresses (ULA) and site-local ranges.
+2. Configuration Leakage: The `GET /api/config` endpoint was accessible without authentication in strict mode, leaking internal filesystem paths.
+3. Insufficient Redaction: Internal IP addresses and sensitive app/system paths (e.g., `/app`, `/etc`) were exposed in log buffers.
+4. Tool Integrity: External dependencies like `wget2` were installed without version pinning or checksum verification in the Dockerfile.
+
+**Learning:**
+1. SSRF blocklists must be protocol-agnostic and explicitly cover all reserved ranges for both IPv4 and IPv6.
+2. Diagnostic and configuration endpoints are high-value targets for reconnaissance; they should require authorization even for read-only access in hardened environments.
+3. Redaction should cover not just secrets, but any infrastructure details (IPs, paths) that aid an attacker in mapping the internal environment.
+4. Supply chain security requires pinning and verifying every external binary introduced at build time.
+
+**Prevention:**
+1. Use `ipaddress` library to check for `is_private`, `is_site_local`, and specific ULA prefixes (fc00::/7) during SSRF validation.
+2. Apply scope-based dependency checks to all API endpoints that return environment-specific data.
+3. Maintain a comprehensive list of infrastructure patterns for log redaction.
+4. Pin external tool versions and verify them with SHA256 checksums in the Dockerfile.
