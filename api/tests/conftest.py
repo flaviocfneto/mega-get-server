@@ -9,3 +9,6 @@ import os
 # BaseSubprocessTransport.__del__). CI already sets MEGA_SIMULATE=1; this matches
 # local runs. Explicit MEGA_SIMULATE in the environment is left unchanged.
 os.environ.setdefault("MEGA_SIMULATE", "1")
+# Default to optional auth for tests so legacy tests don't need to provide keys.
+# Auth-specific tests will explicitly set this to 'strict' via monkeypatch.
+os.environ.setdefault("API_AUTH_MODE", "optional")

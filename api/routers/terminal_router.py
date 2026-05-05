@@ -50,8 +50,9 @@ async def api_terminal(
         }
 
     # SSRF protection for wget2 and URL-like arguments
-    from http_downloads import _host_is_blocked
     from urllib.parse import urlparse
+
+    from http_downloads import _host_is_blocked
 
     # Harden terminal commands: prevent arbitrary path access and SSRF
     abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
