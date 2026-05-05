@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -81,7 +81,7 @@ def _sweep_stale_unlocked(entries: dict[str, dict[str, Any]], *, now: datetime) 
             stale_ids.append(eid)
             continue
         if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
+            created = created.replace(tzinfo=UTC)
         if created < cutoff:
             stale_ids.append(eid)
     for eid in stale_ids:
@@ -101,7 +101,7 @@ async def record_after_ambiguous_mega_get(
     if pr not in {"LOW", "NORMAL", "HIGH"}:
         pr = "NORMAL"
     tags_sorted = sorted(tags_before)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     async with _get_lock():
         entries = _load_entries_unlocked()
         _sweep_stale_unlocked(entries, now=now)
@@ -135,7 +135,7 @@ async def try_attach_from_current_tags(
     For each pending entry, if exactly one new tag appeared vs tags_before, tm.update and remove entry.
     Returns number of successful attachments.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     attached = 0
     async with _get_lock():
         entries = _load_entries_unlocked()

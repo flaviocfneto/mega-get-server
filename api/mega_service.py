@@ -2,6 +2,7 @@
 Shared MEGAcmd integration for Flet UI and FastAPI: env, subprocess helpers,
 transfer list parsing, download/actions, URL history, and in-memory logs.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -112,6 +113,7 @@ def clear_transfer_list_cache() -> None:
     global _transfer_list_cache, _transfer_list_cache_time
     _transfer_list_cache = None
     _transfer_list_cache_time = 0
+
 
 _log_notify: Callable[[], None] | None = None
 
@@ -259,7 +261,7 @@ def load_history() -> None:
     if not os.path.isfile(path):
         return
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, list):
             _url_history = [u for u in data if isinstance(u, str)][:URL_HISTORY_MAX]
@@ -331,7 +333,7 @@ async def wait_for_mega_server_ready(max_wait_sec: float = 15.0) -> bool:
             await asyncio.wait_for(proc.wait(), timeout=5.0)
             if proc.returncode == 0:
                 return True
-        except (asyncio.TimeoutError, OSError):
+        except (TimeoutError, OSError):
             pass
         await asyncio.sleep(1.0)
     return False
@@ -580,7 +582,12 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
             continue
 
         if len(line) > 10:
-            _debug_log("mega_service:parse_transfer_list", "unparsed line", {"line_num": line_num, "line": line[:200]}, hypothesis_id="H6")
+            _debug_log(
+                "mega_service:parse_transfer_list",
+                "unparsed line",
+                {"line_num": line_num, "line": line[:200]},
+                hypothesis_id="H6",
+            )
 
     _debug_log(
         "mega_service:parse_transfer_list",

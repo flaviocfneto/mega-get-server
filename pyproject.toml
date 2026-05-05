@@ -1,0 +1,55 @@
+[project]
+name = "linktugger"
+version = "0.5.0"
+description = "FastAPI backend for FileTugger with MEGAcmd integration"
+authors = [{ name = "Maintainers" }]
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["api/requirements.txt"] }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = ["archive"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+    "ARG001", # unused function argument (allow for fixtures/mocks)
+    "ARG002", # unused method argument
+    "ARG005", # unused lambda argument
+    "B008",   # function call in argument defaults (FastAPI Body/Depends)
+    "PTH",    # use pathlib (avoiding broad refactor noise)
+    "UP",     # pyupgrade (avoiding broad refactor noise)
+]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+exclude = ["archive/", "api/tests/"]
+check_untyped_defs = false
+disallow_untyped_defs = false
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "scripts.*"
+strict = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+ignore_errors = false
+
+[tool.bandit]
+exclude_dirs = ["api/tests", "archive"]
+skips = ["B101"] # allow assert in tests (though tests are excluded)

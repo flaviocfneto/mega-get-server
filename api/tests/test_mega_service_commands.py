@@ -25,7 +25,9 @@ def test_subprocess_env_prepends_megacmd_path(monkeypatch):
 
 def test_mega_cmd_server_binary_uses_which(monkeypatch):
     monkeypatch.setattr(ms, "MEGACMD_PATH", "")
-    monkeypatch.setattr(ms.shutil, "which", lambda name, path=None: "/usr/bin/mega-cmd-server" if name == "mega-cmd-server" else None)
+    monkeypatch.setattr(
+        ms.shutil, "which", lambda name, path=None: "/usr/bin/mega-cmd-server" if name == "mega-cmd-server" else None
+    )
     assert ms.mega_cmd_server_binary() == "mega-cmd-server"
 
 

@@ -1,12 +1,12 @@
 """Unit tests for pending_queue helpers and edge cases."""
+
 from __future__ import annotations
 
 import asyncio
 import json
 
-import pytest
-
 import pending_queue as pq
+import pytest
 
 
 @pytest.fixture

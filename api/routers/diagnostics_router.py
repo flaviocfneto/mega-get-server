@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import tool_diagnostics as td
 import mega_service as ms
+import tool_diagnostics as td
 from fastapi import APIRouter, Depends, Request
 from security import rate_limit, require_csrf_boundary, require_scope
 

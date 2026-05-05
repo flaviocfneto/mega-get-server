@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-from fastapi.testclient import TestClient
-
 import api_main
 import pending_queue as pq
+import pytest
+from fastapi.testclient import TestClient
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 

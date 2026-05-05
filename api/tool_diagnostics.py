@@ -16,8 +16,7 @@ def _run_version_command(cmd: list[str], *, env: dict[str, str] | None = None) -
     try:
         proc = subprocess.run(
             cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             timeout=3,
             env=env or os.environ.copy(),
@@ -140,4 +139,3 @@ def collect_tool_diagnostics() -> dict[str, Any]:
         "missing_tools": missing,
         "tools": tools,
     }
-

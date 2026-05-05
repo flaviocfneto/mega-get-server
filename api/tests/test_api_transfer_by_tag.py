@@ -23,11 +23,7 @@ def test_transfer_by_tag_prefers_http_registry():
 
 def test_transfer_by_tag_from_mega_transfer_list(monkeypatch):
     async def fake_tl():
-        return (
-            "\n"
-            "TRANSFER  STATE     PROGRESS  PATH\n"
-            "9         ACTIVE    12%       /data/sample_file.zip\n"
-        )
+        return "\nTRANSFER  STATE     PROGRESS  PATH\n9         ACTIVE    12%       /data/sample_file.zip\n"
 
     monkeypatch.setattr(ms, "get_transfer_list", fake_tl)
     row = asyncio.run(am._transfer_by_tag("9"))

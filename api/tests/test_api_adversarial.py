@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from typing import Any
 
+import api_main
 import pytest
 from fastapi.testclient import TestClient
-import api_main
+from httpx import Response
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
@@ -18,7 +19,7 @@ _INTERNAL_MARKERS = (
     "mega_service.py",
     "api_main.py",
     "/site-packages/",
-    "file \"/",
+    'file "/',
     "line ",
 )
 

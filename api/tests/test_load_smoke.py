@@ -1,10 +1,9 @@
 """Burst of sequential GETs to a read-only endpoint (MEGA_SIMULATE) — load smoke baseline."""
+
 from __future__ import annotations
 
-import pytest
-from fastapi.testclient import TestClient
-
 import api_main
+from fastapi.testclient import TestClient
 
 
 def test_burst_config_reads_smoke(monkeypatch):

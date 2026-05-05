@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -109,7 +109,7 @@ async def add_item(*, url: str, tags: list[str] | None, priority: str | None) ->
             "url": url,
             "tags": tags_n,
             "priority": pr,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "status": "PENDING",
             "last_error": None,
         }

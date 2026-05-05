@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 import api_main
+from fastapi.testclient import TestClient
 
 
 def _reset_analytics_globals() -> None:
@@ -110,5 +109,3 @@ def test_total_downloaded_persists_after_disappearance(monkeypatch):
     assert api_main._daily_buckets is not None
     today = next(iter(api_main._daily_buckets.values()))
     assert today["bytes"] == 1000
-
-

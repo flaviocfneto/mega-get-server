@@ -3,6 +3,7 @@ Generic HTTP(S) downloads via GNU Wget2: validation, job registry, progress, lif
 Uses --force-progress and --progress=bar:force so the bar is emitted on piped stderr (wget 1.x --show-progress is not used).
 Production target: Linux/Docker (signal pause/resume).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -10,15 +11,15 @@ import ipaddress
 import os
 import re
 import shutil
-import socket
 import signal
-import uuid
+import socket
 import urllib.request
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse, urljoin
-from urllib.request import Request, urlopen
+from urllib.parse import urljoin, urlparse
+from urllib.request import Request
 
 import mega_service as ms
 import pending_queue as pq
@@ -529,12 +530,9 @@ async def _run_job_inner(job: HttpJob, pending_id: str | None) -> None:
             ms.log_buffer.append(f"HTTP download completed: {os.path.basename(out_path)}")
             try:
                 asyncio.get_running_loop()
-                asyncio.create_task(notify_download_completed(
-                    job.tag,
-                    os.path.basename(out_path),
-                    job.downloaded_bytes,
-                    "http"
-                ))
+                asyncio.create_task(
+                    notify_download_completed(job.tag, os.path.basename(out_path), job.downloaded_bytes, "http")
+                )
             except RuntimeError:
                 pass
             if pending_id:
@@ -660,7 +658,7 @@ async def http_cancel(tag: str) -> tuple[bool, str | None]:
         proc.terminate()
         try:
             await asyncio.wait_for(proc.wait(), timeout=8.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
     return True, None

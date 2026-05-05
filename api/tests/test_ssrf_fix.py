@@ -1,7 +1,9 @@
 from __future__ import annotations
-import pytest
+
 import socket
+
 import http_downloads as hd
+
 
 def test_host_is_blocked_resolves_local(monkeypatch):
     # Mock socket.getaddrinfo to return a local IP for a "public" looking domain
@@ -14,6 +16,7 @@ def test_host_is_blocked_resolves_local(monkeypatch):
 
     assert hd._host_is_blocked("evil-local.com") is True
 
+
 def test_host_is_blocked_allows_public(monkeypatch):
     # Mock socket.getaddrinfo to return a public IP
     def mock_getaddrinfo(host, port, *args, **kwargs):
@@ -24,6 +27,7 @@ def test_host_is_blocked_allows_public(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", mock_getaddrinfo)
 
     assert hd._host_is_blocked("safe-public.com") is False
+
 
 def test_host_is_blocked_handles_unresolvable():
     assert hd._host_is_blocked("this-does-not-exist.invalid") is True

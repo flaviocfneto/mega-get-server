@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 import api_main
+from fastapi.testclient import TestClient
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
@@ -160,8 +159,8 @@ def test_history_and_logs_delete(monkeypatch):
 
     with TestClient(api_main.app) as client:
         h = client.delete("/api/history", headers=SAFE_HEADERS)
-        l = client.delete("/api/logs", headers=SAFE_HEADERS)
+        logs_res = client.delete("/api/logs", headers=SAFE_HEADERS)
     assert h.status_code == 200
-    assert l.status_code == 200
+    assert logs_res.status_code == 200
     assert cleared["history"] is True
     assert cleared["logs"] is True

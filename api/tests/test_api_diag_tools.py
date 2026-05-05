@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 import api_main
+from fastapi.testclient import TestClient
 
 
 def test_diag_tools_endpoint(monkeypatch):
@@ -54,4 +53,3 @@ def test_core_smoke_endpoints(monkeypatch):
     assert transfers.status_code == 200
     assert isinstance(transfers.json(), list)
     assert tools.status_code == 200
-

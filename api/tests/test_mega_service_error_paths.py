@@ -4,8 +4,8 @@ import asyncio
 import json
 import os
 
-import mega_service as ms
 import crypt_utils
+import mega_service as ms
 
 
 def test_load_secrets_into_env_applies_encrypted_vars(tmp_path, monkeypatch):

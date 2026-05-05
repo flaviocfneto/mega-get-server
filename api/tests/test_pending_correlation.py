@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 import pending_correlation as pcorr
+import pytest
 import transfer_metadata as tm
 
 
@@ -45,7 +44,7 @@ def test_try_attach_empty_store(isolated_correlation):
 
 def test_ttl_drops_stale_on_attach(isolated_correlation):
     async def main():
-        old = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        old = (datetime.now(UTC) - timedelta(days=30)).isoformat()
         pcorr.CORRELATION_PATH.write_text(
             json.dumps(
                 {
@@ -125,7 +124,7 @@ def test_invalid_tags_before_row_removed(isolated_correlation):
                         "tags": [],
                         "priority": "NORMAL",
                         "tags_before": "not-a-list",
-                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "created_at": datetime.now(UTC).isoformat(),
                         "attempts": 0,
                     }
                 }

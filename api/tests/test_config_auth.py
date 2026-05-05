@@ -1,6 +1,8 @@
 from __future__ import annotations
-from fastapi.testclient import TestClient
+
 import api_main
+from fastapi.testclient import TestClient
+
 
 def test_api_config_get_requires_auth_in_strict_mode(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "strict")
@@ -8,6 +10,7 @@ def test_api_config_get_requires_auth_in_strict_mode(monkeypatch):
     with TestClient(api_main.app) as client:
         res = client.get("/api/config")
     assert res.status_code == 401
+
 
 def test_api_config_get_allows_auth_in_strict_mode(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "strict")

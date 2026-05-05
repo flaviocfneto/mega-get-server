@@ -10,15 +10,26 @@ permissions:
   contents: read
 
 jobs:
+  detect-tier:
+    runs-on: ubuntu-latest
+    outputs:
+      tier: ${{ steps.detector.outputs.tier }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Detect CI Tier
+        id: detector
+        run: python3 scripts/ci_tier_detector.py
+
   workflow-policy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
       - name: Reject tag-based GitHub Actions refs
         run: |
-          # Use a pattern that doesn't match itself
           if grep -E -r -n "uses:[[:space:]]+.+@[v][0-9]" .github/workflows; then
             echo "Tag-based action reference detected. Use immutable commit SHAs."
             exit 1
@@ -30,16 +41,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
-
       - name: Install backend dependencies
         run: |
-          pip install -r api/requirements.txt pytest pytest-cov
-
+          pip install -r api/requirements.txt pytest pytest-cov ruff mypy
+      - name: Ruff Lint & Format Check
+        run: ruff check . && ruff format --check .
+      - name: Mypy Type Check
+        run: mypy api
       - name: Backend tests with coverage threshold
         run: |
           pytest api/tests -v --cov=mega_service --cov=api_main --cov=http_downloads --cov=pending_correlation --cov=pending_queue --cov=tool_diagnostics --cov=transfer_metadata --cov=ui_settings --cov-report=term-missing --cov-fail-under=80
@@ -53,73 +65,107 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install frontend dependencies
-        run: npm ci
+      - name: Install pnpm
+        uses: pnpm/action-setup@0c17529a66aca453f9227af23103ed11469b1e47
+        with:
+          version: 9
+          run_install: false
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+        id: pnpm-cache
+      - name: Setup pnpm cache
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
         working-directory: web
-
       - name: Type checks
-        run: npm run lint && npm run lint:strict
+        run: pnpm run lint && pnpm run lint:strict
         working-directory: web
-
       - name: Frontend tests with coverage
-        run: npm run test:coverage
+        run: pnpm run test:coverage
         working-directory: web
-
       - name: Frontend build
-        run: npm run build
+        run: pnpm run build
         working-directory: web
 
+  bundle-and-lighthouse:
+    runs-on: ubuntu-latest
+    needs: [detect-tier, frontend-quality]
+    if: needs.detect-tier.outputs.tier >= 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Install pnpm
+        uses: pnpm/action-setup@0c17529a66aca453f9227af23103ed11469b1e47
+        with:
+          version: 9
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: web
       - name: Bundle size budget
-        run: npm run check:bundle
+        run: pnpm run check:bundle
         working-directory: web
-
       - name: Lighthouse CI
-        run: npm run lhci
+        run: pnpm run lhci
         working-directory: web
 
   e2e-smoke:
     runs-on: ubuntu-latest
-    needs: [frontend-quality]
+    needs: [detect-tier, frontend-quality]
+    if: needs.detect-tier.outputs.tier >= 2
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install frontend dependencies
-        run: npm ci
+      - name: Install pnpm
+        uses: pnpm/action-setup@0c17529a66aca453f9227af23103ed11469b1e47
+        with:
+          version: 9
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
         working-directory: web
-
       - name: Install Playwright Chromium
-        run: npx playwright install chromium --with-deps
+        run: pnpm exec playwright install chromium --with-deps
         working-directory: web
-
       - name: Run E2E smoke tests
-        run: npm run e2e
+        run: pnpm run e2e
         working-directory: web
 
   quality-gate:
     runs-on: ubuntu-latest
-    needs: [workflow-policy, backend-quality, frontend-quality, e2e-smoke]
+    needs: [workflow-policy, backend-quality, frontend-quality, bundle-and-lighthouse, e2e-smoke]
     if: always()
     steps:
       - name: Enforce gate
         run: |
-          if [[ "${{ needs.workflow-policy.result }}" != "success" || "${{ needs.backend-quality.result }}" != "success" || "${{ needs.frontend-quality.result }}" != "success" || "${{ needs.e2e-smoke.result }}" != "success" ]]; then
-            echo "Quality gate failed"
-            exit 1
-          fi
+          # Success is required for jobs that ran. Skipped jobs are allowed if they were gated by tier.
+          check_status() {
+            if [[ "$1" != "success" && "$1" != "skipped" ]]; then
+              echo "$2 failed with status $1"
+              exit 1
+            fi
+          }
+          check_status "${{ needs.workflow-policy.result }}" "workflow-policy"
+          check_status "${{ needs.backend-quality.result }}" "backend-quality"
+          check_status "${{ needs.frontend-quality.result }}" "frontend-quality"
+          check_status "${{ needs.bundle-and-lighthouse.result }}" "bundle-and-lighthouse"
+          check_status "${{ needs.e2e-smoke.result }}" "e2e-smoke"
           echo "Quality gate passed"
