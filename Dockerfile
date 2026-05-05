@@ -89,7 +89,7 @@ RUN apt-get update && \
 
 RUN useradd -m -d "${HOME}" -u 10001 -s /bin/bash mega
 COPY --from=build-stage /app/venv /app/venv
-COPY api/ /app/
+COPY api/*.py api/requirements.txt /app/
 COPY --from=react-build /build/dist /app/static
 RUN mkdir -p "${HOME}" "${DOWNLOAD_DIR}" && chown -R mega:mega "${HOME}" "${DOWNLOAD_DIR}" /app
 

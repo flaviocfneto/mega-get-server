@@ -5,19 +5,20 @@ import json
 import os
 
 import mega_service as ms
+import crypt_utils
 
 
-def test_load_dotenv_if_present_reads_and_ignores_comments(tmp_path, monkeypatch):
-    (tmp_path / "api").mkdir(parents=True, exist_ok=True)
-    env_path = tmp_path / ".env"
-    env_path.write_text("# comment\nA=1\nB = two\nEMPTY=\n", encoding="utf-8")
+def test_load_secrets_into_env_applies_encrypted_vars(tmp_path, monkeypatch):
+    monkeypatch.setattr(crypt_utils, "SECRET_KEY_PATH", str(tmp_path / "secret.key"))
+    monkeypatch.setattr(crypt_utils, "SECRETS_BIN_PATH", str(tmp_path / "secrets.bin"))
+    monkeypatch.setattr(crypt_utils, "DEFAULT_DATA_DIR", str(tmp_path))
 
-    monkeypatch.setattr(ms, "__file__", str(tmp_path / "api" / "mega_service.py"))
-    monkeypatch.delenv("A", raising=False)
-    monkeypatch.delenv("B", raising=False)
-    ms.load_dotenv_if_present()
-    assert os.environ.get("A") == "1"
-    assert os.environ.get("B") == "two"
+    crypt_utils.generate_key()
+    crypt_utils.set_vault_item("TEST_VAR", "secret_value")
+
+    monkeypatch.delenv("TEST_VAR", raising=False)
+    ms.load_secrets_into_env()
+    assert os.environ.get("TEST_VAR") == "secret_value"
 
 
 def test_history_load_and_save_roundtrip(tmp_path, monkeypatch):

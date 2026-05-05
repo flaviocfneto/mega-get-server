@@ -37,6 +37,7 @@ import {
   AnalyticsData,
   ToolDiagnosticsReport,
   TerminalHistoryEntry,
+  SecretsStatus,
 } from './types';
 import {
   mergeAppConfig,
@@ -47,6 +48,7 @@ import {
   normalizeToolDiagnostics,
   normalizeLoginPostResponse,
   normalizeTerminalPostResponse,
+  normalizeSecretsStatus,
 } from './apiNormalize';
 import { formatBytes, formatETA, quotaBarWidthPct, quotaPercent } from './lib/format';
 import { copyToClipboard } from './lib/clipboard';
@@ -149,6 +151,9 @@ export default function App() {
   const [tempWebhookUrl, setTempWebhookUrl] = useState<string>('');
   const [tempWatchEnabled, setTempWatchEnabled] = useState<boolean>(false);
   const [tempWatchPath, setTempWatchPath] = useState<string>('');
+  const [secretsStatus, setSecretsStatus] = useState<SecretsStatus | null>(null);
+  const [unlockKey, setUnlockKey] = useState('');
+  const [isUnlockOpen, setIsUnlockOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<Set<string>>(new Set());
@@ -287,6 +292,7 @@ export default function App() {
     fetchAccount();
     fetchAnalytics();
     fetchToolDiagnostics();
+    fetchSecretsStatus();
   }, []);
 
   useInterval(() => {
@@ -445,6 +451,41 @@ export default function App() {
       console.error('Failed to fetch tool diagnostics', err);
     } finally {
       setIsDiagnosticsLoading(false);
+    }
+  };
+
+  const fetchSecretsStatus = async () => {
+    try {
+      const raw = await apiGet('/api/secrets/status');
+      const data = normalizeSecretsStatus(raw);
+      setSecretsStatus(data);
+      // If initialized but we can't see any keys, maybe it's locked (but current API returns keys if it can decrypt them)
+      // Actually, my API returns keys only if it can load them.
+      // If key exists but secrets can't be decrypted (wrong key), it might show empty.
+    } catch (err) {
+      console.error('Failed to fetch secrets status', err);
+    }
+  };
+
+  const handleUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setActionError('');
+    try {
+      const result = await apiPostResult('/api/secrets/unlock', { key_base64: unlockKey });
+      if (isApiFailure(result)) {
+        setActionError(result.message);
+      } else {
+        setActionMessage('System unlocked successfully.');
+        setIsUnlockOpen(false);
+        setUnlockKey('');
+        fetchSecretsStatus();
+        fetchAccount(); // Credentials might be available now
+      }
+    } catch (err) {
+      setActionError('Unlock failed.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1182,6 +1223,57 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Security & Encryption */}
+                <div className="space-y-4 pt-8 border-t border-[var(--border)]">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--muted-foreground)] flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    Security & Encryption
+                  </h3>
+                  <div className="p-4 bg-[color-mix(in_srgb,var(--ft-accent)_6%,var(--card))] rounded-2xl border border-[var(--ft-border)] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold">Local Symmetric Encryption</p>
+                        <p className="text-[10px] text-[var(--muted-foreground)]">Protecting MEGA credentials and sensitive variables</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {secretsStatus?.initialized ? (
+                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md">
+                            <CheckCircle2 className="w-3 h-3" /> Initialized
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md">
+                            <AlertCircle className="w-3 h-3" /> Not Setup
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {secretsStatus && (
+                      <div className="grid grid-cols-1 gap-3 text-[10px] font-mono text-[var(--muted-foreground)]">
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1">
+                          <span>Key Location</span>
+                          <span className="text-[var(--foreground)]">{secretsStatus.key_path}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-[var(--border)] pb-1">
+                          <span>Stored Secrets</span>
+                          <span className="text-[var(--foreground)]">
+                            {secretsStatus.keys.length > 0 ? secretsStatus.keys.join(', ') : 'None'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3 pt-2">
+                      <button
+                        onClick={() => setIsUnlockOpen(true)}
+                        className="text-[10px] font-bold uppercase text-[var(--ft-accent)] hover:underline"
+                      >
+                        Provide Manual Key (Unlock)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Account Settings */}
                 <div className="space-y-4 pt-8 border-t border-[var(--border)]">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--muted-foreground)] flex items-center gap-2">
@@ -1330,6 +1422,75 @@ export default function App() {
                   Save Changes
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Unlock Modal */}
+      <AnimatePresence>
+        {isUnlockOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsUnlockOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="unlock-modal-title"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[var(--card)] border border-[var(--border)] rounded-3xl shadow-2xl p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+                  <ShieldCheck className="h-5 w-5 text-amber-500" aria-hidden />
+                </div>
+                <h2 id="unlock-modal-title" className="text-xl font-bold">
+                  Unlock Secrets
+                </h2>
+              </div>
+
+              <p className="text-sm text-[var(--muted-foreground)] mb-6">
+                Paste your base64 encryption key to unlock your credentials. This key will be saved to <code className="bg-[var(--muted)] px-1 rounded">{secretsStatus?.key_path}</code>.
+              </p>
+
+              <form onSubmit={handleUnlock} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Base64 Key</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={unlockKey}
+                    onChange={(e) => setUnlockKey(e.target.value)}
+                    placeholder="Enter key..."
+                    className={`${ftInput} ${ftFocusRing} font-mono text-xs`}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsUnlockOpen(false)}
+                    className="flex-1 px-6 py-3 rounded-xl text-sm font-bold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`flex-1 ${ftBtnPrimaryMd} ${ftFocusRing} py-3`}
+                  >
+                    {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                    Unlock System
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

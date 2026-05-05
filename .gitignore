@@ -15,6 +15,8 @@ api/pending_correlation.json
 .cursor/debug.log
 
 # Local data artifacts
+secret.key
+secrets.bin
 TEST-downloads/
 commands/
 

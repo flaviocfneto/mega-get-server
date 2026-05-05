@@ -317,6 +317,18 @@ export function normalizeBulkPostResponse(data: unknown): BulkPostPayload {
   };
 }
 
+import { SecretsStatus } from './types';
+
+export function normalizeSecretsStatus(data: unknown): SecretsStatus {
+  const src = isRecord(data) ? data : {};
+  return {
+    initialized: asBoolean(src.initialized),
+    keys: Array.isArray(src.keys) ? src.keys.filter((k): k is string => typeof k === 'string') : [],
+    key_path: asString(src.key_path),
+    store_path: asString(src.store_path),
+  };
+}
+
 /** POST /api/transfers/{tag}/limit */
 export interface SpeedLimitPostPayload {
   message: string;

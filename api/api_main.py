@@ -14,6 +14,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+import crypt_utils
 import http_downloads as hd
 import mega_service as ms
 import pending_correlation as pcorr
@@ -301,6 +302,15 @@ class LogoutBody(BaseModel):
     password: str | None = None
 
 
+class SecretSetBody(BaseModel):
+    key: str = Field(min_length=1, max_length=256)
+    value: str = Field(min_length=1, max_length=4096)
+
+
+class UnlockBody(BaseModel):
+    key_base64: str = Field(min_length=1)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ms.set_history_path(ms.default_history_path())
@@ -421,6 +431,14 @@ async def api_login(body: LoginBody, request: Request):
     account = await ms.get_account_info()
     if account["is_logged_in"]:
         ms.log_buffer.append(f"Login success: {account.get('email') or email}")
+        # Save credentials to encrypted store
+        try:
+            if not os.path.exists(crypt_utils.SECRET_KEY_PATH):
+                crypt_utils.generate_key()
+            crypt_utils.set_vault_item("MEGA_EMAIL", email)
+            crypt_utils.set_vault_item("MEGA_PASSWORD", password)
+        except Exception as e:
+            ms.log_buffer.append(f"Warning: Failed to encrypt credentials: {e}")
         return {"status": "success", "message": "Logged in.", "account": account, "command": login_result}
     return {
         "status": "error",
@@ -440,6 +458,59 @@ async def api_logout(request: Request, _: None = Depends(require_scope("write"))
         ms.log_buffer.append("Logout completed.")
         return {"status": "success", "message": "Logged out.", "command": result}
     return {"status": "error", "message": result.get("output") or "Logout failed.", "command": result}
+
+
+@app.get("/api/secrets/status")
+async def api_secrets_status(_: None = Depends(require_scope("write"))):
+    key_exists = os.path.exists(crypt_utils.SECRET_KEY_PATH)
+    data_map = crypt_utils.load_vault()
+    return {
+        "initialized": key_exists,
+        "keys": list(data_map.keys()),
+        "key_path": crypt_utils.SECRET_KEY_PATH,
+        "store_path": crypt_utils.SECRETS_BIN_PATH
+    }
+
+
+@app.post("/api/secrets/set")
+@rate_limit("secrets_set", limit=20, window_seconds=60)
+async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    if not os.path.exists(crypt_utils.SECRET_KEY_PATH):
+        crypt_utils.generate_key()
+        ms.log_buffer.append("Encryption key generated automatically.")
+
+    try:
+        crypt_utils.set_vault_item(body.key, body.value)
+        # Update environment if it matches known MEGA keys
+        if body.key in ("MEGA_EMAIL", "MEGA_PASSWORD"):
+            os.environ[body.key] = body.value
+        ms.log_buffer.append(f"Secret '{body.key}' updated.")
+        return {"success": True, "message": f"Secret '{body.key}' saved."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/secrets/unlock")
+@rate_limit("secrets_unlock", limit=5, window_seconds=60)
+async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depends(require_scope("write"))):
+    require_csrf_boundary(request)
+    try:
+        # Try to use it
+        from cryptography.fernet import Fernet
+        Fernet(body.key_base64.encode())
+
+        with open(crypt_utils.SECRET_KEY_PATH, "wb") as f:
+            f.write(body.key_base64.encode())
+        os.chmod(crypt_utils.SECRET_KEY_PATH, 0o600)
+
+        # Reload secrets into env
+        ms.load_secrets_into_env()
+
+        ms.log_buffer.append("Encryption key provided and system unlocked.")
+        return {"success": True, "message": "System unlocked."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid key format")
 
 
 def _analytics_parse_debug_enabled() -> bool:
