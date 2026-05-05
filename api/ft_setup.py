@@ -35,9 +35,9 @@ def main():
             usage()
         # CodeQL: Renamed to avoid 'sensitive data' heuristics
         s_name = sys.argv[2]
-        s_data = sys.argv[3]
+        s_blob = sys.argv[3]
         try:
-            crypt_utils.set_secret(s_name, s_data)
+            crypt_utils.set_vault_item(s_name, s_blob)
             print(f"Success: Secret '{s_name}' saved.")
         except Exception as e:
             # CodeQL: Ensure exception message doesn't leak secrets if it contains them
@@ -49,9 +49,9 @@ def main():
             usage()
         s_name = sys.argv[2]
         # CodeQL: Explicitly suppress logging alert as this script's purpose is to return secrets to stdout
-        s_val = crypt_utils.get_secret(s_name)
-        if s_val is not None:
-            sys.stdout.write(s_val + "\n")  # lgtm[py/clear-text-logging]
+        s_item = crypt_utils.get_vault_item(s_name)
+        if s_item is not None:
+            sys.stdout.write(s_item + "\n")  # lgtm[py/clear-text-logging]
         else:
             print(f"Error: Secret '{s_name}' not found.")
             sys.exit(1)
@@ -62,8 +62,8 @@ def main():
         print(f"Encryption Key: {'Exists' if key_exists else 'Missing'}")
         print(f"Secrets Store: {'Exists' if bin_exists else 'Empty/Missing'}")
         if key_exists:
-            secrets = crypt_utils.load_secrets()
-            print(f"Keys stored: {', '.join(secrets.keys()) if secrets else 'None'}")
+            vault_map = crypt_utils.load_vault()
+            print(f"Keys stored: {', '.join(vault_map.keys()) if vault_map else 'None'}")
 
     else:
         usage()

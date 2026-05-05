@@ -14,7 +14,7 @@ def test_load_secrets_into_env_applies_encrypted_vars(tmp_path, monkeypatch):
     monkeypatch.setattr(crypt_utils, "DEFAULT_DATA_DIR", str(tmp_path))
 
     crypt_utils.generate_key()
-    crypt_utils.set_secret("TEST_VAR", "secret_value")
+    crypt_utils.set_vault_item("TEST_VAR", "secret_value")
 
     monkeypatch.delenv("TEST_VAR", raising=False)
     ms.load_secrets_into_env()

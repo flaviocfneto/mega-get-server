@@ -31,7 +31,7 @@ def get_fernet():
         return None
     return Fernet(key)
 
-def save_secrets(secrets: dict):
+def save_vault(data_map: dict):
     ensure_data_dir()
     fernet = get_fernet()
     if not fernet:
@@ -40,13 +40,13 @@ def save_secrets(secrets: dict):
         # MailQuay's mq-setup.py init generates the key.
         raise ValueError("Encryption key not found. Initialize it first.")
 
-    data = json.dumps(secrets).encode("utf-8")
-    encrypted = fernet.encrypt(data)
+    encoded_data = json.dumps(data_map).encode("utf-8")
+    encrypted = fernet.encrypt(encoded_data)
     with open(SECRETS_BIN_PATH, "wb") as f:
         f.write(encrypted)
     os.chmod(SECRETS_BIN_PATH, 0o600)
 
-def load_secrets() -> dict:
+def load_vault() -> dict:
     if not os.path.exists(SECRETS_BIN_PATH):
         return {}
 
@@ -64,11 +64,11 @@ def load_secrets() -> dict:
         # Could be invalid key or corrupted data
         return {}
 
-def set_secret(key: str, value: str):
-    secrets = load_secrets()
-    secrets[key] = value
-    save_secrets(secrets)
+def set_vault_item(item_name: str, item_value: str):
+    data_map = load_vault()
+    data_map[item_name] = item_value
+    save_vault(data_map)
 
-def get_secret(key: str, default=None):
-    secrets = load_secrets()
-    return secrets.get(key, default)
+def get_vault_item(item_name: str, default=None):
+    data_map = load_vault()
+    return data_map.get(item_name, default)

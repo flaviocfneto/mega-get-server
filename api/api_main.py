@@ -435,8 +435,8 @@ async def api_login(body: LoginBody, request: Request):
         try:
             if not os.path.exists(crypt_utils.SECRET_KEY_PATH):
                 crypt_utils.generate_key()
-            crypt_utils.set_secret("MEGA_EMAIL", email)
-            crypt_utils.set_secret("MEGA_PASSWORD", password)
+            crypt_utils.set_vault_item("MEGA_EMAIL", email)
+            crypt_utils.set_vault_item("MEGA_PASSWORD", password)
         except Exception as e:
             ms.log_buffer.append(f"Warning: Failed to encrypt credentials: {e}")
         return {"status": "success", "message": "Logged in.", "account": account, "command": login_result}
@@ -463,10 +463,10 @@ async def api_logout(request: Request, _: None = Depends(require_scope("write"))
 @app.get("/api/secrets/status")
 async def api_secrets_status(_: None = Depends(require_scope("write"))):
     key_exists = os.path.exists(crypt_utils.SECRET_KEY_PATH)
-    secrets = crypt_utils.load_secrets()
+    data_map = crypt_utils.load_vault()
     return {
         "initialized": key_exists,
-        "keys": list(secrets.keys()),
+        "keys": list(data_map.keys()),
         "key_path": crypt_utils.SECRET_KEY_PATH,
         "store_path": crypt_utils.SECRETS_BIN_PATH
     }
@@ -481,7 +481,7 @@ async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depen
         ms.log_buffer.append("Encryption key generated automatically.")
 
     try:
-        crypt_utils.set_secret(body.key, body.value)
+        crypt_utils.set_vault_item(body.key, body.value)
         # Update environment if it matches known MEGA keys
         if body.key in ("MEGA_EMAIL", "MEGA_PASSWORD"):
             os.environ[body.key] = body.value

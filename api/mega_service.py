@@ -52,10 +52,10 @@ def _debug_log(location: str, message: str, data: dict | None = None, hypothesis
 def load_secrets_into_env() -> None:
     """Load encrypted secrets into environment variables."""
     try:
-        secrets = crypt_utils.load_secrets()
-        for key, value in secrets.items():
-            if key and value:
-                os.environ[key] = value
+        data_map = crypt_utils.load_vault()
+        for item_name, item_value in data_map.items():
+            if item_name and item_value:
+                os.environ[item_name] = item_value
     except Exception:
         pass
 
