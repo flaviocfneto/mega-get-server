@@ -1,6 +1,7 @@
 """
 FastAPI server: /api/* for React SPA + optional static files from ./static (vite dist).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -22,20 +23,20 @@ import pending_queue as pq
 import tool_diagnostics as td
 import transfer_metadata as tm
 import ui_settings as us
-from services.webhook_service import notify_download_completed
-from routers.diagnostics_router import router as diagnostics_router
-from routers.terminal_router import router as terminal_router
 from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from routers.diagnostics_router import router as diagnostics_router
+from routers.terminal_router import router as terminal_router
 from security import (
+    generate_nonce,
+    rate_limit,
     require_csrf_boundary,
     require_scope,
-    rate_limit,
     set_csrf_cookie,
-    generate_nonce,
 )
+from services.webhook_service import notify_download_completed
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 APP_STARTED = time.time()
@@ -173,10 +174,7 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 done_bytes = int(r.get("size_bytes", 0) or r.get("downloaded_bytes", 0) or 0)
                 _bump_daily_on_completed(done_bytes)
                 _fire_forget_webhook(
-                    tag,
-                    str(r.get("filename", "unknown")),
-                    done_bytes,
-                    str(r.get("driver", "megacmd"))
+                    tag, str(r.get("filename", "unknown")), done_bytes, str(r.get("driver", "megacmd"))
                 )
         elif state == "FAILED":
             failed_now += 1
@@ -197,12 +195,7 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if prev in _IN_FLIGHT_STATES:
             _analytics_completed += 1
             _bump_daily_on_completed(bytes_done)
-            _fire_forget_webhook(
-                tag,
-                str(snap.get("filename", "unknown")),
-                bytes_done,
-                "megacmd"
-            )
+            _fire_forget_webhook(tag, str(snap.get("filename", "unknown")), bytes_done, "megacmd")
 
     total_downloaded = _total_persisted_downloaded_bytes() + inflight_downloaded
     avg_speed = total_speed // active_n if active_n else 0
@@ -262,9 +255,7 @@ async def _execute_dispatched_queue_row(row: dict[str, Any]) -> None:
     labels = row.get("tags") if isinstance(row.get("tags"), list) else []
     pr = str(row.get("priority") or "NORMAL")
     if kind == "mega":
-        ok, err = await ms.run_mega_get_with_user_meta(
-            url, [str(x) for x in labels], pr, pending_id=item_id
-        )
+        ok, err = await ms.run_mega_get_with_user_meta(url, [str(x) for x in labels], pr, pending_id=item_id)
         if ok:
             await pq.remove_item(item_id)
         else:
@@ -405,7 +396,9 @@ async def api_config_get(response: Response, _: None = Depends(require_scope("wr
 
 @app.post("/api/config")
 @rate_limit("config_post", limit=20, window_seconds=60)
-async def api_config_post(request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))):
+async def api_config_post(
+    request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))
+):
     require_csrf_boundary(request)
     us.merge_post_into_stored(body)
     if body.get("download_dir") is not None:
@@ -468,7 +461,7 @@ async def api_secrets_status(_: None = Depends(require_scope("write"))):
         "initialized": key_exists,
         "keys": list(data_map.keys()),
         "key_path": crypt_utils.SECRET_KEY_PATH,
-        "store_path": crypt_utils.SECRETS_BIN_PATH
+        "store_path": crypt_utils.SECRETS_BIN_PATH,
     }
 
 
@@ -498,6 +491,7 @@ async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depen
     try:
         # Try to use it
         from cryptography.fernet import Fernet
+
         Fernet(body.key_base64.encode())
 
         with open(crypt_utils.SECRET_KEY_PATH, "wb") as f:
@@ -509,7 +503,7 @@ async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depen
 
         ms.log_buffer.append("Encryption key provided and system unlocked.")
         return {"success": True, "message": "System unlocked."}
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid key format")
 
 
@@ -778,7 +772,12 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
 
 @app.post("/api/transfers/{tag}/update")
 @rate_limit("transfer_update", limit=40, window_seconds=60)
-async def api_transfer_update(tag: str, request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))):
+async def api_transfer_update(
+    tag: str,
+    request: Request,
+    body: dict[str, Any] = Body(default_factory=dict),
+    _: None = Depends(require_scope("write")),
+):
     require_csrf_boundary(request)
     values: dict[str, Any] = {}
     if "priority" in body and body["priority"] is not None:
@@ -800,7 +799,12 @@ async def api_transfer_update(tag: str, request: Request, body: dict[str, Any] =
 
 @app.post("/api/transfers/{tag}/limit")
 @rate_limit("transfer_limit", limit=40, window_seconds=60)
-async def api_transfer_limit(tag: str, request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))):
+async def api_transfer_limit(
+    tag: str,
+    request: Request,
+    body: dict[str, Any] = Body(default_factory=dict),
+    _: None = Depends(require_scope("write")),
+):
     require_csrf_boundary(request)
     if "speed_limit_kbps" not in body:
         raise HTTPException(status_code=400, detail="speed_limit_kbps is required")

@@ -5,10 +5,9 @@ without real mega-transfers. Validates parse + disappearance completion together
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 import api_main
 import mega_service as ms
+from fastapi.testclient import TestClient
 
 
 def _reset_analytics_globals() -> None:

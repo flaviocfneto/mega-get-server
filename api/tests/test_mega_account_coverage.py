@@ -1,4 +1,5 @@
 """Extra mega_service.get_account_info coverage (non-simulate paths, mocked MEGAcmd)."""
+
 from __future__ import annotations
 
 import asyncio

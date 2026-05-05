@@ -11,9 +11,24 @@ permissions:
   contents: read
 
 jobs:
+  detect-tier:
+    runs-on: ubuntu-latest
+    outputs:
+      tier: ${{ steps.detector.outputs.tier }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Detect CI Tier
+        id: detector
+        run: python3 scripts/ci_tier_detector.py
+
   build:
     name: Smoke build
     runs-on: ubuntu-latest
+    needs: [detect-tier]
+    if: needs.detect-tier.outputs.tier >= 3 || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5

@@ -17,7 +17,9 @@ class TerminalBody(BaseModel):
 
 @router.post("/terminal")
 @rate_limit("terminal", limit=15, window_seconds=60)
-async def api_terminal(body: TerminalBody, request: Request, _: None = Depends(require_scope("admin"))) -> dict[str, object]:
+async def api_terminal(
+    body: TerminalBody, request: Request, _: None = Depends(require_scope("admin"))
+) -> dict[str, object]:
     require_csrf_boundary(request)
     raw = (body.command or "").strip()
     if not raw:

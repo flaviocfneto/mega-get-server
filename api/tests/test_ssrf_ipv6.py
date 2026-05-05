@@ -1,7 +1,9 @@
 from __future__ import annotations
-import pytest
+
 import socket
+
 import http_downloads as hd
+
 
 def test_host_is_blocked_resolves_local(monkeypatch):
     # Mock socket.getaddrinfo to return a local IP for a "public" looking domain
@@ -14,6 +16,7 @@ def test_host_is_blocked_resolves_local(monkeypatch):
 
     assert hd._host_is_blocked("evil-local.com") is True
 
+
 def test_host_is_blocked_allows_public(monkeypatch):
     # Mock socket.getaddrinfo to return a public IP
     def mock_getaddrinfo(host, port, *args, **kwargs):
@@ -25,21 +28,24 @@ def test_host_is_blocked_allows_public(monkeypatch):
 
     assert hd._host_is_blocked("safe-public.com") is False
 
+
 def test_host_is_blocked_handles_unresolvable():
     assert hd._host_is_blocked("this-does-not-exist.invalid") is True
+
 
 def test_host_is_blocked_ipv6_private(monkeypatch):
     def mock_getaddrinfo(host, port, *args, **kwargs):
         if host == "evil-v6-local.com":
             return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("fd00::1", 0, 0, 0))]
         if host == "evil-v6-site.com":
-             return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("fec0::1", 0, 0, 0))]
+            return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("fec0::1", 0, 0, 0))]
         return socket.getaddrinfo(host, port, *args, **kwargs)
 
     monkeypatch.setattr(socket, "getaddrinfo", mock_getaddrinfo)
 
     assert hd._host_is_blocked("evil-v6-local.com") is True
     assert hd._host_is_blocked("evil-v6-site.com") is True
+
 
 def test_host_is_blocked_ipv6_public(monkeypatch):
     def mock_getaddrinfo(host, port, *args, **kwargs):

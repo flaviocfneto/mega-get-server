@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import mega_service as ms
+
 
 def test_redact_ips():
     assert "10.***.***.***" in ms.redact_sensitive_text("Connect to 10.0.0.5")
@@ -9,6 +11,7 @@ def test_redact_ips():
     # Public IPs should not be redacted (this regex is simple so it might have false positives, but let's check basic ones)
     assert "1.1.1.1" in ms.redact_sensitive_text("1.1.1.1")
     assert "8.8.8.8" in ms.redact_sensitive_text("8.8.8.8")
+
 
 def test_redact_paths():
     assert "/app/*** " in ms.redact_sensitive_text("/app/api_main.py is starting")

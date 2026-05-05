@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-from fastapi.testclient import TestClient
-
 import api_main
 import pending_queue as pq
+import pytest
+from fastapi.testclient import TestClient
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
@@ -95,11 +94,14 @@ def test_queue_start_all_starts_pending(queue_path, monkeypatch):
 
     with TestClient(api_main.app) as client:
         for i in range(2):
-            assert client.post(
-                "/api/queue",
-                json={"url": f"https://mega.nz/file/{i}", "tags": [], "priority": "NORMAL"},
-                headers=SAFE_HEADERS,
-            ).status_code == 200
+            assert (
+                client.post(
+                    "/api/queue",
+                    json={"url": f"https://mega.nz/file/{i}", "tags": [], "priority": "NORMAL"},
+                    headers=SAFE_HEADERS,
+                ).status_code
+                == 200
+            )
         r = client.post("/api/queue/start-all", headers=SAFE_HEADERS)
     assert r.status_code == 200
     body = r.json()

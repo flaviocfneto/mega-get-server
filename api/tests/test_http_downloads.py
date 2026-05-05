@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import pytest
-
 import http_downloads as hd
 import mega_service as ms
+import pytest
 
 
 def test_normalize_download_url_mega():

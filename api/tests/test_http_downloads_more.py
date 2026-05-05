@@ -1,14 +1,14 @@
 """Additional http_downloads coverage: registry, lifecycle helpers, and mocked subprocess paths."""
+
 from __future__ import annotations
 
 import asyncio
 import os
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 import http_downloads as hd
 import mega_service as ms
+import pytest
 import transfer_metadata as tm
 
 
@@ -377,9 +377,15 @@ def test_resolve_and_validate_url_success(monkeypatch):
         def __init__(self):
             self.status = 200
             self.headers = {"Content-Length": "2048"}
-        def __enter__(self): return self
-        def __exit__(self, *exc): pass
-        def close(self): pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            pass
+
+        def close(self):
+            pass
 
     mock_opener = MagicMock()
     mock_opener.open.return_value = _Resp()
@@ -525,7 +531,7 @@ def test_http_cancel_kills_on_wait_timeout(tmp_path, monkeypatch, meta_path):
     hd._registry[tag] = job
 
     async def boom_wait_for(_coro, timeout=8.0):
-        raise asyncio.TimeoutError
+        raise TimeoutError
 
     monkeypatch.setattr(hd.asyncio, "wait_for", boom_wait_for)
     ok, err = asyncio.run(hd.http_cancel(tag))

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+
 from services.json_store import read_json_dict, write_json_atomic
 
 META_PATH = Path(__file__).resolve().parent / "transfer_metadata.json"

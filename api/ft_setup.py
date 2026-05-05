@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import sys
 import os
-from pathlib import Path
+import sys
 
 # Add the current directory to sys.path so we can import crypt_utils
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import crypt_utils
+
 
 def usage():
     print("Usage:")
@@ -15,6 +15,7 @@ def usage():
     print("  ft-setup.py get <name>           - Decrypt and return a secret")
     print("  ft-setup.py status               - Check if encryption is initialized")
     sys.exit(1)
+
 
 def main():
     if len(sys.argv) < 2:
@@ -39,9 +40,9 @@ def main():
         try:
             crypt_utils.set_vault_item(s_name, s_blob)
             print(f"Success: Secret '{s_name}' saved.")
-        except Exception as e:
+        except Exception:
             # CodeQL: Ensure exception message doesn't leak secrets if it contains them
-            print(f"Error: Secret save failed.")
+            print("Error: Secret save failed.")
             sys.exit(1)
 
     elif cmd == "get":
@@ -67,6 +68,7 @@ def main():
 
     else:
         usage()
+
 
 if __name__ == "__main__":
     main()

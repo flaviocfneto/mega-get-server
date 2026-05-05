@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import pytest
-
 import mega_service as ms
+import pytest
 
 
 def test_validate_mega_download_url_strips():

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 import api_main
+from fastapi.testclient import TestClient
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
@@ -65,7 +64,9 @@ def test_transfer_update_success_persists_values(monkeypatch):
     monkeypatch.setattr(api_main, "_transfer_by_tag", fake_by_tag)
 
     with TestClient(api_main.app) as client:
-        res = client.post("/api/transfers/22/update", json={"priority": "high", "tags": ["a", " ", "b"]}, headers=SAFE_HEADERS)
+        res = client.post(
+            "/api/transfers/22/update", json={"priority": "high", "tags": ["a", " ", "b"]}, headers=SAFE_HEADERS
+        )
 
     assert res.status_code == 200
     assert captured["tag"] == "22"
@@ -100,8 +101,12 @@ def test_transfer_bulk_add_tag_and_priority_update(monkeypatch):
     monkeypatch.setattr(api_main.tm, "update", fake_update)
 
     with TestClient(api_main.app) as client:
-        r1 = client.post("/api/transfers/bulk", json={"tags": ["7"], "action": "add_tag", "value": "new"}, headers=SAFE_HEADERS)
-        r2 = client.post("/api/transfers/bulk", json={"tags": ["7"], "action": "set_priority", "value": "high"}, headers=SAFE_HEADERS)
+        r1 = client.post(
+            "/api/transfers/bulk", json={"tags": ["7"], "action": "add_tag", "value": "new"}, headers=SAFE_HEADERS
+        )
+        r2 = client.post(
+            "/api/transfers/bulk", json={"tags": ["7"], "action": "set_priority", "value": "high"}, headers=SAFE_HEADERS
+        )
 
     assert r1.status_code == 200
     assert r2.status_code == 200
@@ -122,21 +127,30 @@ def test_bulk_actions_hit_megacmd_paths(monkeypatch):
     monkeypatch.setattr(api_main.ms, "run_mega_transfers_resume_for_tag", fake_resume)
 
     with TestClient(api_main.app) as client:
-        assert client.post(
-            "/api/transfers/bulk",
-            json={"tags": ["99"], "action": "pause"},
-            headers=SAFE_HEADERS,
-        ).status_code == 200
-        assert client.post(
-            "/api/transfers/bulk",
-            json={"tags": ["99"], "action": "resume"},
-            headers=SAFE_HEADERS,
-        ).status_code == 200
-        assert client.post(
-            "/api/transfers/bulk",
-            json={"tags": ["99"], "action": "cancel"},
-            headers=SAFE_HEADERS,
-        ).status_code == 200
+        assert (
+            client.post(
+                "/api/transfers/bulk",
+                json={"tags": ["99"], "action": "pause"},
+                headers=SAFE_HEADERS,
+            ).status_code
+            == 200
+        )
+        assert (
+            client.post(
+                "/api/transfers/bulk",
+                json={"tags": ["99"], "action": "resume"},
+                headers=SAFE_HEADERS,
+            ).status_code
+            == 200
+        )
+        assert (
+            client.post(
+                "/api/transfers/bulk",
+                json={"tags": ["99"], "action": "cancel"},
+                headers=SAFE_HEADERS,
+            ).status_code
+            == 200
+        )
 
     assert ("pause", "99") in actions
     assert ("resume", "99") in actions

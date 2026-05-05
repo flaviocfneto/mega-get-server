@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 import api_main
 import mega_service as ms
 import security
+from fastapi.testclient import TestClient
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
@@ -59,7 +58,9 @@ def test_csrf_blocks_missing_origin_for_unsafe_routes():
 
 def test_csrf_blocks_untrusted_origin():
     with TestClient(api_main.app) as client:
-        res = client.post("/api/download", json={"url": "https://mega.nz/file/abc"}, headers={"origin": "https://evil.example"})
+        res = client.post(
+            "/api/download", json={"url": "https://mega.nz/file/abc"}, headers={"origin": "https://evil.example"}
+        )
     assert res.status_code == 403
 
 
@@ -75,9 +76,13 @@ def test_rate_limit_hits_429_on_terminal(monkeypatch):
 
     with TestClient(api_main.app) as client:
         for _ in range(15):
-            ok = client.post("/api/terminal", json={"command": "mega-version"}, headers={"x-api-key": "secret-admin", **SAFE_HEADERS})
+            ok = client.post(
+                "/api/terminal", json={"command": "mega-version"}, headers={"x-api-key": "secret-admin", **SAFE_HEADERS}
+            )
             assert ok.status_code == 200
-        limited = client.post("/api/terminal", json={"command": "mega-version"}, headers={"x-api-key": "secret-admin", **SAFE_HEADERS})
+        limited = client.post(
+            "/api/terminal", json={"command": "mega-version"}, headers={"x-api-key": "secret-admin", **SAFE_HEADERS}
+        )
     assert limited.status_code == 429
 
 

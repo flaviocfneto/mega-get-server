@@ -4,10 +4,10 @@ import os
 import secrets
 import time
 from collections import defaultdict, deque
-from urllib.parse import urlparse
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
+from urllib.parse import urlparse
 
 from fastapi import Header, HTTPException, Request, Response
 
@@ -40,13 +40,16 @@ def require_scope(scope: str) -> Callable[..., None]:
 _rate_state: dict[str, deque[float]] = defaultdict(deque)
 
 
-def rate_limit(name: str, limit: int = 30, window_seconds: int = 60) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def rate_limit(
+    name: str, limit: int = 30, window_seconds: int = 60
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Limit requests per route name and client host using a sliding time window.
 
     Tests: ``api/tests/test_security_controls.py`` (429 behavior and window reset via
     ``test_rate_limit_resets_after_window``). Multi-replica and process boundaries:
     ``INFRASTRUCTURE.md`` section 8.1.
     """
+
     def deco(fn: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(fn)
         async def wrapped(*args: Any, **kwargs: Any) -> Any:

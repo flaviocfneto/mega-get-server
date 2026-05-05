@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 import api_main
+from fastapi.testclient import TestClient
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 

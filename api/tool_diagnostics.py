@@ -140,4 +140,3 @@ def collect_tool_diagnostics() -> dict[str, Any]:
         "missing_tools": missing,
         "tools": tools,
     }
-

@@ -50,4 +50,3 @@ def test_wget2_diagnostic_uses_absolute_wget_http_bin(tmp_path, monkeypatch):
     diag = td._wget2_diagnostic()
     assert diag["available"] is True
     assert "wget2" in (diag.get("detected_version") or "").lower() or diag["details"].get("resolved_path")
-
