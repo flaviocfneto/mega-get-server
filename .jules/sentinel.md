@@ -85,6 +85,23 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 2. Use a dedicated webhook service that encapsulates SSRF protection logic (host validation, redirect suppression) and is called by the application's event loop.
 3. Set a strict CSRF policy that requires security headers for all state-changing methods, rejecting requests where both Origin and Referer are absent.
 
+## 2026-05-06 - [Terminal Flag Bypass and Default Insecurity]
+**Vulnerability:**
+1. Terminal Flag Bypass: Hardening only non-flag arguments allowed attackers to use flags like `--output-document=/etc/passwd` or `-O /etc/passwd` in `wget2` to bypass path traversal checks.
+2. SSRF in Terminal: While generic downloads were protected, the administrative terminal allowed `wget2` to hit internal/private IP ranges.
+3. Insecure Defaults: `API_AUTH_MODE` defaulted to `optional`, leaving the API open if not explicitly configured.
+4. Secret Key Injection: Lack of validation on secret keys allowed characters that could lead to shell injection when exported via `decrypt_env.py`.
+
+**Learning:**
+1. Defense-in-depth for terminal wrappers must inspect ALL command tokens. Attackers will use standard tool options (flags) to provide malicious paths or targets that are ignored by heuristics looking only at positional arguments.
+2. "Secure by Default" is a critical principle; fallbacks for authentication modes should always lean toward the most restrictive state.
+3. Any user input that eventually ends up being evaluated in a shell context (like environment variable names) MUST be strictly validated against a whitelist of safe characters (e.g., `[a-zA-Z0-9_]`).
+
+**Prevention:**
+1. Iterate over every token in a command and apply both SSRF (for URL-like tokens) and Path Traversal (for path-like tokens, including flag values after `=`) checks.
+2. Set default security modes to `strict`.
+3. Use Pydantic patterns to enforce strict character sets for keys and identifiers.
+
 ## 2026-05-04 - [Defense in Depth: SSRF, Redaction, and Dependency Pinning]
 **Vulnerability:**
 1. IPv6 SSRF: SSRF protection was missing explicit checks for IPv6 Unique Local Addresses (ULA) and site-local ranges.

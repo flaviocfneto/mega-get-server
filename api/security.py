@@ -13,7 +13,7 @@ from fastapi import Header, HTTPException, Request, Response
 
 
 def _auth_mode() -> str:
-    return os.environ.get("API_AUTH_MODE", "optional").strip().lower()
+    return os.environ.get("API_AUTH_MODE", "strict").strip().lower()
 
 
 def _key_for_scope(scope: str) -> str:

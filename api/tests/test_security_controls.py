@@ -34,7 +34,8 @@ def test_terminal_allows_auth_in_strict_mode(monkeypatch):
     assert res.json().get("ok") is True
 
 
-def test_logs_are_redacted():
+def test_logs_are_redacted(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     with TestClient(api_main.app) as client:
         ms.log_buffer.append("mega-login user@example.com secret")
         res = client.get("/api/logs")
@@ -43,20 +44,23 @@ def test_logs_are_redacted():
     assert any("***" in line for line in body)
 
 
-def test_download_rejects_disallowed_http_urls():
+def test_download_rejects_disallowed_http_urls(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     with TestClient(api_main.app) as client:
         res = client.post("/api/download", json={"url": "http://127.0.0.1/file.zip"}, headers=SAFE_HEADERS)
     assert res.status_code == 400
 
 
-def test_csrf_blocks_missing_origin_for_unsafe_routes():
+def test_csrf_blocks_missing_origin_for_unsafe_routes(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     with TestClient(api_main.app) as client:
         res = client.post("/api/download", json={"url": "https://mega.nz/file/abc"})
     assert res.status_code == 403
     assert "csrf boundary violation" in res.json()["detail"].lower()
 
 
-def test_csrf_blocks_untrusted_origin():
+def test_csrf_blocks_untrusted_origin(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     with TestClient(api_main.app) as client:
         res = client.post(
             "/api/download", json={"url": "https://mega.nz/file/abc"}, headers={"origin": "https://evil.example"}
@@ -107,6 +111,7 @@ def test_rate_limit_resets_after_window(monkeypatch):
 
 
 def test_cookie_session_mode_requires_token_mismatch(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("API_AUTH_TRANSPORT", "cookie_session")
     monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_plus_token")
     with TestClient(api_main.app) as client:
@@ -123,6 +128,7 @@ def test_cookie_session_mode_requires_token_mismatch(monkeypatch):
 
 
 def test_cookie_session_mode_rejects_missing_csrf_token(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("API_AUTH_TRANSPORT", "cookie_session")
     monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_plus_token")
     with TestClient(api_main.app) as client:
@@ -134,6 +140,7 @@ def test_cookie_session_mode_rejects_missing_csrf_token(monkeypatch):
 
 
 def test_cookie_session_mode_accepts_valid_csrf_token(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("API_AUTH_TRANSPORT", "cookie_session")
     monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_plus_token")
     with TestClient(api_main.app) as client:
@@ -150,6 +157,7 @@ def test_cookie_session_mode_accepts_valid_csrf_token(monkeypatch):
 
 
 def test_header_key_mode_preserves_existing_origin_only_behavior(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("API_AUTH_TRANSPORT", "header_key")
     monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_only")
     with TestClient(api_main.app) as client:
