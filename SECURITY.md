@@ -32,6 +32,16 @@ We aim to **acknowledge** receipt, **triage** severity, and provide **remediatio
 
 We welcome coordinated disclosure: keep details non-public until a fix is released or a mutually agreed disclosure date, unless immediate disclosure is required for user safety.
 
+## Local Symmetric Encryption Model
+
+FileTugger implements a Local Symmetric Encryption model to protect sensitive end-user credentials (like MEGA passwords) on their local machine or within Docker volumes.
+
+- **Encryption Engine:** Uses `cryptography.fernet` (AES-256 in CBC mode with HMAC-SHA256) for authenticated symmetric encryption.
+- **Master Key:** A master key is stored in `/data/secret.key`. This key is required to decrypt the secrets.
+- **Encrypted Blob:** Sensitive variables are stored as an encrypted binary JSON blob in `/data/secrets.bin`.
+- **Zero-Knowledge Storage:** Plain-text secrets never touch the container's disk; they are decrypted at boot time and injected directly into the container's RAM.
+- **Interactive Recovery:** If the master key is missing at boot, the container can prompt for it in interactive mode, or it can be provided via the Web UI.
+
 ## Security Controls in Repository
 
 Summary controls (details and tests: [docs/security/VERIFICATION-PACK.md](docs/security/VERIFICATION-PACK.md) and [docs/security/FINDINGS-REGISTER.md](docs/security/FINDINGS-REGISTER.md)):

@@ -120,3 +120,10 @@ export interface ToolDiagnosticsReport {
   missing_tools: string[];
   tools: ToolDiagnosticEntry[];
 }
+
+export interface SecretsStatus {
+  initialized: boolean;
+  keys: string[];
+  key_path: string;
+  store_path: string;
+}

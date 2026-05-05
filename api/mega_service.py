@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+import crypt_utils
 import pending_correlation
 import transfer_metadata as tm
 
@@ -48,24 +49,13 @@ def _debug_log(location: str, message: str, data: dict | None = None, hypothesis
 # #endregion
 
 
-def load_dotenv_if_present() -> None:
-    """Load .env from project root when keys are not already set."""
+def load_secrets_into_env() -> None:
+    """Load encrypted secrets into environment variables."""
     try:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        env_path = os.path.join(project_root, ".env")
-        if not os.path.isfile(env_path):
-            return
-        with open(env_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, _, value = line.partition("=")
-                    key = key.strip()
-                    value = value.strip()
-                    if key and key not in os.environ:
-                        os.environ[key] = value
+        secrets = crypt_utils.load_secrets()
+        for key, value in secrets.items():
+            if key and value:
+                os.environ[key] = value
     except Exception:
         pass
 
@@ -91,7 +81,7 @@ def default_history_path() -> str:
     return os.path.join(app_root_dir(), ".mega-get-history.json")
 
 
-load_dotenv_if_present()
+load_secrets_into_env()
 
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR") or default_download_dir()
 TRANSFER_LIST_LIMIT = os.environ.get("TRANSFER_LIST_LIMIT", "50")
