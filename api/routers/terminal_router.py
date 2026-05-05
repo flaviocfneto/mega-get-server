@@ -49,53 +49,75 @@ async def api_terminal(
             "blocked_reason": "not_in_allowlist",
         }
 
-    # Harden terminal commands: prevent arbitrary path access
-    path_args = [p for p in parts[1:] if not p.startswith("-")]
+    # SSRF protection for wget2 and URL-like arguments
+    from http_downloads import _host_is_blocked
+    from urllib.parse import urlparse
 
-    # General path validation for all allowed commands.
-    # We want to block local filesystem access outside DOWNLOAD_DIR.
-    # Remote paths in MEGAcmd often start with '/' (e.g. /Root) or 'mega:/'.
+    # Harden terminal commands: prevent arbitrary path access and SSRF
     abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
-    for arg in path_args:
+
+    for part in parts[1:]:
+        # 1. URL/SSRF Validation
+        if part.startswith(("http://", "https://")):
+            try:
+                parsed = urlparse(part)
+                host = (parsed.hostname or "").lower()
+                if _host_is_blocked(host):
+                    return {
+                        "ok": False,
+                        "command": raw,
+                        "exit_code": 126,
+                        "output": f"Blocked: untrusted host in URL '{part}'",
+                        "blocked_reason": "ssrf_attempt",
+                    }
+            except Exception:
+                pass
+
+        # 2. Path Traversal Validation (Check ALL arguments, even flags with paths)
+        # Extract potential path from argument (e.g., --output-document=/path or just /path)
+        potential_path = part
+        if "=" in part:
+            potential_path = part.split("=", 1)[1]
+
         # Heuristic: if it looks like a remote path, don't apply local traversal checks.
-        if arg.startswith("mega:/"):
+        if potential_path.startswith("mega:/"):
             continue
 
-        # If it's an absolute path but NOT a remote path (starts with / but isn't /Root, etc)
         # In MEGAcmd, /Root, /Bin, /Incoming are the standard remote roots.
-        if os.path.isabs(arg):
-            is_likely_remote = any(arg.startswith(r) for r in ("//", "/Root", "/Bin", "/Incoming"))
-            if is_likely_remote:
-                continue
+        is_likely_remote = any(potential_path.startswith(r) for r in ("//", "/Root", "/Bin", "/Incoming"))
+        if is_likely_remote:
+            continue
 
-            # It's an absolute local path. Must be within DOWNLOAD_DIR.
-            abs_arg = os.path.abspath(arg)
-        else:
-            # It's a relative path. Check if it resolves outside DOWNLOAD_DIR.
-            # We resolve it relative to DOWNLOAD_DIR if it's meant to be a local path,
-            # but here we just check if it tries to escape via ../
-            abs_arg = os.path.abspath(os.path.join(abs_download_dir, arg))
+        # Check for path-like indicators: contains slash or is an absolute path or contains ..
+        if "/" in potential_path or os.path.isabs(potential_path) or ".." in potential_path:
+            if os.path.isabs(potential_path):
+                abs_arg = os.path.abspath(potential_path)
+            else:
+                abs_arg = os.path.abspath(os.path.join(abs_download_dir, potential_path))
 
-        try:
-            if os.path.commonpath([abs_arg, abs_download_dir]) != abs_download_dir:
+            try:
+                if os.path.commonpath([abs_arg, abs_download_dir]) != abs_download_dir:
+                    return {
+                        "ok": False,
+                        "command": raw,
+                        "exit_code": 126,
+                        "output": f"Blocked: local path access outside {ms.DOWNLOAD_DIR} in argument '{part}'",
+                        "blocked_reason": "path_traversal_attempt",
+                    }
+            except ValueError:
+                # This can happen if paths are on different drives on Windows, or other oddities
                 return {
                     "ok": False,
                     "command": raw,
                     "exit_code": 126,
-                    "output": f"Blocked: local path access outside {ms.DOWNLOAD_DIR}",
-                    "blocked_reason": "path_traversal_attempt",
+                    "output": f"Invalid path in argument '{part}'",
+                    "blocked_reason": "invalid_path",
                 }
-        except ValueError:
-            return {
-                "ok": False,
-                "command": raw,
-                "exit_code": 126,
-                "output": "Invalid path.",
-                "blocked_reason": "invalid_path",
-            }
 
     if cmd == "mega-get":
         # mega-get [OPTIONS] <remotepath> [localpath]
+        # path_args for legacy check: non-dash arguments
+        path_args = [p for p in parts[1:] if not p.startswith("-")]
         if len(path_args) != 2:
             return {
                 "ok": False,

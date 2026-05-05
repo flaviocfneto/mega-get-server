@@ -294,7 +294,7 @@ class LogoutBody(BaseModel):
 
 
 class SecretSetBody(BaseModel):
-    key: str = Field(min_length=1, max_length=256)
+    key: str = Field(min_length=1, max_length=256, pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$")
     value: str = Field(min_length=1, max_length=4096)
 
 
