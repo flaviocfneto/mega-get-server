@@ -40,17 +40,18 @@ def main():
             crypt_utils.set_secret(s_name, s_data)
             print(f"Success: Secret '{s_name}' saved.")
         except Exception as e:
-            print(f"Error: {e}")
+            # CodeQL: Ensure exception message doesn't leak secrets if it contains them
+            print(f"Error: Secret save failed.")
             sys.exit(1)
 
     elif cmd == "get":
         if len(sys.argv) < 3:
             usage()
         s_name = sys.argv[2]
-        # CodeQL: Intended output of secret to stdout for shell capture
+        # CodeQL: Explicitly suppress logging alert as this script's purpose is to return secrets to stdout
         s_val = crypt_utils.get_secret(s_name)
         if s_val is not None:
-            sys.stdout.write(s_val + "\n")
+            sys.stdout.write(s_val + "\n")  # lgtm[py/clear-text-logging]
         else:
             print(f"Error: Secret '{s_name}' not found.")
             sys.exit(1)
