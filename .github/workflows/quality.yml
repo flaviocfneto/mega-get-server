@@ -70,7 +70,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install pnpm
-        uses: pnpm/action-setup@a3252b78c470c0c9108d939327959da96fd3407c
+        uses: pnpm/action-setup@0c17529a66aca453f9227af23103ed11469b1e47
         with:
           version: 9
           run_install: false
@@ -80,7 +80,7 @@ jobs:
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
         id: pnpm-cache
       - name: Setup pnpm cache
-        uses: actions/cache@0ad4b8fadaa221e03344b2f930056322096a6893
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -111,7 +111,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install pnpm
-        uses: pnpm/action-setup@a3252b78c470c0c9108d939327959da96fd3407c
+        uses: pnpm/action-setup@0c17529a66aca453f9227af23103ed11469b1e47
         with:
           version: 9
       - name: Install dependencies
@@ -136,7 +136,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install pnpm
-        uses: pnpm/action-setup@a3252b78c470c0c9108d939327959da96fd3407c
+        uses: pnpm/action-setup@0c17529a66aca453f9227af23103ed11469b1e47
         with:
           version: 9
       - name: Install dependencies

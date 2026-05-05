@@ -481,7 +481,7 @@ async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depen
         ms.log_buffer.append(f"Secret '{body.key}' updated.")
         return {"success": True, "message": f"Secret '{body.key}' saved."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/secrets/unlock")
@@ -504,7 +504,7 @@ async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depen
         ms.log_buffer.append("Encryption key provided and system unlocked.")
         return {"success": True, "message": "System unlocked."}
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid key format")
+        raise HTTPException(status_code=400, detail="Invalid key format") from None
 
 
 def _analytics_parse_debug_enabled() -> bool:
@@ -811,7 +811,7 @@ async def api_transfer_limit(
     try:
         limit = int(body["speed_limit_kbps"])
     except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="speed_limit_kbps must be an integer")
+        raise HTTPException(status_code=400, detail="speed_limit_kbps must be an integer") from None
     if limit < 0:
         raise HTTPException(status_code=400, detail="speed_limit_kbps must be >= 0")
     tm.update(tag, {"speed_limit_kbps": limit})

@@ -10,6 +10,7 @@ from typing import Any
 import api_main
 import pytest
 from fastapi.testclient import TestClient
+from httpx import Response
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
