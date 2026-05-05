@@ -64,6 +64,20 @@ By default, files and folders downloaded will be owned by `root` with user-only 
 
 `INPUT_TIMEOUT=0.0166` — Poll interval lower bound (seconds) for the transfer list; affects UI update frequency and CPU use.
 
+`DOTENV_KEY` — (Optional) Decryption key for `python-dotenv-vault`. If provided, the app will decrypt `.env.vault` on the fly.
+
+## Secure Configuration with dotenv-vault
+
+FileTugger uses `python-dotenv-vault` for secure variable management.
+
+To build an encrypted vault:
+1. Ensure you have a `.env` file in the project root.
+2. Run `npx dotenv-vault build` locally. This generates `.env.vault` and `.env.keys`.
+3. Commit `.env.vault` to your repository.
+4. Set the `DOTENV_KEY` (from `.env.keys`) as an environment variable in your production environment.
+
+At runtime, the app will automatically detect `DOTENV_KEY`, decrypt `.env.vault`, and load your variables.
+
 ## Diagnostics and smoke tests
 
 The backend exposes tool readiness diagnostics at `GET /api/diag/tools`.
