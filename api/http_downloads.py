@@ -83,7 +83,8 @@ def _host_is_blocked(hostname: str) -> bool:
     try:
         ip = ipaddress.ip_address(h)
         return bool(
-            ip.is_private
+            not ip.is_global
+            or ip.is_private
             or ip.is_loopback
             or ip.is_link_local
             or ip.is_reserved
@@ -102,7 +103,8 @@ def _host_is_blocked(hostname: str) -> bool:
             ip_str = sockaddr[0]
             ip = ipaddress.ip_address(ip_str)
             if (
-                ip.is_private
+                not ip.is_global
+                or ip.is_private
                 or ip.is_loopback
                 or ip.is_link_local
                 or ip.is_reserved
