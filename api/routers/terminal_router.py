@@ -81,13 +81,17 @@ async def api_terminal(
             potential_path = part.split("=", 1)[1]
 
         # Heuristic: if it looks like a remote path, don't apply local traversal checks.
-        if potential_path.startswith("mega:/"):
-            continue
+        # These heuristics should ONLY apply to MEGAcmd tools, not generic tools like wget2.
+        is_mega_cmd = cmd.startswith("mega-")
+        if is_mega_cmd:
+            if potential_path.startswith("mega:/"):
+                continue
 
-        # In MEGAcmd, /Root, /Bin, /Incoming are the standard remote roots.
-        is_likely_remote = any(potential_path.startswith(r) for r in ("//", "/Root", "/Bin", "/Incoming"))
-        if is_likely_remote:
-            continue
+            # In MEGAcmd, /Root, /Bin, /Incoming are the standard remote roots.
+            # // is also used for some remote path specifications.
+            is_likely_remote = any(potential_path.startswith(r) for r in ("//", "/Root", "/Bin", "/Incoming"))
+            if is_likely_remote:
+                continue
 
         # Check for path-like indicators: contains slash or is an absolute path or contains ..
         if "/" in potential_path or os.path.isabs(potential_path) or ".." in potential_path:

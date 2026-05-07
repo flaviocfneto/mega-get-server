@@ -130,8 +130,9 @@ class LogBuffer:
         self._lock = threading.Lock()
 
     def append(self, line: str) -> None:
+        redacted = redact_sensitive_text(line)
         with self._lock:
-            self._lines.append(line)
+            self._lines.append(redacted)
             if len(self._lines) > self._max:
                 self._lines = self._lines[-self._max :]
         if _log_notify:

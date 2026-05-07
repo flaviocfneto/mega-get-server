@@ -120,3 +120,19 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 2. Apply scope-based dependency checks to all API endpoints that return environment-specific data.
 3. Maintain a comprehensive list of infrastructure patterns for log redaction.
 4. Pin external tool versions and verify them with SHA256 checksums in the Dockerfile.
+
+## 2026-05-07 - [Context-Specific Terminal Heuristics and Proactive Redaction]
+**Vulnerability:**
+1. Terminal Heuristic Leakage: Remote path heuristics (e.g., skipping validation for paths starting with '//') intended for MEGAcmd were being applied to generic tools like 'wget2', allowing attackers to access local paths via '//etc/passwd'.
+2. Reactive Redaction: Sensitive data was being stored in the in-memory log buffer unredacted, only being masked when served via the API. This left secrets exposed in memory.
+3. Incomplete SSRF Blocklist: Obscure non-global IP ranges like CGNAT (100.64.0.0/10) were missing from the manual blocklist.
+
+**Learning:**
+1. Security heuristics must be scoped to the specific command context. What is a "safe" remote path for one tool is a "dangerous" local path for another.
+2. Defense-in-depth requires redacting sensitive information at the point of ingestion (proactive) rather than just at the point of display (reactive) to minimize the window of exposure in RAM.
+3. Leverage built-in library properties like 'ipaddress.IPv4Address.is_global' for comprehensive SSRF protection instead of manually maintaining blocklists of reserved ranges.
+
+**Prevention:**
+1. Apply command-specific validation logic in terminal wrappers.
+2. Implement redaction in the logging service's storage method.
+3. Use 'is_global' to block all non-routable/reserved IP addresses in SSRF checks.

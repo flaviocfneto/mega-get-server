@@ -407,7 +407,7 @@ async def api_config_post(
 
 
 @app.get("/api/account")
-async def api_account():
+async def api_account(_: None = Depends(require_scope("write"))):
     return await ms.get_account_info()
 
 
@@ -512,7 +512,7 @@ def _analytics_parse_debug_enabled() -> bool:
 
 
 @app.get("/api/analytics")
-async def api_analytics():
+async def api_analytics(_: None = Depends(require_scope("write"))):
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
     rows = [ms.parsed_transfer_to_api_row(t) for t in parsed]
@@ -526,7 +526,7 @@ async def api_analytics():
 
 
 @app.get("/api/transfers")
-async def api_transfers():
+async def api_transfers(_: None = Depends(require_scope("write"))):
     global _last_correlation_merge_at
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
@@ -560,7 +560,7 @@ async def api_history_delete(request: Request, _: None = Depends(require_scope("
 @app.get("/api/logs")
 @rate_limit("logs_get", limit=20, window_seconds=60)
 async def api_logs(request: Request, _: None = Depends(require_scope("write"))):
-    return [ms.redact_sensitive_text(line) for line in ms.log_buffer.get_lines()]
+    return ms.log_buffer.get_lines()
 
 
 @app.delete("/api/logs")
