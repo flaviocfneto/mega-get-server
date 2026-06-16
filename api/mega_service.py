@@ -222,6 +222,11 @@ def redact_sensitive_text(text: str) -> str:
     # AWS Access Key IDs
     masked = re.sub(r"\bAKIA[A-Z0-9]{16}\b", "***", masked)
 
+    # MEGA URL keys: modern (#KEY) and legacy (#!ID!KEY)
+    # Redact everything after '#' in a MEGA URL or the part after the '!' following '#!'
+    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz)/(?:file|folder)/[A-Za-z0-9_-]+)#\S+", r"\1#***", masked)
+    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz)/#![A-Za-z0-9_-]+)!\S+", r"\1!***", masked)
+
     return masked
 
 
@@ -229,17 +234,22 @@ def redact_command_args(args: list[str]) -> list[str]:
     if not args:
         return args
     cmd = args[0]
+    redacted = []
+    for arg in args:
+        # Proactively redact MEGA keys if present in any argument
+        redacted.append(redact_sensitive_text(arg))
+
     if cmd == "mega-login":
-        # redact password and email from diagnostics/event history
-        redacted = [cmd]
+        # Additional redaction for login (email/password may not match MEGA URL patterns)
+        final = [cmd]
         if len(args) > 1:
-            redacted.append("***")
+            final.append("***")
         if len(args) > 2:
-            redacted.append("***")
+            final.append("***")
         if len(args) > 3:
-            redacted.extend(args[3:])
-        return redacted
-    return args
+            final.extend(redacted[3:])
+        return final
+    return redacted
 
 
 # URL history (newest first)
