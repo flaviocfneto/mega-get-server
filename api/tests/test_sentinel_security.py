@@ -21,6 +21,9 @@ def test_redact_sensitive_text_extended():
     assert ms.redact_sensitive_text("token: abc.def.ghi") == "token: ***"
     # URL params
     assert ms.redact_sensitive_text("http://localhost?sid=secret") == "http://localhost?sid=***"
+    # MEGA URL keys
+    assert ms.redact_sensitive_text("https://mega.nz/file/abc#secret") == "https://mega.nz/file/abc#***"
+    assert ms.redact_sensitive_text("https://mega.co.nz/#!id!key") == "https://mega.co.nz/#!id!***"
 
 
 class _FakeProc:
