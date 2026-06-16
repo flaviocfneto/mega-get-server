@@ -544,7 +544,7 @@ async def api_transfers(_: None = Depends(require_scope("write"))):
 
 
 @app.get("/api/history")
-async def api_history():
+async def api_history(_: None = Depends(require_scope("write"))):
     return ms.get_history()
 
 
@@ -573,7 +573,7 @@ async def api_logs_delete(request: Request, _: None = Depends(require_scope("wri
 
 
 @app.get("/api/queue")
-async def api_queue_list():
+async def api_queue_list(_: None = Depends(require_scope("write"))):
     return await pq.list_items()
 
 
