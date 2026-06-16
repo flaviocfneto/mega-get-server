@@ -185,3 +185,17 @@ def test_diag_commands_export_keeps_redacted_command_args(monkeypatch):
     assert body["events"][0]["command"] == "mega-login *** ***"
     assert "user@example.com" not in body["events"][0]["command"]
     assert "secret" not in body["events"][0]["command"]
+
+
+def test_history_and_queue_require_auth_in_strict_mode(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "strict")
+    monkeypatch.setenv("API_WRITE_KEY", "write-secret")
+
+    with TestClient(api_main.app) as client:
+        # History
+        res = client.get("/api/history")
+        assert res.status_code == 401
+
+        # Queue
+        res = client.get("/api/queue")
+        assert res.status_code == 401

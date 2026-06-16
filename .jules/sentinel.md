@@ -136,3 +136,13 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 1. Apply command-specific validation logic in terminal wrappers.
 2. Implement redaction in the logging service's storage method.
 3. Use 'is_global' to block all non-routable/reserved IP addresses in SSRF checks.
+
+## 2026-06-16 - [Missing Authentication on History and Queue Endpoints]
+**Vulnerability:**
+The `GET /api/history` and `GET /api/queue` endpoints were accessible without authentication even when `API_AUTH_MODE` was set to 'strict'. This allowed unauthorized users to view download history and the pending queue, which may contain sensitive metadata like filenames and source URLs.
+
+**Learning:**
+Security audits should verify that ALL endpoints returning user-specific or system-state data are consistently protected by the application's authentication middleware. It is easy to overlook read-only GET endpoints when focusing on state-changing POST/DELETE operations.
+
+**Prevention:**
+Enforce a "secure by default" policy where all endpoints in a specific path prefix (e.g., `/api/*`) require authentication unless explicitly marked as public. In FastAPI, this can be achieved by adding dependencies to the APIRouter or the main app instance.
