@@ -3,7 +3,6 @@
 import os
 
 import pytest
-
 import security
 
 # Default to simulation so `mega_service.SIMULATE` is True at import time. Otherwise
