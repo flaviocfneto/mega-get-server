@@ -146,3 +146,18 @@ Security audits should verify that ALL endpoints returning user-specific or syst
 
 **Prevention:**
 Enforce a "secure by default" policy where all endpoints in a specific path prefix (e.g., `/api/*`) require authentication unless explicitly marked as public. In FastAPI, this can be achieved by adding dependencies to the APIRouter or the main app instance.
+
+## 2026-06-20 - [Terminal SSRF Hardening and Timing Attack Mitigation]
+**Vulnerability:**
+1. Terminal SSRF Bypass: Attackers could bypass SSRF checks by providing URLs in flag values (e.g., `--base=http://127.0.0.1`), using mixed-case protocols (e.g., `HTTP://`), or using the `ftp://` protocol.
+2. Timing Attack on API Keys: The application used standard string comparison (`!=`) for API key validation, potentially allowing an attacker to guess the key character-by-character by measuring response times.
+
+**Learning:**
+1. SSRF validation in terminal wrappers must inspect all potential payloads, including those embedded in CLI flags after an '=' separator.
+2. Protocol-based security checks must be case-insensitive and cover all supported schemes (http, https, ftp).
+3. Secret comparisons should always use constant-time algorithms (`secrets.compare_digest`) to prevent side-channel leaks.
+
+**Prevention:**
+1. Normalize and extract payloads from all command tokens before applying security heuristics.
+2. Use case-insensitive matching for protocol and hostname validation.
+3. Enforce constant-time comparison for all security-critical tokens and keys.

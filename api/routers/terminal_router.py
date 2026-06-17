@@ -58,27 +58,29 @@ async def api_terminal(
     abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
 
     for part in parts[1:]:
-        # 1. URL/SSRF Validation
-        if part.startswith(("http://", "https://")):
+        # Extract potential path or URL from argument (e.g., --output-document=/path or just /path)
+        potential_path = part
+        if "=" in part:
+            potential_path = part.split("=", 1)[1]
+
+        # 1. URL/SSRF Validation (Check potential payload extracted from flag or argument)
+        low_part = potential_path.lower()
+        if low_part.startswith(("http://", "https://", "ftp://")):
             try:
-                parsed = urlparse(part)
+                parsed = urlparse(potential_path)
                 host = (parsed.hostname or "").lower()
                 if _host_is_blocked(host):
                     return {
                         "ok": False,
                         "command": raw,
                         "exit_code": 126,
-                        "output": f"Blocked: untrusted host in URL '{part}'",
+                        "output": f"Blocked: untrusted host in URL '{potential_path}'",
                         "blocked_reason": "ssrf_attempt",
                     }
             except Exception:
                 pass
 
         # 2. Path Traversal Validation (Check ALL arguments, even flags with paths)
-        # Extract potential path from argument (e.g., --output-document=/path or just /path)
-        potential_path = part
-        if "=" in part:
-            potential_path = part.split("=", 1)[1]
 
         # Heuristic: if it looks like a remote path, don't apply local traversal checks.
         # These heuristics should ONLY apply to MEGAcmd tools, not generic tools like wget2.
