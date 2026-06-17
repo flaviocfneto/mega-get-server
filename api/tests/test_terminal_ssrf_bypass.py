@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
+
 def test_terminal_ssrf_bypass_uppercase_scheme(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
@@ -23,6 +24,7 @@ def test_terminal_ssrf_bypass_uppercase_scheme(monkeypatch):
     assert data["ok"] is False
     assert "Blocked: untrusted host in URL" in data["output"]
     assert data["blocked_reason"] == "ssrf_attempt"
+
 
 def test_terminal_ssrf_ftp_bypass(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
