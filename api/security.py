@@ -30,7 +30,7 @@ def require_scope(scope: str) -> Callable[..., None]:
         expected = _key_for_scope(scope)
         if not expected:
             raise HTTPException(status_code=503, detail=f"Server auth misconfigured for scope: {scope}")
-        if (x_api_key or "").strip() != expected:
+        if not secrets.compare_digest((x_api_key or "").strip(), expected):
             raise HTTPException(status_code=401, detail="Unauthorized")
 
     return dependency

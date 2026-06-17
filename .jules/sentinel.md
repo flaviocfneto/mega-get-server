@@ -121,6 +121,22 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 3. Maintain a comprehensive list of infrastructure patterns for log redaction.
 4. Pin external tool versions and verify them with SHA256 checksums in the Dockerfile.
 
+## 2024-05-22 - [Case-Insensitive SSRF and Timing Attacks]
+**Vulnerability:**
+1. SSRF bypass: Protocol scheme checks (e.g. `startswith("http://")`) were case-sensitive, allowing bypass via uppercase schemes like `HTTP://`.
+2. Timing attack: API key validation used standard `==` string comparison.
+3. Log leakage: `Authorization: Basic` headers were not redacted in logs.
+
+**Learning:**
+1. Security validation of URLs must be case-insensitive for schemes.
+2. Constant-time comparison is essential for verifying secrets to prevent timing side-channels.
+3. Redaction filters should cover both modern (Bearer) and legacy (Basic) authentication patterns.
+
+**Prevention:**
+1. Normalize input to lowercase before prefix-based protocol validation.
+2. Use `secrets.compare_digest` for all cryptographic or security-critical string comparisons.
+3. Regularly audit and expand redaction regex patterns to cover common authentication headers.
+
 ## 2026-05-07 - [Context-Specific Terminal Heuristics and Proactive Redaction]
 **Vulnerability:**
 1. Terminal Heuristic Leakage: Remote path heuristics (e.g., skipping validation for paths starting with '//') intended for MEGAcmd were being applied to generic tools like 'wget2', allowing attackers to access local paths via '//etc/passwd'.

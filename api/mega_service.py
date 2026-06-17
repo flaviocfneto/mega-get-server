@@ -191,8 +191,8 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(r"(?i)(password|token|apikey|api_key|secret|sid)(\s*[:=]\s*)\S+", r"\1\2***", masked)
     # MEGAcmd login specific redaction
     masked = re.sub(r"(?i)(mega-login\s+)\S+(\s+)\S+", r"\1***\2***", masked)
-    # Bearer tokens
-    masked = re.sub(r"(?i)(authorization\s*:\s*bearer\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
+    # Bearer and Basic tokens
+    masked = re.sub(r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
     # Opaque API keys (like sk-...)
     masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
 

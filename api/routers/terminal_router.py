@@ -59,7 +59,9 @@ async def api_terminal(
 
     for part in parts[1:]:
         # 1. URL/SSRF Validation
-        if part.startswith(("http://", "https://")):
+        # Use case-insensitive prefix check and include ftp
+        part_l = part.lower()
+        if part_l.startswith(("http://", "https://", "ftp://")):
             try:
                 parsed = urlparse(part)
                 host = (parsed.hostname or "").lower()
