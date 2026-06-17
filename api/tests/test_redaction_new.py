@@ -24,3 +24,8 @@ def test_redact_paths():
     # Relative paths or other paths should not be redacted
     assert "./local/path" in ms.redact_sensitive_text("./local/path")
     assert "Downloads/folder" in ms.redact_sensitive_text("Downloads/folder")
+
+
+def test_redact_auth_headers():
+    assert "Authorization: Bearer ***" in ms.redact_sensitive_text("Authorization: Bearer abc123def")
+    assert "Authorization: Basic ***" in ms.redact_sensitive_text("Authorization: Basic dXNlcjpwYXNz")
