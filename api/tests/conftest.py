@@ -2,6 +2,10 @@
 
 import os
 
+import pytest
+
+import security
+
 # Default to simulation so `mega_service.SIMULATE` is True at import time. Otherwise
 # FastAPI lifespan runs `ensure_mega_cmd_server_running()` and asyncio subprocess
 # transports may finalize after TestClient tears down the event loop, triggering
@@ -12,3 +16,9 @@ os.environ.setdefault("MEGA_SIMULATE", "1")
 # Default to optional auth for tests so legacy tests don't need to provide keys.
 # Auth-specific tests will explicitly set this to 'strict' via monkeypatch.
 os.environ.setdefault("API_AUTH_MODE", "optional")
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limits():
+    """Ensure each test starts with a clean rate limit state."""
+    security._rate_state.clear()
