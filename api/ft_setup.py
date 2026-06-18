@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import re
 import sys
 
 # Add the current directory to sys.path so we can import crypt_utils
@@ -37,6 +38,12 @@ def main():
         # CodeQL: Renamed to avoid 'sensitive data' heuristics
         s_name = sys.argv[2]
         s_blob = sys.argv[3]
+
+        # Harden: Strictly validate secret names
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", s_name):
+            print(f"Error: Invalid secret name '{s_name}'. Only alphanumeric and underscores allowed.")
+            sys.exit(1)
+
         try:
             crypt_utils.set_vault_item(s_name, s_blob)
             print(f"Success: Secret '{s_name}' saved.")

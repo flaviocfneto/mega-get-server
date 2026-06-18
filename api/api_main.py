@@ -376,6 +376,7 @@ async def add_security_headers(request: Request, call_next):
     # We still allow https://fonts.googleapis.com for external stylesheets.
     # style-src-attr 'unsafe-inline' is used to allow Framer Motion and other libraries
     # that inject dynamic styles via attributes, while blocking <style> tag injection.
+    # object-src 'none' is used as a defense-in-depth measure to prevent plugin-based attacks.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         f"script-src 'self' 'nonce-{nonce}'; "
@@ -383,6 +384,7 @@ async def add_security_headers(request: Request, call_next):
         "style-src-attr 'unsafe-inline'; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
+        "object-src 'none'; "
         f"connect-src {connect_src_str}"
     )
     return response
