@@ -77,10 +77,13 @@ async def api_terminal(
                 pass
 
         # 2. Path Traversal Validation (Check ALL arguments, even flags with paths)
-        # Extract potential path from argument (e.g., --output-document=/path or just /path)
+        # Extract potential path from argument (e.g., --output-document=/path, -O/path, or just /path)
         potential_path = part
         if "=" in part:
             potential_path = part.split("=", 1)[1]
+        elif part.startswith(("-O", "-o")) and len(part) > 2:
+            # Common wget/wget2/curl flags where path might be attached
+            potential_path = part[2:]
 
         # Heuristic: if it looks like a remote path, don't apply local traversal checks.
         # These heuristics should ONLY apply to MEGAcmd tools, not generic tools like wget2.

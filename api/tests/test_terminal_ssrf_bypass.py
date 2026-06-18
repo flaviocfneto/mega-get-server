@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import mega_service as ms
+import security
 from api_main import app
 from fastapi.testclient import TestClient
 
@@ -8,6 +9,7 @@ client = TestClient(app)
 
 
 def test_terminal_ssrf_bypass_uppercase_scheme(monkeypatch):
+    security._rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
@@ -27,6 +29,7 @@ def test_terminal_ssrf_bypass_uppercase_scheme(monkeypatch):
 
 
 def test_terminal_ssrf_ftp_bypass(monkeypatch):
+    security._rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
