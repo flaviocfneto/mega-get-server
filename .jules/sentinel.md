@@ -162,3 +162,14 @@ Security audits should verify that ALL endpoints returning user-specific or syst
 
 **Prevention:**
 Enforce a "secure by default" policy where all endpoints in a specific path prefix (e.g., `/api/*`) require authentication unless explicitly marked as public. In FastAPI, this can be achieved by adding dependencies to the APIRouter or the main app instance.
+
+## 2024-05-23 - [Incomplete Defense-in-Depth for Shell Exports]
+**Vulnerability:**
+The `decrypt_env.py` script and `ft_setup.py` CLI tool lacked strict validation for secret keys, which were later used in a shell `eval` context. While the web API enforced safe key patterns, an attacker could use the CLI or manipulate the encrypted vault to inject shell commands via malicious key names (e.g., `VAR='v'; pwned;`).
+
+**Learning:**
+Defense-in-depth requires consistent validation across ALL input vectors (API, CLI, and direct file manipulation). Furthermore, manual string escaping for shell consumption is error-prone; standard library functions like `shlex.quote` should always be preferred.
+
+**Prevention:**
+1. Apply strict regex validation (`^[a-zA-Z_][a-zA-Z0-9_]*$`) to all identifiers used in shell commands or environment variable exports.
+2. Use `shlex.quote()` for all values being passed to a shell context to ensure robust escaping.
