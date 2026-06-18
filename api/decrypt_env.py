@@ -6,9 +6,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    import crypt_utils
-
     import shlex
+
+    import crypt_utils
 
     # CodeQL: Renamed to avoid 'sensitive data' heuristics
     vault_data = crypt_utils.load_vault()
