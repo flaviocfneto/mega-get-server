@@ -162,3 +162,16 @@ Security audits should verify that ALL endpoints returning user-specific or syst
 
 **Prevention:**
 Enforce a "secure by default" policy where all endpoints in a specific path prefix (e.g., `/api/*`) require authentication unless explicitly marked as public. In FastAPI, this can be achieved by adding dependencies to the APIRouter or the main app instance.
+
+## 2024-06-16 - [Shell Injection in Decrypt Env and Terminal Flag Bypass]
+**Vulnerability:**
+1. Shell Injection: `api/decrypt_env.py` used manual single-quote escaping (`replace("'", "'\\''")`) which is insufficient when the resulting string is evaluated by a shell in an `eval $(...)` context, especially if the value contains newlines or other shell-sensitive characters.
+2. Path Traversal Bypass: The terminal's path validation only looked for `=` in flags or separate arguments. It missed paths attached directly to short flags (e.g., `-O/etc/passwd`), allowing attackers to specify output files outside the permitted directory.
+
+**Learning:**
+1. Never implement manual shell escaping. The `shlex.quote()` function in the Python standard library is the only reliable way to escape strings for POSIX shells.
+2. Command-line parsers are complex. When hardening a terminal wrapper, you must account for all ways a tool might accept a path, including attached short flags, which are common in tools like `wget`, `wget2`, and `curl`.
+
+**Prevention:**
+1. Use `shlex.quote()` for all data intended for shell evaluation.
+2. Robustly parse CLI arguments by checking for attached values in known short flags (e.g., `-O`, `-o`) when performing path-based security validation.
