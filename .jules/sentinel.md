@@ -173,3 +173,16 @@ Defense-in-depth requires consistent validation across ALL input vectors (API, C
 **Prevention:**
 1. Apply strict regex validation (`^[a-zA-Z_][a-zA-Z0-9_]*$`) to all identifiers used in shell commands or environment variable exports.
 2. Use `shlex.quote()` for all values being passed to a shell context to ensure robust escaping.
+
+## 2024-05-24 - [Terminal Bypass via Attached Flags and Embedded URLs]
+**Vulnerability:**
+1. Path Traversal Bypass: Short flags in CLI tools like `wget2` (e.g., `-O/path`) can have values attached directly without a space or `=`. Standard heuristics that only checked for `=` or positional arguments missed these.
+2. SSRF Bypass: URLs can be embedded within flags (e.g., `--base=http://...`). A simple `startswith` check on the argument failed to detect these.
+
+**Learning:**
+1. Heuristics for command-line security must account for the flexible syntax of CLI flags. Both attached short flags and flag values following `=` are common vectors for providing sensitive paths or URLs.
+2. Protocol detection for SSRF must be performed on the entire argument string, not just the prefix, to ensure no embedded URLs bypass validation.
+
+**Prevention:**
+1. Implement flag-aware parsing that explicitly checks for and extracts values from attached short flags (e.g., `-O`, `-o`).
+2. Scan the entire argument for protocol prefixes (`http://`, `https://`, `ftp://`) to detect and validate any embedded URLs.
