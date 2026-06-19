@@ -173,3 +173,15 @@ Defense-in-depth requires consistent validation across ALL input vectors (API, C
 **Prevention:**
 1. Apply strict regex validation (`^[a-zA-Z_][a-zA-Z0-9_]*$`) to all identifiers used in shell commands or environment variable exports.
 2. Use `shlex.quote()` for all values being passed to a shell context to ensure robust escaping.
+
+## 2024-05-24 - [Terminal Security Bypass via Flag Formats]
+**Vulnerability:**
+The administrative terminal's security filters for SSRF and Path Traversal were bypassed by using specific flag formats. SSRF checks could be avoided by putting URLs in flags like `--base=URL`, and Path Traversal checks were bypassed using attached short flags like `-o/path/to/file`, as the heuristic only inspected the whole argument or expected a space/equals separator.
+
+**Learning:**
+Security heuristics in terminal wrappers must be format-aware. Simply checking if an argument starts with a protocol or is an absolute path is insufficient when tools like `wget2` support multiple ways of providing these values (e.g., `--flag=val`, `-fval`). Every argument token must be decomposed to extract potential sensitive values.
+
+**Prevention:**
+1. Decompose every command token by splitting at `=` to validate values passed to long flags.
+2. Specifically detect and extract values from attached short flags (e.g., tokens starting with `-` followed by a single character and a path or URL).
+3. Apply all security validations (SSRF, Path Traversal) to the extracted values.
