@@ -12,3 +12,12 @@ os.environ.setdefault("MEGA_SIMULATE", "1")
 # Default to optional auth for tests so legacy tests don't need to provide keys.
 # Auth-specific tests will explicitly set this to 'strict' via monkeypatch.
 os.environ.setdefault("API_AUTH_MODE", "optional")
+
+import pytest
+import security
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limits():
+    """Automatically clear rate limits between tests to avoid 429 in CI."""
+    security._rate_state.clear()

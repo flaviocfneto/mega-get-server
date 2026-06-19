@@ -3,10 +3,13 @@ from __future__ import annotations
 import mega_service as ms
 from api_main import app
 from fastapi.testclient import TestClient
+from security import _rate_state
 
 client = TestClient(app)
 
+
 def test_terminal_wget2_path_traversal_attached_flag(monkeypatch):
+    _rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
@@ -23,7 +26,9 @@ def test_terminal_wget2_path_traversal_attached_flag(monkeypatch):
     assert "Blocked: local path access outside /data" in data["output"]
     assert data["blocked_reason"] == "path_traversal_attempt"
 
+
 def test_terminal_wget2_ssrf_attached_flag(monkeypatch):
+    _rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
