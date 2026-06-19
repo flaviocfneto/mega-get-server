@@ -58,29 +58,33 @@ async def api_terminal(
     abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
 
     for part in parts[1:]:
-        # 1. URL/SSRF Validation
-        # Use case-insensitive prefix check and include ftp
-        part_l = part.lower()
-        if part_l.startswith(("http://", "https://", "ftp://")):
+        # Extract potential value from argument (handles --flag=value and simple value)
+        potential_value = part
+        if "=" in part:
+            potential_value = part.split("=", 1)[1]
+
+        # 1. URL/SSRF Validation (Check the value part of flags too)
+        val_l = potential_value.lower()
+        if val_l.startswith(("http://", "https://", "ftp://")):
             try:
-                parsed = urlparse(part)
+                parsed = urlparse(potential_value)
                 host = (parsed.hostname or "").lower()
                 if _host_is_blocked(host):
                     return {
                         "ok": False,
                         "command": raw,
                         "exit_code": 126,
-                        "output": f"Blocked: untrusted host in URL '{part}'",
+                        "output": f"Blocked: untrusted host in URL '{potential_value}'",
                         "blocked_reason": "ssrf_attempt",
                     }
             except Exception:
                 pass
 
         # 2. Path Traversal Validation (Check ALL arguments, even flags with paths)
-        # Extract potential path from argument (e.g., --output-document=/path or just /path)
-        potential_path = part
-        if "=" in part:
-            potential_path = part.split("=", 1)[1]
+        potential_path = potential_value
+        # Detect short flags with attached paths (e.g., -o/etc/passwd or -O/etc/passwd)
+        if not part.startswith("--") and part.startswith("-") and len(part) > 2 and "/" in part:
+            potential_path = part[2:]
 
         # Heuristic: if it looks like a remote path, don't apply local traversal checks.
         # These heuristics should ONLY apply to MEGAcmd tools, not generic tools like wget2.
