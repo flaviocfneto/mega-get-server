@@ -59,28 +59,35 @@ async def api_terminal(
 
     for part in parts[1:]:
         # 1. URL/SSRF Validation
-        # Use case-insensitive prefix check and include ftp
+        # Check for protocol prefixes anywhere in the argument (e.g., --base=http://...)
         part_l = part.lower()
-        if part_l.startswith(("http://", "https://", "ftp://")):
-            try:
-                parsed = urlparse(part)
-                host = (parsed.hostname or "").lower()
-                if _host_is_blocked(host):
-                    return {
-                        "ok": False,
-                        "command": raw,
-                        "exit_code": 126,
-                        "output": f"Blocked: untrusted host in URL '{part}'",
-                        "blocked_reason": "ssrf_attempt",
-                    }
-            except Exception:
-                pass
+        for proto in ("http://", "https://", "ftp://"):
+            if proto in part_l:
+                idx = part_l.find(proto)
+                url_to_check = part[idx:]
+                try:
+                    parsed = urlparse(url_to_check)
+                    host = (parsed.hostname or "").lower()
+                    if _host_is_blocked(host):
+                        return {
+                            "ok": False,
+                            "command": raw,
+                            "exit_code": 126,
+                            "output": f"Blocked: untrusted host in URL '{part}'",
+                            "blocked_reason": "ssrf_attempt",
+                        }
+                except Exception:
+                    pass
+                break
 
         # 2. Path Traversal Validation (Check ALL arguments, even flags with paths)
         # Extract potential path from argument (e.g., --output-document=/path or just /path)
         potential_path = part
         if "=" in part:
             potential_path = part.split("=", 1)[1]
+        elif part.startswith(("-O", "-o")) and len(part) > 2:
+            # Handle attached short flags like -O/etc/passwd
+            potential_path = part[2:]
 
         # Heuristic: if it looks like a remote path, don't apply local traversal checks.
         # These heuristics should ONLY apply to MEGAcmd tools, not generic tools like wget2.
