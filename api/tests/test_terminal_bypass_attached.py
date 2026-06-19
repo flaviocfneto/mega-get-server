@@ -1,11 +1,11 @@
 from __future__ import annotations
-import os
+
 import mega_service as ms
 from api_main import app
 from fastapi.testclient import TestClient
-import pytest
 
 client = TestClient(app)
+
 
 def test_terminal_bypass_ssrf_attached_flag(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
@@ -22,6 +22,7 @@ def test_terminal_bypass_ssrf_attached_flag(monkeypatch):
     assert data.get("blocked_reason") == "ssrf_attempt"
     assert "untrusted host" in data.get("output", "")
 
+
 def test_terminal_bypass_path_attached_short_flag(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
@@ -37,6 +38,7 @@ def test_terminal_bypass_path_attached_short_flag(monkeypatch):
     data = response.json()
     assert data.get("blocked_reason") == "path_traversal_attempt"
     assert "outside /data" in data.get("output", "")
+
 
 def test_terminal_mega_ls_not_confused_by_root(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
