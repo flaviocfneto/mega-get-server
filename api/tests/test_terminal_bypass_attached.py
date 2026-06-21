@@ -44,3 +44,22 @@ def test_terminal_wget2_ssrf_attached_flag(monkeypatch):
     assert data["ok"] is False
     assert "Blocked: untrusted host" in data["output"]
     assert data["blocked_reason"] == "ssrf_attempt"
+
+
+def test_terminal_mega_get_path_traversal_double_slash_bypass(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
+    monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
+
+    # This should be blocked after the fix; previously it might have been allowed by the '//' heuristic
+    response = client.post(
+        "/api/terminal",
+        json={"command": "mega-get /Root/file //etc/passwd"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: local path access outside /data" in data["output"]
+    assert data["blocked_reason"] == "path_traversal_attempt"

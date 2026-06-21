@@ -186,3 +186,14 @@ Defense-in-depth requires consistent validation across ALL input vectors (API, C
 **Prevention:**
 1. Implement flag-aware parsing that explicitly checks for and extracts values from attached short flags (e.g., `-O`, `-o`).
 2. Scan the entire argument for protocol prefixes (`http://`, `https://`, `ftp://`) to detect and validate any embedded URLs.
+
+## 2024-05-25 - [Terminal Heuristic Bypass via Double Slashes]
+**Vulnerability:**
+The administrative terminal allowed `mega-*` commands to bypass local path traversal checks if a path started with `//`. This heuristic was intended to identify remote MEGA paths, but since most Unix-like systems resolve `//` to `/`, it could be used to access arbitrary local files (e.g., `mega-get /Root/file //etc/passwd`).
+
+**Learning:**
+Heuristics that grant security exemptions (like skipping validation for "remote" paths) must be extremely narrow. If a "safe" pattern overlaps with a "dangerous" one due to OS-level normalization, it becomes a bypass vector.
+
+**Prevention:**
+1. Avoid using broad prefixes like `//` as a sole indicator of "remoteness" if the underlying system might treat it as a local root.
+2. Subject all paths to validation against allowed directories (like `DOWNLOAD_DIR`) unless they match a strictly defined and non-overlapping remote pattern (e.g., `/Root`, `/Bin`).
