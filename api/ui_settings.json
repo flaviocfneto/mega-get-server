@@ -12,5 +12,5 @@
   "post_download_action": "",
   "webhook_url": "",
   "watch_folder_enabled": false,
-  "watch_folder_path": "/downloads/watch"
+  "watch_folder_path": "/data/safe/path"
 }

@@ -25,6 +25,15 @@ async def api_terminal(
     if not raw:
         raise HTTPException(status_code=400, detail="Command is required")
 
+    if any(c in raw for c in "\n\r"):
+        return {
+            "ok": False,
+            "command": raw,
+            "exit_code": 126,
+            "output": "Blocked: command contains restricted characters.",
+            "blocked_reason": "injection_attempt",
+        }
+
     parts = shlex.split(raw)
     if not parts:
         raise HTTPException(status_code=400, detail="Command is required")

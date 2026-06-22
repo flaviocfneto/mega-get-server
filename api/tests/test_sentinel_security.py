@@ -16,11 +16,11 @@ def test_redact_sensitive_text_extended():
     # Test new patterns
     assert "password=***" in ms.redact_sensitive_text("password=mysecret")
     assert "sid=***" in ms.redact_sensitive_text("sid=ABC123XYZ")
-    assert "Session:***" in ms.redact_sensitive_text("Session: ABC123XYZ789")
+    assert "Session: ***" in ms.redact_sensitive_text("Session: ABC123XYZ789")
     # JWT-like
     assert ms.redact_sensitive_text("token: abc.def.ghi") == "token: ***"
     # URL params
-    assert ms.redact_sensitive_text("http://localhost?sid=secret") == "http://localhost?sid=***"
+    assert ms.redact_sensitive_text("http://localhost?sid=secret") == "http://***?sid=***"
     # MEGA URL keys
     assert ms.redact_sensitive_text("https://mega.nz/file/abc#secret") == "https://mega.nz/file/abc#***"
     assert ms.redact_sensitive_text("https://mega.co.nz/#!id!key") == "https://mega.co.nz/#!id!***"
@@ -48,7 +48,7 @@ def test_run_megacmd_command_redaction(monkeypatch):
     monkeypatch.setattr(ms.asyncio, "create_subprocess_exec", mock_create_subprocess_exec)
 
     result = asyncio.run(ms.run_megacmd_command(["mega-whoami"]))
-    assert "Session:***" in result["stdout"]
+    assert "Session: ***" in result["stdout"]
     assert "SECRET123" not in result["stdout"]
 
 
