@@ -284,13 +284,8 @@ class BulkBody(BaseModel):
 
 
 class LoginBody(BaseModel):
-    email: str | None = None
-    password: str | None = None
-
-
-class LogoutBody(BaseModel):
-    email: str | None = None
-    password: str | None = None
+    email: str | None = Field(default=None, max_length=256)
+    password: str | None = Field(default=None, max_length=1024)
 
 
 class SecretSetBody(BaseModel):
@@ -299,7 +294,7 @@ class SecretSetBody(BaseModel):
 
 
 class UnlockBody(BaseModel):
-    key_base64: str = Field(min_length=1)
+    key_base64: str = Field(min_length=1, max_length=4096)
 
 
 @asynccontextmanager
@@ -391,7 +386,8 @@ async def add_security_headers(request: Request, call_next):
 
 
 @app.get("/api/config")
-async def api_config_get(response: Response, _: None = Depends(require_scope("write"))):
+@rate_limit("config_get", limit=100, window_seconds=60)
+async def api_config_get(request: Request, response: Response, _: None = Depends(require_scope("write"))):
     set_csrf_cookie(response)
     return _full_config()
 
@@ -409,7 +405,8 @@ async def api_config_post(
 
 
 @app.get("/api/account")
-async def api_account(_: None = Depends(require_scope("write"))):
+@rate_limit("account_get", limit=20, window_seconds=60)
+async def api_account(request: Request, _: None = Depends(require_scope("write"))):
     return await ms.get_account_info()
 
 
@@ -456,7 +453,8 @@ async def api_logout(request: Request, _: None = Depends(require_scope("write"))
 
 
 @app.get("/api/secrets/status")
-async def api_secrets_status(_: None = Depends(require_scope("write"))):
+@rate_limit("secrets_status_get", limit=20, window_seconds=60)
+async def api_secrets_status(request: Request, _: None = Depends(require_scope("write"))):
     key_exists = os.path.exists(crypt_utils.SECRET_KEY_PATH)
     data_map = crypt_utils.load_vault()
     return {
@@ -514,7 +512,8 @@ def _analytics_parse_debug_enabled() -> bool:
 
 
 @app.get("/api/analytics")
-async def api_analytics(_: None = Depends(require_scope("write"))):
+@rate_limit("analytics_get", limit=30, window_seconds=60)
+async def api_analytics(request: Request, _: None = Depends(require_scope("write"))):
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
     rows = [ms.parsed_transfer_to_api_row(t) for t in parsed]
@@ -528,7 +527,8 @@ async def api_analytics(_: None = Depends(require_scope("write"))):
 
 
 @app.get("/api/transfers")
-async def api_transfers(_: None = Depends(require_scope("write"))):
+@rate_limit("transfers_get", limit=60, window_seconds=60)
+async def api_transfers(request: Request, _: None = Depends(require_scope("write"))):
     global _last_correlation_merge_at
     raw = await ms.get_transfer_list()
     parsed = ms.parse_transfer_list(raw)
@@ -546,7 +546,8 @@ async def api_transfers(_: None = Depends(require_scope("write"))):
 
 
 @app.get("/api/history")
-async def api_history(_: None = Depends(require_scope("write"))):
+@rate_limit("history_get", limit=30, window_seconds=60)
+async def api_history(request: Request, _: None = Depends(require_scope("write"))):
     return ms.get_history()
 
 
@@ -575,7 +576,8 @@ async def api_logs_delete(request: Request, _: None = Depends(require_scope("wri
 
 
 @app.get("/api/queue")
-async def api_queue_list(_: None = Depends(require_scope("write"))):
+@rate_limit("queue_list_get", limit=30, window_seconds=60)
+async def api_queue_list(request: Request, _: None = Depends(require_scope("write"))):
     return await pq.list_items()
 
 
