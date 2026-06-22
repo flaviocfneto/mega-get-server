@@ -284,8 +284,8 @@ class BulkBody(BaseModel):
 
 
 class LoginBody(BaseModel):
-    email: str | None = None
-    password: str | None = None
+    email: str | None = Field(default=None, max_length=256)
+    password: str | None = Field(default=None, max_length=1024)
 
 
 class LogoutBody(BaseModel):
