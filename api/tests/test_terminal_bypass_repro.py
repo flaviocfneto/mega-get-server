@@ -3,9 +3,9 @@ from __future__ import annotations
 import mega_service as ms
 from api_main import app
 from fastapi.testclient import TestClient
-import pytest
 
 client = TestClient(app)
+
 
 def test_terminal_mega_ls_bypass_repro(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
@@ -14,9 +14,7 @@ def test_terminal_mega_ls_bypass_repro(monkeypatch):
 
     # This should be blocked, but currently it bypasses because it starts with /Root
     response = client.post(
-        "/api/terminal",
-        json={"command": "mega-ls /Root/../etc"},
-        headers={"Origin": "http://testserver"}
+        "/api/terminal", json={"command": "mega-ls /Root/../etc"}, headers={"Origin": "http://testserver"}
     )
 
     assert response.status_code == 200
@@ -27,7 +25,9 @@ def test_terminal_mega_ls_bypass_repro(monkeypatch):
     if data.get("blocked_reason") == "path_traversal_attempt":
         print("Vulnerability FIXED (unexpected for repro)")
     else:
-        print(f"Vulnerability CONFIRMED: command was NOT blocked by path_traversal_attempt. Reason: {data.get('blocked_reason')}")
+        print(
+            f"Vulnerability CONFIRMED: command was NOT blocked by path_traversal_attempt. Reason: {data.get('blocked_reason')}"
+        )
 
     # In fixed version, we expect it to be blocked by traversal check
     assert data.get("blocked_reason") == "path_traversal_attempt"
