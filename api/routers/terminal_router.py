@@ -107,8 +107,9 @@ async def api_terminal(
 
             # In MEGAcmd, /Root, /Bin, /Incoming are the standard remote roots.
             # Restricted: removed '//' heuristic as it can be used for path traversal bypass.
+            # If it looks remote, we skip local traversal checks UNLESS it contains '..'.
             is_likely_remote = any(potential_path.startswith(r) for r in ("/Root", "/Bin", "/Incoming"))
-            if is_likely_remote:
+            if is_likely_remote and ".." not in potential_path:
                 continue
 
         # Check for path-like indicators: contains slash or is an absolute path or contains ..

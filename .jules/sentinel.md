@@ -197,3 +197,13 @@ Heuristics that grant security exemptions (like skipping validation for "remote"
 **Prevention:**
 1. Avoid using broad prefixes like `//` as a sole indicator of "remoteness" if the underlying system might treat it as a local root.
 2. Subject all paths to validation against allowed directories (like `DOWNLOAD_DIR`) unless they match a strictly defined and non-overlapping remote pattern (e.g., `/Root`, `/Bin`).
+
+## 2024-05-26 - [Terminal Heuristic Bypass via Directory Traversal in Remote Paths]
+**Vulnerability:**
+The administrative terminal's MEGAcmd path heuristics allowed any path starting with `/Root`, `/Bin`, or `/Incoming` to bypass local filesystem traversal checks. This enabled attackers to access arbitrary local files by using these prefixes followed by directory traversal sequences (e.g., `mega-ls /Root/../etc`).
+
+**Learning:**
+Heuristics that exempt specific input patterns from security checks must be extremely defensive. In this case, simply checking for a "safe" prefix was insufficient because the OS still resolves `..` regardless of the prefix, allowing escape from the intended "remote" context.
+
+**Prevention:**
+Always validate that "safe" patterns do not contain malicious sequences like `..` even if they match a trusted prefix. When a path is intended for a specific remote namespace, enforce that it remains within that namespace by forbidding traversal markers.
