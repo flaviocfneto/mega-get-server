@@ -13,7 +13,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import crypt_utils
 import http_downloads as hd
@@ -266,21 +266,22 @@ async def _execute_dispatched_queue_row(row: dict[str, Any]) -> None:
 
 class DownloadBody(BaseModel):
     url: str = Field(max_length=4096)
-    tags: list[str] | None = Field(default=None, max_length=50)
-    priority: str | None = None
+    tags: list[Annotated[str, Field(max_length=128)]] | None = Field(default=None, max_length=50)
+    # Defense-in-depth: add length limits to items and fields
+    priority: str | None = Field(default=None, max_length=16)
     autostart: bool = True
 
 
 class QueueAddBody(BaseModel):
     url: str = Field(max_length=4096)
-    tags: list[str] | None = Field(default=None, max_length=50)
-    priority: str | None = None
+    tags: list[Annotated[str, Field(max_length=128)]] | None = Field(default=None, max_length=50)
+    priority: str | None = Field(default=None, max_length=16)
 
 
 class BulkBody(BaseModel):
     tags: list[str] = Field(min_length=1, max_length=200)
     action: str = Field(min_length=2, max_length=32)
-    value: Any | None = None
+    value: Any | None = Field(default=None, max_length=1024)
 
 
 class LoginBody(BaseModel):
