@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -28,13 +29,26 @@ DEFAULT_UI_KEYS: dict[str, Any] = {
     "watch_folder_path": "/downloads/watch",
 }
 
+_cache: dict[str, Any] | None = None
+
 
 def load_stored() -> dict[str, Any]:
-    return read_json_dict(SETTINGS_PATH)
+    global _cache
+    if _cache is not None:
+        return copy.deepcopy(_cache)
+    _cache = read_json_dict(SETTINGS_PATH)
+    return copy.deepcopy(_cache)
 
 
 def save_stored(data: dict[str, Any]) -> None:
+    global _cache
+    _cache = copy.deepcopy(data)
     write_json_atomic(SETTINGS_PATH, data)
+
+
+def clear_cache() -> None:
+    global _cache
+    _cache = None
 
 
 def merge_post_into_stored(body: dict[str, Any]) -> None:

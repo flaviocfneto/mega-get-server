@@ -15,6 +15,15 @@ os.environ.setdefault("API_AUTH_MODE", "optional")
 
 import pytest
 import security
+import transfer_metadata as tm
+import ui_settings as us
+
+
+@pytest.fixture(autouse=True)
+def clear_caches():
+    """Automatically clear module-level caches between tests."""
+    tm.clear_cache()
+    us.clear_cache()
 
 
 @pytest.fixture(autouse=True)
