@@ -44,7 +44,7 @@ def test_get_account_info_simulated(monkeypatch):
 
 
 def test_get_account_info_logged_out(monkeypatch):
-    async def fake_cmd(_args):
+    async def fake_cmd(_args, **kwargs):
         return {"ok": False, "stdout": "", "stderr": "", "output": ""}
 
     monkeypatch.setattr(ms, "SIMULATE", False)

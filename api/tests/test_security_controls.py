@@ -20,7 +20,7 @@ def test_terminal_allows_auth_in_strict_mode(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "strict")
     monkeypatch.setenv("API_ADMIN_KEY", "secret-admin")
 
-    async def fake_run(_args):
+    async def fake_run(_args, **kwargs):
         return {"ok": True, "exit_code": 0, "stdout": "ok", "output": "ok"}
 
     monkeypatch.setattr(api_main.ms, "run_megacmd_command", fake_run)
@@ -72,7 +72,7 @@ def test_rate_limit_hits_429_on_terminal(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "strict")
     monkeypatch.setenv("API_ADMIN_KEY", "secret-admin")
 
-    async def fake_run(_args):
+    async def fake_run(_args, **kwargs):
         return {"ok": True, "exit_code": 0, "stdout": "ok", "output": "ok"}
 
     monkeypatch.setattr(api_main.ms, "run_megacmd_command", fake_run)

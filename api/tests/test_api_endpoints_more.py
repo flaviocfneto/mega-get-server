@@ -7,8 +7,8 @@ SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
 
 def test_logout_success_and_error(monkeypatch):
-    async def fake_logout_cmd(_args):
-        return {"ok": True, "output": "bye"}
+    async def fake_logout_cmd(_args, **kwargs):
+        return {"ok": True, "exit_code": 0, "stdout": "bye", "output": "bye"}
 
     async def logged_out():
         return {"is_logged_in": False}
@@ -42,7 +42,7 @@ def test_terminal_requires_command_and_blocks_not_allowlisted():
 
 
 def test_terminal_allowlisted_command_executes(monkeypatch):
-    async def fake_run(args):
+    async def fake_run(args, **kwargs):
         assert args[0] == "mega-version"
         return {"ok": True, "exit_code": 0, "stdout": "v1.0"}
 

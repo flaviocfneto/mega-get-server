@@ -14,7 +14,7 @@ def test_login_requires_email_and_password():
 
 
 def test_login_returns_error_when_account_not_logged(monkeypatch):
-    async def fake_run(args):
+    async def fake_run(args, **kwargs):
         return {"ok": False, "output": "bad credentials"}
 
     async def fake_account():
