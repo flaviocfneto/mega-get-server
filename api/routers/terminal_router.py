@@ -112,31 +112,31 @@ async def api_terminal(
             if is_likely_remote and ".." not in potential_path:
                 continue
 
-        # Check for path-like indicators: contains slash or is an absolute path or contains ..
-        if "/" in potential_path or os.path.isabs(potential_path) or ".." in potential_path:
-            if os.path.isabs(potential_path):
-                abs_arg = os.path.abspath(potential_path)
-            else:
-                abs_arg = os.path.abspath(os.path.join(abs_download_dir, potential_path))
+        # Normalize and validate ALL arguments as potential local paths
+        # (even if they don't contain a slash, to prevent local access relative to CWD)
+        if os.path.isabs(potential_path):
+            abs_arg = os.path.abspath(potential_path)
+        else:
+            abs_arg = os.path.abspath(os.path.join(abs_download_dir, potential_path))
 
-            try:
-                if os.path.commonpath([abs_arg, abs_download_dir]) != abs_download_dir:
-                    return {
-                        "ok": False,
-                        "command": raw,
-                        "exit_code": 126,
-                        "output": f"Blocked: local path access outside {ms.DOWNLOAD_DIR} in argument '{part}'",
-                        "blocked_reason": "path_traversal_attempt",
-                    }
-            except ValueError:
-                # This can happen if paths are on different drives on Windows, or other oddities
+        try:
+            if os.path.commonpath([abs_arg, abs_download_dir]) != abs_download_dir:
                 return {
                     "ok": False,
                     "command": raw,
                     "exit_code": 126,
-                    "output": f"Invalid path in argument '{part}'",
-                    "blocked_reason": "invalid_path",
+                    "output": f"Blocked: local path access outside {ms.DOWNLOAD_DIR} in argument '{part}'",
+                    "blocked_reason": "path_traversal_attempt",
                 }
+        except ValueError:
+            # This can happen if paths are on different drives on Windows, or other oddities
+            return {
+                "ok": False,
+                "command": raw,
+                "exit_code": 126,
+                "output": f"Invalid path in argument '{part}'",
+                "blocked_reason": "invalid_path",
+            }
 
     if cmd == "mega-get":
         # mega-get [OPTIONS] <remotepath> [localpath]
@@ -164,7 +164,7 @@ async def api_terminal(
                 "blocked_reason": "injection_attempt",
             }
 
-    result = await ms.run_megacmd_command(parts)
+    result = await ms.run_megacmd_command(parts, cwd=abs_download_dir)
     return {
         "ok": bool(result["ok"]),
         "command": raw,

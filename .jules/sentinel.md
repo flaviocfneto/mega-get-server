@@ -207,3 +207,16 @@ Heuristics that exempt specific input patterns from security checks must be extr
 
 **Prevention:**
 Always validate that "safe" patterns do not contain malicious sequences like `..` even if they match a trusted prefix. When a path is intended for a specific remote namespace, enforce that it remains within that namespace by forbidding traversal markers.
+
+## 2025-05-27 - [Terminal Path Traversal Bypass via CWD and Incomplete Argument Validation]
+**Vulnerability:**
+1. The administrative terminal only performed path traversal checks on arguments that appeared to be paths (containing slashes or being absolute). This allowed bypasses using filename-only arguments (e.g., `wget2 -O myfile.txt ...`) which would be written to the server's current working directory (CWD), potentially outside the allowed `DOWNLOAD_DIR`.
+2. Subprocesses were executed in the server's default CWD, providing an escape vector if path validation was bypassed.
+
+**Learning:**
+1. Heuristics that decide *whether* to validate an argument based on its content are dangerous. All arguments should be treated as potentially malicious and validated against expected boundaries.
+2. Defence-in-depth for shell-like interfaces should include restricting the execution environment (CWD) to the most restrictive path possible.
+
+**Prevention:**
+1. Explicitly set the `cwd` for all subprocesses executed from user-controlled input to a safe, restricted directory.
+2. Normalize and validate every command argument against the intended directory constraint, even if it doesn't look like a path.

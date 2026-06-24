@@ -198,8 +198,8 @@ def redact_sensitive_text(text: str) -> str:
     # Opaque API keys (like sk-...)
     masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
 
-    # Specific environment-based API keys if present
-    for env_key in ("API_ADMIN_KEY", "API_WRITE_KEY"):
+    # Specific environment-based secrets if present
+    for env_key in ("API_ADMIN_KEY", "API_WRITE_KEY", "MEGA_EMAIL", "MEGA_PASSWORD"):
         val = os.environ.get(env_key, "").strip()
         if val and len(val) >= 8:
             masked = masked.replace(val, "***")
@@ -914,7 +914,7 @@ async def _mega_transfers_exec(flag: str, target: str) -> tuple[int, str, str]:
     return rc, out, err
 
 
-async def run_megacmd_command(args: list[str]) -> dict[str, Any]:
+async def run_megacmd_command(args: list[str], cwd: str | None = None) -> dict[str, Any]:
     """
     Execute a MEGAcmd CLI command with the configured subprocess environment.
     Returns {ok, command, exit_code, stdout, stderr, output, timestamp}.
@@ -929,6 +929,7 @@ async def run_megacmd_command(args: list[str]) -> dict[str, Any]:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env=subprocess_env(),
+            cwd=cwd,
         )
         stdout_b, stderr_b = await proc.communicate()
         code = proc.returncode if proc.returncode is not None else -1
