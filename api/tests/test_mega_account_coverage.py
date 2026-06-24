@@ -10,7 +10,7 @@ import mega_service as ms
 def test_get_account_info_not_logged_in(monkeypatch):
     monkeypatch.setattr(ms, "SIMULATE", False)
 
-    async def fake_whoami(_args):
+    async def fake_whoami(_args, **kwargs):
         return {"ok": False, "stdout": "", "stderr": "not logged in", "output": "not logged in"}
 
     monkeypatch.setattr(ms, "run_megacmd_command", fake_whoami)
@@ -27,7 +27,7 @@ def test_get_account_info_with_email_and_df(monkeypatch):
     monkeypatch.setattr(ms, "SIMULATE", False)
     calls: list[list[str]] = []
 
-    async def fake_cmd(args):
+    async def fake_cmd(args, **kwargs):
         calls.append(list(args))
         if args[:1] == ["mega-whoami"]:
             return {"ok": True, "stdout": "email: user@example.com\n", "stderr": "", "output": ""}

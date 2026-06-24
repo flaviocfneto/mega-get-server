@@ -14,7 +14,7 @@ def test_terminal_allows_wget2(monkeypatch):
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
 
-    async def fake_run(args):
+    async def fake_run(args, **kwargs):
         return {"ok": True, "exit_code": 0, "stdout": "ok", "output": "ok"}
 
     monkeypatch.setattr(ms, "run_megacmd_command", fake_run)

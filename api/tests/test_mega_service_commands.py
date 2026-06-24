@@ -68,7 +68,7 @@ def test_run_megacmd_command_exception_path(monkeypatch):
 def test_command_probe_runs_three_commands(monkeypatch):
     called = []
 
-    async def fake_run(args):
+    async def fake_run(args, **kwargs):
         called.append(args)
         return {"ok": True, "command": " ".join(args)}
 
