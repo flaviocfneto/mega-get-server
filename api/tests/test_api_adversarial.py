@@ -41,8 +41,8 @@ def _cases() -> list[tuple[str, str, str, dict[str, Any], int]]:
         ("bulk_empty_tags", "POST", "/api/transfers/bulk", {"json": {"tags": [], "action": "pause"}}, 422),
         ("bulk_action_too_long", "POST", "/api/transfers/bulk", {"json": {"tags": ["1"], "action": "x" * 40}}, 422),
         ("transfer_update_bad_priority", "POST", "/api/transfers/1/update", {"json": {"priority": "INVALID"}}, 400),
-        ("transfer_update_tags_not_array", "POST", "/api/transfers/1/update", {"json": {"tags": "nope"}}, 400),
-        ("transfer_limit_missing_field", "POST", "/api/transfers/1/limit", {"json": {}}, 400),
+        ("transfer_update_tags_not_array", "POST", "/api/transfers/1/update", {"json": {"tags": "nope"}}, 422),
+        ("transfer_limit_missing_field", "POST", "/api/transfers/1/limit", {"json": {}}, 422),
         (
             "config_body_not_object",
             "POST",

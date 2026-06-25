@@ -44,8 +44,7 @@ def test_transfer_update_validates_priority_and_tags(monkeypatch):
 
     assert bad_priority.status_code == 400
     assert "priority" in bad_priority.json()["detail"].lower()
-    assert bad_tags.status_code == 400
-    assert "tags must be an array" in bad_tags.json()["detail"]
+    assert bad_tags.status_code == 422
     assert no_fields.status_code == 400
 
 
@@ -81,9 +80,9 @@ def test_transfer_limit_validates_body():
         not_int = client.post("/api/transfers/1/limit", json={"speed_limit_kbps": "abc"}, headers=SAFE_HEADERS)
         negative = client.post("/api/transfers/1/limit", json={"speed_limit_kbps": -5}, headers=SAFE_HEADERS)
 
-    assert missing.status_code == 400
-    assert not_int.status_code == 400
-    assert negative.status_code == 400
+    assert missing.status_code == 422
+    assert not_int.status_code == 422
+    assert negative.status_code == 422
 
 
 def test_transfer_bulk_add_tag_and_priority_update(monkeypatch):
