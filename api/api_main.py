@@ -281,7 +281,17 @@ class QueueAddBody(BaseModel):
 class BulkBody(BaseModel):
     tags: list[str] = Field(min_length=1, max_length=200)
     action: str = Field(min_length=2, max_length=32)
-    value: Any | None = Field(default=None, max_length=1024)
+    value: str | None = Field(default=None, max_length=1024)
+
+
+class TransferUpdateBody(BaseModel):
+    priority: str | None = Field(default=None, max_length=16)
+    tags: list[Annotated[str, Field(max_length=128)]] | None = Field(default=None, max_length=50)
+    url: str | None = Field(default=None, max_length=4096)
+
+
+class TransferLimitBody(BaseModel):
+    speed_limit_kbps: int = Field(ge=0, le=1000000)
 
 
 class LoginBody(BaseModel):
@@ -726,7 +736,7 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
                     tm.update(tag, {"priority": pr})
                     metadata_affected += 1
             elif body.action == "add_tag":
-                label = str(body.value or "").strip()
+                label = str(body.value or "").strip()[:128]
                 if label:
                     meta = tm.get(tag)
                     tags = list(meta.get("tags", []))
@@ -735,7 +745,7 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
                     tm.update(tag, {"tags": tags})
                     metadata_affected += 1
             elif body.action == "remove_tag":
-                label = str(body.value or "").strip()
+                label = str(body.value or "").strip()[:128]
                 meta = tm.get(tag)
                 tags = [t for t in meta.get("tags", []) if t != label]
                 tm.update(tag, {"tags": tags})
@@ -756,7 +766,7 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
                 tm.update(tag, {"priority": pr})
                 metadata_affected += 1
         elif body.action == "add_tag":
-            label = str(body.value or "").strip()
+            label = str(body.value or "").strip()[:128]
             if label:
                 meta = tm.get(tag)
                 tags = list(meta.get("tags", []))
@@ -765,7 +775,7 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
                 tm.update(tag, {"tags": tags})
                 metadata_affected += 1
         elif body.action == "remove_tag":
-            label = str(body.value or "").strip()
+            label = str(body.value or "").strip()[:128]
             meta = tm.get(tag)
             tags = [t for t in meta.get("tags", []) if t != label]
             tm.update(tag, {"tags": tags})
@@ -778,22 +788,20 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
 async def api_transfer_update(
     tag: str,
     request: Request,
-    body: dict[str, Any] = Body(default_factory=dict),
+    body: TransferUpdateBody,
     _: None = Depends(require_scope("write")),
 ):
     require_csrf_boundary(request)
     values: dict[str, Any] = {}
-    if "priority" in body and body["priority"] is not None:
-        pr = str(body["priority"]).upper()
+    if body.priority is not None:
+        pr = body.priority.upper()
         if pr not in {"LOW", "NORMAL", "HIGH"}:
             raise HTTPException(status_code=400, detail="priority must be LOW, NORMAL or HIGH")
         values["priority"] = pr
-    if "tags" in body and body["tags"] is not None:
-        if not isinstance(body["tags"], list):
-            raise HTTPException(status_code=400, detail="tags must be an array")
-        values["tags"] = [str(t).strip() for t in body["tags"] if str(t).strip()]
-    if "url" in body and body["url"] is not None:
-        values["url"] = str(body["url"]).strip()
+    if body.tags is not None:
+        values["tags"] = [t.strip() for t in body.tags if t.strip()]
+    if body.url is not None:
+        values["url"] = body.url.strip()
     if not values:
         raise HTTPException(status_code=400, detail="No valid fields to update")
     tm.update(tag, values)
@@ -805,18 +813,11 @@ async def api_transfer_update(
 async def api_transfer_limit(
     tag: str,
     request: Request,
-    body: dict[str, Any] = Body(default_factory=dict),
+    body: TransferLimitBody,
     _: None = Depends(require_scope("write")),
 ):
     require_csrf_boundary(request)
-    if "speed_limit_kbps" not in body:
-        raise HTTPException(status_code=400, detail="speed_limit_kbps is required")
-    try:
-        limit = int(body["speed_limit_kbps"])
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="speed_limit_kbps must be an integer") from None
-    if limit < 0:
-        raise HTTPException(status_code=400, detail="speed_limit_kbps must be >= 0")
+    limit = body.speed_limit_kbps
     tm.update(tag, {"speed_limit_kbps": limit})
     return {
         "success": True,
