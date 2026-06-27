@@ -166,7 +166,7 @@ def validate_mega_download_url(url: str) -> str:
     host = (parsed.hostname or "").lower()
     if parsed.scheme not in {"https", "http"}:
         raise ValueError("Only http/https URLs are allowed")
-    if host not in {"mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz"}:
+    if host not in {"mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz", "mega.io", "www.mega.io"}:
         raise ValueError("Only MEGA URLs are allowed")
     return u
 
@@ -235,10 +235,10 @@ def redact_sensitive_text(text: str) -> str:
     # AWS Access Key IDs
     masked = re.sub(r"\bAKIA[A-Z0-9]{16}\b", "***", masked)
 
-    # MEGA URL keys: modern (#KEY) and legacy (#!ID!KEY)
-    # Redact everything after '#' in a MEGA URL or the part after the '!' following '#!'
-    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz)/(?:file|folder)/[A-Za-z0-9_-]+)#\S+", r"\1#***", masked)
-    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz)/#![A-Za-z0-9_-]+)!\S+", r"\1!***", masked)
+    # MEGA URL keys: modern (#KEY) and legacy (#!ID!KEY, #F!ID!KEY, etc.)
+    # Redact everything after '#' in a MEGA URL or the part after the '!' following the legacy ID
+    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz|io)/(?:file|folder)/[A-Za-z0-9_-]+)#\S+", r"\1#***", masked)
+    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz|io)/#[A-Z]?![A-Za-z0-9_-]+)!\S+", r"\1!***", masked)
 
     return masked
 
