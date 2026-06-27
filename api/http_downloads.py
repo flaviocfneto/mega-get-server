@@ -26,7 +26,7 @@ import pending_queue as pq
 import transfer_metadata as tm
 from services.webhook_service import notify_download_completed
 
-MEGA_HOSTS = frozenset({"mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz"})
+MEGA_HOSTS = frozenset({"mega.nz", "www.mega.nz", "mega.co.nz", "www.mega.co.nz", "mega.io", "www.mega.io"})
 
 _PROGRESS_PCT_RE = re.compile(r"(\d{1,3})\s*%")
 _COMPLETED_PRUNE_SEC = 120.0
