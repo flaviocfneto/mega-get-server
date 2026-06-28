@@ -27,6 +27,43 @@ def test_terminal_wget2_path_traversal_attached_flag(monkeypatch):
     assert data["blocked_reason"] == "path_traversal_attempt"
 
 
+def test_terminal_lfd_file_protocol(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
+    monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
+
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 file:///etc/passwd"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: untrusted host" in data["output"]
+    assert data["blocked_reason"] == "ssrf_attempt"
+
+
+def test_terminal_generic_attached_flag_path_traversal(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
+    monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
+
+    # Use a flag not explicitly handled before (like -C for config file)
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 -C/etc/shadow http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: local path access outside /data" in data["output"]
+    assert data["blocked_reason"] == "path_traversal_attempt"
+
+
 def test_terminal_wget2_ssrf_attached_flag(monkeypatch):
     _rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")

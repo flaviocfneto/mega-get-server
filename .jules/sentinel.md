@@ -220,3 +220,16 @@ Always validate that "safe" patterns do not contain malicious sequences like `..
 **Prevention:**
 1. Explicitly set the `cwd` for all subprocesses executed from user-controlled input to a safe, restricted directory.
 2. Normalize and validate every command argument against the intended directory constraint, even if it doesn't look like a path.
+
+## 2025-06-18 - [Incomplete Protocol Blocklist and Generalized Attached Flag Bypasses]
+**Vulnerability:**
+1. Protocol-based SSRF/LFD: The administrative terminal's SSRF protection only checked for a small subset of protocols (http, https, ftp). This allowed for Local File Disclosure (LFD) via the 'file://' protocol and potential SSRF via other obscure protocols like 'gopher://' or 'php://'.
+2. Attached Flag Path Traversal: While the terminal tried to check for paths in flags, it only looked for specific flags like '-O' or '-o'. Other tools or flags (e.g., '-C/path') could be used to provide malicious local paths by attaching them directly to the flag.
+
+**Learning:**
+1. SSRF and LFD protection must be comprehensive in terms of supported protocols. Any protocol that can resolve to a local file or an internal service should be blocked.
+2. CLI flag heuristics must be generic. Instead of whitelisting specific "dangerous" flags, any argument that follows the common "attached short flag" pattern (e.g., -X/path) and contains a slash or traversal marker should be treated as a potential path and validated.
+
+**Prevention:**
+1. Use an exhaustive list of dangerous protocols in SSRF/LFD checks.
+2. Implement generic flag parsing that extracts potential paths from any short flag where the value is attached without a space or equals sign.
