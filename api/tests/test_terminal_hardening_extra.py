@@ -7,6 +7,7 @@ from security import _rate_state
 
 client = TestClient(app)
 
+
 def test_terminal_wget2_path_traversal_arbitrary_attached_flag(monkeypatch):
     _rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")
@@ -25,6 +26,7 @@ def test_terminal_wget2_path_traversal_arbitrary_attached_flag(monkeypatch):
     assert "Blocked: local path access outside /data" in data["output"]
     assert data["blocked_reason"] == "path_traversal_attempt"
 
+
 def test_terminal_wget2_ssrf_protocol_bypass(monkeypatch):
     _rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")
@@ -42,6 +44,7 @@ def test_terminal_wget2_ssrf_protocol_bypass(monkeypatch):
     assert data["ok"] is False
     assert "Blocked: untrusted host or protocol" in data["output"]
     assert data["blocked_reason"] == "ssrf_attempt"
+
 
 def test_terminal_wget2_ssrf_protocol_bypass_embedded(monkeypatch):
     _rate_state.clear()
