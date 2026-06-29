@@ -24,7 +24,7 @@ def test_terminal_ssrf_bypass_uppercase_scheme(monkeypatch):
     data = response.json()
 
     assert data["ok"] is False
-    assert "Blocked: untrusted host in URL" in data["output"]
+    assert "Blocked: untrusted host" in data["output"]
     assert data["blocked_reason"] == "ssrf_attempt"
 
 
@@ -44,5 +44,5 @@ def test_terminal_ssrf_ftp_bypass(monkeypatch):
     data = response.json()
 
     assert data["ok"] is False
-    assert "Blocked: untrusted host in URL" in data["output"]
+    assert "Blocked: untrusted host" in data["output"]
     assert data["blocked_reason"] == "ssrf_attempt"

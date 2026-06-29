@@ -220,3 +220,25 @@ Always validate that "safe" patterns do not contain malicious sequences like `..
 **Prevention:**
 1. Explicitly set the `cwd` for all subprocesses executed from user-controlled input to a safe, restricted directory.
 2. Normalize and validate every command argument against the intended directory constraint, even if it doesn't look like a path.
+
+## 2025-05-28 - [Generalized CLI Flag Path Extraction and Protocol Blocklisting]
+**Vulnerability:**
+The administrative terminal's security logic was too specific, checking only for  or  flags when looking for attached paths. This allowed path traversal via other flags like  (input-file). Additionally, the SSRF protocol blocklist was incomplete, missing schemes like `file://`, `php://`, or `data://` which could be used for local file disclosure or other attacks.
+
+**Learning:**
+Security heuristics in a CLI wrapper should be as generalized as possible. Hardcoding specific flags (like `-O`) creates a false sense of security while leaving other vectors open. Similarly, protocol blocklists must account for the wide variety of schemes supported by modern CLI tools, not just the standard web protocols.
+
+**Prevention:**
+1. Implement generalized path extraction that validates any argument following the CLI tool's expected syntax for attached values (e.g., any short flag containing path separators or traversal markers).
+2. Maintain a comprehensive list of dangerous protocols to block, and ensure they are checked for anywhere within an argument string to catch embedded URLs.
+
+## 2025-05-28 - [Generalized CLI Flag Path Extraction and Protocol Blocklisting]
+**Vulnerability:**
+The administrative terminal's security logic was too specific, checking only for `-O` or `-o` flags when looking for attached paths. This allowed path traversal via other flags like `-i` (input-file). Additionally, the SSRF protocol blocklist was incomplete, missing schemes like `file://`, `php://`, or `data://` which could be used for local file disclosure or other attacks.
+
+**Learning:**
+Security heuristics in a CLI wrapper should be as generalized as possible. Hardcoding specific flags (like `-O`) creates a false sense of security while leaving other vectors open. Similarly, protocol blocklists must account for the wide variety of schemes supported by modern CLI tools, not just the standard web protocols.
+
+**Prevention:**
+1. Implement generalized path extraction that validates any argument following the CLI tool's expected syntax for attached values (e.g., any short flag containing path separators or traversal markers).
+2. Maintain a comprehensive list of dangerous protocols to block, and ensure they are checked for anywhere within an argument string to catch embedded URLs.
