@@ -70,7 +70,7 @@ async def api_terminal(
         # 1. URL/SSRF Validation
         # Check for protocol prefixes anywhere in the argument (e.g., --base=http://...)
         part_l = part.lower()
-        for proto in ("http://", "https://", "ftp://"):
+        for proto in ("http://", "https://", "ftp://", "file://", "data://", "gopher://", "php://", "dict://"):
             if proto in part_l:
                 idx = part_l.find(proto)
                 url_to_check = part[idx:]
@@ -82,7 +82,7 @@ async def api_terminal(
                             "ok": False,
                             "command": raw,
                             "exit_code": 126,
-                            "output": f"Blocked: untrusted host in URL '{part}'",
+                            "output": f"Blocked: untrusted host or protocol in URL '{part}'",
                             "blocked_reason": "ssrf_attempt",
                         }
                 except Exception:
@@ -94,8 +94,9 @@ async def api_terminal(
         potential_path = part
         if "=" in part:
             potential_path = part.split("=", 1)[1]
-        elif part.startswith(("-O", "-o")) and len(part) > 2:
-            # Handle attached short flags like -O/etc/passwd
+        elif part.startswith("-") and not part.startswith("--") and len(part) > 2 and ("/" in part or ".." in part):
+            # Handle attached short flags like -O/etc/passwd or -i/etc/shadow
+            # We assume the flag is the first character after the dash.
             potential_path = part[2:]
 
         # Heuristic: if it looks like a remote path, don't apply local traversal checks.
