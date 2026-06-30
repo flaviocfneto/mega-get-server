@@ -233,3 +233,13 @@ Always validate that "safe" patterns do not contain malicious sequences like `..
 **Prevention:**
 1. Use an exhaustive list of dangerous protocols in SSRF/LFD checks.
 2. Implement generic flag parsing that extracts potential paths from any short flag where the value is attached without a space or equals sign.
+
+## 2024-05-28 - [Log Redaction Bypass via Structured Formats and Quoted Keys]
+**Vulnerability:**
+The `redact_sensitive_text` function used simple key-value patterns (e.g., `key=value`) that failed to redact secrets in structured formats like JSON, where keys and values are typically quoted (e.g., `"password": "secret"`). Additionally, Authorization headers with multi-word values (e.g., `Bearer <token>`) were only partially redacted if they contained spaces.
+
+**Learning:**
+Security redaction logic must account for the diverse ways sensitive data is serialized in logs. Structured formats like JSON and specific header schemes like 'Bearer' introduce delimiters (quotes, spaces) that can bypass naive regex patterns.
+
+**Prevention:**
+Use comprehensive regex patterns that explicitly handle optional quotes (single and double) for both keys and values, and accommodate multi-word tokens in sensitive fields like Authorization.
