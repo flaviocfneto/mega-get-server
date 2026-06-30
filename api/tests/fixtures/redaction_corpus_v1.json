@@ -16,7 +16,7 @@
     {
       "name": "bearer_token",
       "input": "Authorization: Bearer abc.def.ghi",
-      "expected": "Authorization: Bearer ***",
+      "expected": "Authorization: ***",
       "must_not_contain": ["abc.def.ghi"]
     },
     {
