@@ -27,5 +27,6 @@ def test_redact_paths():
 
 
 def test_redact_auth_headers():
-    assert "Authorization: Bearer ***" in ms.redact_sensitive_text("Authorization: Bearer abc123def")
-    assert "Authorization: Basic ***" in ms.redact_sensitive_text("Authorization: Basic dXNlcjpwYXNz")
+    # After enhancement, Authorization: Bearer abc123def is redacted to Authorization: ***
+    assert "Authorization: ***" in ms.redact_sensitive_text("Authorization: Bearer abc123def")
+    assert "Authorization: ***" in ms.redact_sensitive_text("Authorization: Basic dXNlcjpwYXNz")
