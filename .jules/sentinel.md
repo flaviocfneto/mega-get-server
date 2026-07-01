@@ -153,6 +153,18 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 2. Implement redaction in the logging service's storage method.
 3. Use 'is_global' to block all non-routable/reserved IP addresses in SSRF checks.
 
+## 2026-06-29 - [Insecure Configuration Update via Generic Dictionaries]
+**Vulnerability:**
+The `/api/config` endpoint accepted arbitrary JSON dictionaries without validation. This allowed attackers (with 'write' scope) to set configuration values to extreme ranges (e.g., millions of retries) or provide massive strings for webhook URLs, potentially leading to resource exhaustion, application instability, or bypassing intended UI limits.
+
+**Learning:**
+Generic dictionary input in state-changing API endpoints is a security risk even with authentication. Defense-in-depth requires strict schema validation at the API entry point (e.g., Pydantic models) AND consistent enforcement in the underlying storage/service layers to ensure system invariants are maintained regardless of the input vector.
+
+**Prevention:**
+1. Always use structured Pydantic models for POST/PUT/PATCH request bodies to enforce type safety, numeric ranges, string length limits, and format validation (e.g., regex for time strings).
+2. Use `model_dump(exclude_unset=True)` to support partial updates safely.
+3. Implement secondary validation in the service layer (e.g., `ui_settings.py`) to protect against internal misuse or future API regressions.
+
 ## 2026-06-16 - [Missing Authentication on History and Queue Endpoints]
 **Vulnerability:**
 The `GET /api/history` and `GET /api/queue` endpoints were accessible without authentication even when `API_AUTH_MODE` was set to 'strict'. This allowed unauthorized users to view download history and the pending queue, which may contain sensitive metadata like filenames and source URLs.
