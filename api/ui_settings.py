@@ -62,6 +62,8 @@ def merge_post_into_stored(body: dict[str, Any]) -> None:
 
         if key == "webhook_url":
             url = str(val).strip()
+            if len(url) > 1024:
+                continue
             if url:
                 parsed = urlparse(url)
                 if parsed.scheme not in {"http", "https"}:
@@ -74,10 +76,17 @@ def merge_post_into_stored(body: dict[str, Any]) -> None:
 
         if key == "watch_folder_path":
             path = str(val).strip()
-            if ".." in path:
+            if len(path) > 1024 or ".." in path:
                 # Basic path traversal protection for watch folder
                 continue
             stored[key] = path
+            continue
+
+        if key == "post_download_action":
+            action = str(val).strip()
+            if len(action) > 1024:
+                continue
+            stored[key] = action
             continue
 
         default = DEFAULT_UI_KEYS[key]

@@ -294,6 +294,23 @@ class TransferLimitBody(BaseModel):
     speed_limit_kbps: int = Field(ge=0, le=1000000)
 
 
+class ConfigUpdateBody(BaseModel):
+    history_limit: int | None = Field(default=None, ge=1, le=1000)
+    history_retention_days: int | None = Field(default=None, ge=1, le=365)
+    max_retries: int | None = Field(default=None, ge=0, le=100)
+    global_speed_limit_kbps: int | None = Field(default=None, ge=0, le=1000000)
+    scheduled_start: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")
+    scheduled_stop: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")
+    is_scheduling_enabled: bool | None = None
+    sound_alerts_enabled: bool | None = None
+    is_privacy_mode: bool | None = None
+    is_compact_mode: bool | None = None
+    post_download_action: str | None = Field(default=None, max_length=1024)
+    webhook_url: str | None = Field(default=None, max_length=1024)
+    watch_folder_enabled: bool | None = None
+    watch_folder_path: str | None = Field(default=None, max_length=1024)
+
+
 class LoginBody(BaseModel):
     email: str | None = Field(default=None, max_length=256)
     password: str | None = Field(default=None, max_length=1024)
@@ -411,12 +428,10 @@ async def api_config_get(request: Request, response: Response, _: None = Depends
 @app.post("/api/config")
 @rate_limit("config_post", limit=20, window_seconds=60)
 async def api_config_post(
-    request: Request, body: dict[str, Any] = Body(default_factory=dict), _: None = Depends(require_scope("write"))
+    request: Request, body: ConfigUpdateBody, _: None = Depends(require_scope("write"))
 ):
     require_csrf_boundary(request)
-    us.merge_post_into_stored(body)
-    if body.get("download_dir") is not None:
-        ms.log_buffer.append("Note: download_dir is controlled by the server environment; UI value was not applied.")
+    us.merge_post_into_stored(body.model_dump(exclude_unset=True))
     return _full_config()
 
 
