@@ -23,7 +23,7 @@ import pending_queue as pq
 import tool_diagnostics as td
 import transfer_metadata as tm
 import ui_settings as us
-from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -309,6 +309,7 @@ class ConfigUpdateBody(BaseModel):
     webhook_url: str | None = Field(default=None, max_length=1024)
     watch_folder_enabled: bool | None = None
     watch_folder_path: str | None = Field(default=None, max_length=1024)
+    download_dir: str | None = Field(default=None, max_length=1024)
 
 
 class LoginBody(BaseModel):
@@ -427,11 +428,12 @@ async def api_config_get(request: Request, response: Response, _: None = Depends
 
 @app.post("/api/config")
 @rate_limit("config_post", limit=20, window_seconds=60)
-async def api_config_post(
-    request: Request, body: ConfigUpdateBody, _: None = Depends(require_scope("write"))
-):
+async def api_config_post(request: Request, body: ConfigUpdateBody, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
-    us.merge_post_into_stored(body.model_dump(exclude_unset=True))
+    data = body.model_dump(exclude_unset=True)
+    us.merge_post_into_stored(data)
+    if "download_dir" in data:
+        ms.log_buffer.append("Note: download_dir is controlled by the server environment; UI value was not applied.")
     return _full_config()
 
 

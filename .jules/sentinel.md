@@ -153,7 +153,7 @@ Always enforce explicit, absolute, and validated destination paths when invoking
 2. Implement redaction in the logging service's storage method.
 3. Use 'is_global' to block all non-routable/reserved IP addresses in SSRF checks.
 
-## 2024-05-29 - [Insecure Configuration Update via Generic Dictionaries]
+## 2026-06-29 - [Insecure Configuration Update via Generic Dictionaries]
 **Vulnerability:**
 The `/api/config` endpoint accepted arbitrary JSON dictionaries without validation. This allowed attackers (with 'write' scope) to set configuration values to extreme ranges (e.g., millions of retries) or provide massive strings for webhook URLs, potentially leading to resource exhaustion, application instability, or bypassing intended UI limits.
 
