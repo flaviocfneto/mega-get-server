@@ -162,6 +162,8 @@ async def _resolve_and_validate_url(url: str, timeout: float = 10.0) -> tuple[st
     for _ in range(5):
         try:
             parsed = urlparse(current_url)
+            if parsed.scheme not in {"http", "https"}:
+                return None, None
             host = (parsed.hostname or "").lower()
             if _host_is_blocked(host):
                 return None, None
