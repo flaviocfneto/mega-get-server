@@ -222,7 +222,9 @@ def redact_sensitive_text(text: str) -> str:
 
     # Absolute server-side paths
     # Redact common app/system roots to avoid leaking internal filesystem layout
-    masked = re.sub(r"(?i)(^|\s|['\"])(/app|/data|/home/mega|/root|/etc|/var/log)(?:/|(?=[\s'\"$])|$)\S*", r"\1\2/***", masked)
+    masked = re.sub(
+        r"(?i)(^|\s|['\"])(/app|/data|/home/mega|/root|/etc|/var/log)(?:/|(?=[\s'\"$])|$)\S*", r"\1\2/***", masked
+    )
 
     # Likely JWTs or similar dot-separated tokens
     # Using more specific length bounds to avoid false positives on public IPs (e.g. 1.1.1.1)
