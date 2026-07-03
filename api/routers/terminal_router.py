@@ -168,7 +168,7 @@ async def api_terminal(
     result = await ms.run_megacmd_command(parts, cwd=abs_download_dir)
     return {
         "ok": bool(result["ok"]),
-        "command": raw,
+        "command": ms.redact_sensitive_text(raw),
         "exit_code": result.get("exit_code", -1),
         "output": result.get("stdout") or result.get("output") or "(ok)",
     }
