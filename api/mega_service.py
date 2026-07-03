@@ -190,14 +190,14 @@ def redact_sensitive_text(text: str) -> str:
     # Standard secret patterns (preserves separator)
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
     masked = re.sub(
-        r'(?i)(["\']?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s+\S+|\S+)',
+        r'(?i)(["\']?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
         r"\1\2***",
         masked,
     )
     # MEGAcmd login specific redaction
     masked = re.sub(r"(?i)(mega-login\s+)\S+(\s+)\S+", r"\1***\2***", masked)
     # Bearer and Basic tokens
-    masked = re.sub(r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
+    masked = re.sub(r"(?i)(authorization\s*:\s*(?:bearer|basic)\s*)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
     # Opaque API keys (like sk-...)
     masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
 
@@ -222,7 +222,7 @@ def redact_sensitive_text(text: str) -> str:
 
     # Absolute server-side paths
     # Redact common app/system roots to avoid leaking internal filesystem layout
-    masked = re.sub(r"(?i)(^|\s|['\"])(/app/|/data/|/home/mega/|/root/|/etc/|/var/log/)\S*", r"\1\2***", masked)
+    masked = re.sub(r"(?i)(^|\s|['\"])(/app|/data|/home/mega|/root|/etc|/var/log)(?:/|(?=[\s'\"$])|$)\S*", r"\1\2/***", masked)
 
     # Likely JWTs or similar dot-separated tokens
     # Using more specific length bounds to avoid false positives on public IPs (e.g. 1.1.1.1)
@@ -242,6 +242,9 @@ def redact_sensitive_text(text: str) -> str:
     # Redact everything after '#' in a MEGA URL or the part after the '!' following the legacy ID
     masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz|io)/(?:file|folder)/[A-Za-z0-9_-]+)#\S+", r"\1#***", masked)
     masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz|io)/#[A-Z]?![A-Za-z0-9_-]+)!\S+", r"\1!***", masked)
+    # Generalized MEGA fragments redaction (e.g. for cases where the full URL is not present)
+    masked = re.sub(r"(?i)(#[A-Z]?![\w-]+)!\S+", r"\1!***", masked)
+    masked = re.sub(r"(?i)(#[A-Z]?![\w-]{8,})#\S+", r"\1#***", masked)
 
     return masked
 
