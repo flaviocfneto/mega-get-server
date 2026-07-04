@@ -391,6 +391,10 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-XSS-Protection"] = "0"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()"
+    )
 
     # CSP connect-src: allow self and configured trusted origins
     trusted_origins = os.environ.get("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")
@@ -408,6 +412,8 @@ async def add_security_headers(request: Request, call_next):
     # object-src 'none' is used as a defense-in-depth measure to prevent plugin-based attacks.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
         f"script-src 'self' 'nonce-{nonce}'; "
         f"style-src 'self' 'nonce-{nonce}' https://fonts.googleapis.com; "
         "style-src-attr 'unsafe-inline'; "
