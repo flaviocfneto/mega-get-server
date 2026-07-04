@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from api_main import app
 from fastapi.testclient import TestClient
-import pytest
 
 client = TestClient(app)
+
 
 def test_security_headers_enhancement():
     """
