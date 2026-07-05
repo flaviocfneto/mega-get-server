@@ -41,3 +41,29 @@ def test_redact_session_and_extra_headers():
     assert "session=***" in ms.redact_sensitive_text("session=abcdef123456")
     assert "x-api-key: ***" in ms.redact_sensitive_text("x-api-key: some-key")
     assert "auth: ***" in ms.redact_sensitive_text("auth: some-token")
+
+
+def test_redact_url_credentials():
+    # Test that inline credentials in URLs are redacted
+    raw = "Downloading from http://user:password123@example.com/file.zip"
+    redacted = ms.redact_sensitive_text(raw)
+    assert "password123" not in redacted
+    assert "user" not in redacted
+    assert "http://***:***@" in redacted
+
+
+def test_redact_x_csrf_token():
+    # Test that x-csrf-token is redacted
+    raw = "x-csrf-token: abc123def456"
+    redacted = ms.redact_sensitive_text(raw)
+    assert "abc123def456" not in redacted
+    assert "x-csrf-token: ***" in redacted
+
+
+def test_redact_quoted_login():
+    # Test that mega-login with quoted arguments is fully redacted
+    raw = 'mega-login "user name" "pass word"'
+    redacted = ms.redact_sensitive_text(raw)
+    assert "user name" not in redacted
+    assert "pass word" not in redacted
+    assert "mega-login *** ***" in redacted

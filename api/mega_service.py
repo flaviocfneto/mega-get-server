@@ -189,13 +189,18 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(r"\b[A-Za-z0-9._%+-]{1,3}[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "***@***", masked)
     # Standard secret patterns (preserves separator)
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
+    # Supports prefixed keys like x-csrf-token. Non-greedy prefix to avoid ReDoS.
     masked = re.sub(
-        r'(?i)(["\']?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
+        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
         r"\1\2***",
         masked,
     )
-    # MEGAcmd login specific redaction
-    masked = re.sub(r"(?i)(mega-login\s+)\S+(\s+)\S+", r"\1***\2***", masked)
+    # MEGAcmd login specific redaction (handles quoted arguments with spaces)
+    masked = re.sub(
+        r"(?i)(mega-login\s+)(?:\"[^\"]*\"|'[^']*'|\S+)(\s+)(?:\"[^\"]*\"|'[^']*'|\S+)", r"\1***\2***", masked
+    )
+    # URL credentials (e.g. http://user:pass@host)
+    masked = re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^:@\s/]+:[^@\s/]+@", r"\1***:***@", masked)
     # Bearer and Basic tokens
     masked = re.sub(r"(?i)(authorization\s*:\s*(?:bearer|basic)\s*)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
     # Opaque API keys (like sk-...)
