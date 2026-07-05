@@ -189,9 +189,9 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(r"\b[A-Za-z0-9._%+-]{1,3}[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "***@***", masked)
     # Standard secret patterns (preserves separator)
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
-    # Supports prefixed keys like x-csrf-token
+    # Supports prefixed keys like x-csrf-token. Non-greedy prefix to avoid ReDoS.
     masked = re.sub(
-        r'(?i)(["\']?[\w-]*(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
+        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
         r"\1\2***",
         masked,
     )
