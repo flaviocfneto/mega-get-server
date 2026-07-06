@@ -395,14 +395,28 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = (
         "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()"
     )
+    # Defense-in-depth: HSTS, cross-origin policies and download options
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Block Flash/PDF from making cross-domain requests
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    # Prevent other origins from including our resources
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    # Isolate the browsing context
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    # Prevent IE from opening HTML in the context of the site
+    response.headers["X-Download-Options"] = "noopen"
 
     # CSP connect-src: allow self and configured trusted origins
+    # We sanitize each origin to prevent CSP directive injection via CORS_ALLOW_ORIGINS.
     trusted_origins = os.environ.get("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")
     connect_src = ["'self'"]
     for o in trusted_origins:
         o = o.strip()
         if o:
-            connect_src.append(o)
+            # Remove any characters that could be used for directive injection
+            safe_o = "".join(c for c in o if c not in "; \r\n\t'\"")
+            if safe_o:
+                connect_src.append(safe_o)
     connect_src_str = " ".join(connect_src)
 
     # CSP: remove 'unsafe-inline' and use nonces for scripts and styles.
