@@ -37,3 +37,26 @@ def test_security_headers_enhancement():
     # Verify nonces are present for script and style
     assert "script-src 'self' 'nonce-" in csp
     assert "style-src 'self' 'nonce-" in csp
+
+    # Check for defense-in-depth headers
+    assert response.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
+    assert response.headers.get("X-Permitted-Cross-Domain-Policies") == "none"
+    assert response.headers.get("Cross-Origin-Resource-Policy") == "same-origin"
+    assert response.headers.get("Cross-Origin-Opener-Policy") == "same-origin"
+    assert response.headers.get("X-Download-Options") == "noopen"
+
+
+def test_csp_connect_src_sanitization(monkeypatch):
+    """
+    Verify that connect-src is sanitized to prevent directive injection.
+    """
+    # Inject a semicolon into CORS_ALLOW_ORIGINS to attempt directive injection
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://localhost:5173; script-src 'unsafe-inline'")
+
+    response = client.get("/api/diag/tools")
+    csp = response.headers.get("Content-Security-Policy")
+
+    # The injected script-src should be sanitized away
+    assert "connect-src 'self' http://localhost:5173script-src" in csp
+    # Semicolon should NOT be in the CSP for that origin
+    assert "http://localhost:5173;" not in csp
