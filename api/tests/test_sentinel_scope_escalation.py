@@ -3,12 +3,12 @@ from __future__ import annotations
 import base64
 from unittest.mock import mock_open
 
-from fastapi.testclient import TestClient
-
 import api_main
 import mega_service as ms
+from fastapi.testclient import TestClient
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
+
 
 def test_sensitive_endpoints_reject_write_scope_accept_admin_scope(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "strict")
@@ -37,7 +37,7 @@ def test_sensitive_endpoints_reject_write_scope_accept_admin_scope(monkeypatch):
         ("DELETE", "/api/logs", None),
         ("GET", "/api/secrets/status", None),
         ("POST", "/api/secrets/set", {"key": "TEST_KEY", "value": "TEST_VALUE"}),
-        ("POST", "/api/secrets/unlock", {"key_base64": base64.urlsafe_b64encode(b'A' * 32).decode()}),
+        ("POST", "/api/secrets/unlock", {"key_base64": base64.urlsafe_b64encode(b"A" * 32).decode()}),
     ]
 
     # Mocking the open and chmod for the unlock endpoint
@@ -66,6 +66,7 @@ def test_sensitive_endpoints_reject_write_scope_accept_admin_scope(monkeypatch):
                 res = client.post(url, json=json_body, headers={"x-api-key": "admin-secret", **SAFE_HEADERS})
 
             assert res.status_code == 200, f"Expected 200 for {method} {url} with admin key, got {res.status_code}"
+
 
 def test_redaction_hardening():
     # Test new Authorization redaction
