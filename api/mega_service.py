@@ -236,8 +236,8 @@ def redact_sensitive_text(text: str) -> str:
     # Likely JWTs or similar dot-separated tokens
     # Using more specific length bounds to avoid false positives on public IPs (e.g. 1.1.1.1)
     masked = re.sub(r"\b[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\b", "***", masked)
-    # Private keys
-    masked = re.sub(r"(?is)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", "***", masked)
+    # Private keys (bounded prefix to avoid ReDoS)
+    masked = re.sub(r"(?is)-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----.*?-----END [A-Z ]{0,32}PRIVATE KEY-----", "***", masked)
     # URL query parameters
     masked = re.sub(r"(?i)([?&](?:token|apikey|api_key|key|secret|sid|password)=)[^&\s#]+", r"\1***", masked)
     # MEGAcmd session IDs (often look like alphanumeric strings after 'Session:')

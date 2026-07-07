@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import os
+import base64
+from unittest.mock import mock_open
+
 from fastapi.testclient import TestClient
+
 import api_main
 import mega_service as ms
-import pytest
-import base64
 
 SAFE_HEADERS = {"origin": "http://localhost:5173"}
 
@@ -40,7 +41,6 @@ def test_sensitive_endpoints_reject_write_scope_accept_admin_scope(monkeypatch):
     ]
 
     # Mocking the open and chmod for the unlock endpoint
-    from unittest.mock import mock_open
     m = mock_open()
     monkeypatch.setattr("builtins.open", m)
     monkeypatch.setattr("os.chmod", lambda p, m: None)
@@ -69,10 +69,6 @@ def test_sensitive_endpoints_reject_write_scope_accept_admin_scope(monkeypatch):
 
 def test_redaction_hardening():
     # Test new Authorization redaction
-    # The existing generic pattern (masked = re.sub(r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)', ...))
-    # matches 'Authorization: Bearer mytoken' and replaces it with 'Authorization: ***'
-    # My new pattern also matches it but with more specific scheme support.
-
     # Authorization header with multiple spaces
     redacted = ms.redact_sensitive_text("Authorization: Bearer   mytoken123")
     assert "Authorization: ***" in redacted
