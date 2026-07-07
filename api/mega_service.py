@@ -201,8 +201,10 @@ def redact_sensitive_text(text: str) -> str:
     )
     # URL credentials (e.g. http://user:pass@host)
     masked = re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^:@\s/]+:[^@\s/]+@", r"\1***:***@", masked)
-    # Bearer and Basic tokens
-    masked = re.sub(r"(?i)(authorization\s*:\s*(?:bearer|basic)\s*)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
+    # Bearer and Basic tokens (handles variable whitespace)
+    masked = re.sub(r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
+    # Standalone API keys (e.g. x-api-key: secret)
+    masked = re.sub(r"(?i)\b(x-api-key|api-key)\s*:\s*\S+", r"\1: ***", masked)
     # Opaque API keys (like sk-...)
     masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
 
