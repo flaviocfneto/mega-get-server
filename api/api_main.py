@@ -507,7 +507,7 @@ async def api_logout(request: Request, _: None = Depends(require_scope("write"))
 
 @app.get("/api/secrets/status")
 @rate_limit("secrets_status_get", limit=20, window_seconds=60)
-async def api_secrets_status(request: Request, _: None = Depends(require_scope("write"))):
+async def api_secrets_status(request: Request, _: None = Depends(require_scope("admin"))):
     key_exists = os.path.exists(crypt_utils.SECRET_KEY_PATH)
     data_map = crypt_utils.load_vault()
     return {
@@ -520,7 +520,7 @@ async def api_secrets_status(request: Request, _: None = Depends(require_scope("
 
 @app.post("/api/secrets/set")
 @rate_limit("secrets_set", limit=20, window_seconds=60)
-async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depends(require_scope("write"))):
+async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depends(require_scope("admin"))):
     require_csrf_boundary(request)
     if not os.path.exists(crypt_utils.SECRET_KEY_PATH):
         crypt_utils.generate_key()
@@ -539,7 +539,7 @@ async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depen
 
 @app.post("/api/secrets/unlock")
 @rate_limit("secrets_unlock", limit=5, window_seconds=60)
-async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depends(require_scope("write"))):
+async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depends(require_scope("admin"))):
     require_csrf_boundary(request)
     try:
         # Try to use it
@@ -615,13 +615,13 @@ async def api_history_delete(request: Request, _: None = Depends(require_scope("
 
 @app.get("/api/logs")
 @rate_limit("logs_get", limit=20, window_seconds=60)
-async def api_logs(request: Request, _: None = Depends(require_scope("write"))):
+async def api_logs(request: Request, _: None = Depends(require_scope("admin"))):
     return ms.log_buffer.get_lines()
 
 
 @app.delete("/api/logs")
 @rate_limit("logs_delete", limit=20, window_seconds=60)
-async def api_logs_delete(request: Request, _: None = Depends(require_scope("write"))):
+async def api_logs_delete(request: Request, _: None = Depends(require_scope("admin"))):
     require_csrf_boundary(request)
     ms.log_buffer.clear()
     ms.log_buffer.append("Logs cleared.")
