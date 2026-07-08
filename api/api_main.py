@@ -426,6 +426,7 @@ async def add_security_headers(request: Request, call_next):
     # object-src 'none' is used as a defense-in-depth measure to prevent plugin-based attacks.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
+        "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "
         f"script-src 'self' 'nonce-{nonce}'; "
