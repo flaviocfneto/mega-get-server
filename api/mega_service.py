@@ -191,7 +191,7 @@ def redact_sensitive_text(text: str) -> str:
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
     # Supports prefixed keys like x-csrf-token. Non-greedy prefix to avoid ReDoS.
     masked = re.sub(
-        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
+        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization|csrf|xsrf)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
         r"\1\2***",
         masked,
     )
@@ -207,6 +207,14 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(r"(?i)\b(x-api-key|api-key)\s*:\s*\S+", r"\1: ***", masked)
     # Opaque API keys (like sk-...)
     masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
+    # Google Cloud API Keys
+    masked = re.sub(r"\bAIza[0-9A-Za-z-_]{35}\b", "***", masked)
+    # GitHub Personal Access Tokens
+    masked = re.sub(r"\bgh[pousr]_[0-9A-Za-z]{36,251}\b", "***", masked)
+    # AWS Secret Access Keys (only when following a keyword to avoid false positives)
+    masked = re.sub(
+        r"(?i)(aws_secret_access_key|aws_secret|secret_key)(\s*[:=]\s*)[A-Za-z0-9/+=]{40}\b", r"\1\2***", masked
+    )
 
     # Specific environment-based secrets if present
     for env_key in ("API_ADMIN_KEY", "API_WRITE_KEY", "MEGA_EMAIL", "MEGA_PASSWORD"):
