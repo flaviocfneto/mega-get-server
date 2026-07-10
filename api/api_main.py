@@ -466,7 +466,7 @@ async def api_account(request: Request, _: None = Depends(require_scope("write")
 
 @app.post("/api/login")
 @rate_limit("login", limit=5, window_seconds=60)
-async def api_login(body: LoginBody, request: Request):
+async def api_login(body: LoginBody, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
     email = (body.email or "").strip()
     password = body.password or ""
