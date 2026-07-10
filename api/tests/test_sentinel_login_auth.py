@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import os
 from unittest.mock import patch
-import pytest
-from fastapi.testclient import TestClient
+
 import api_main
+from fastapi.testclient import TestClient
+
 
 def test_login_requires_auth_in_strict_mode(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "strict")
@@ -16,7 +16,7 @@ def test_login_requires_auth_in_strict_mode(monkeypatch):
         response = client.post(
             "/api/login",
             json={"email": "test@example.com", "password": "password"},
-            headers={"Origin": "http://localhost:5173"}
+            headers={"Origin": "http://localhost:5173"},
         )
         assert response.status_code == 401
 
@@ -24,7 +24,7 @@ def test_login_requires_auth_in_strict_mode(monkeypatch):
         response = client.post(
             "/api/login",
             json={"email": "test@example.com", "password": "password"},
-            headers={"Origin": "http://localhost:5173", "x-api-key": "wrong_key"}
+            headers={"Origin": "http://localhost:5173", "x-api-key": "wrong_key"},
         )
         assert response.status_code == 401
 
@@ -37,10 +37,11 @@ def test_login_requires_auth_in_strict_mode(monkeypatch):
                 response = client.post(
                     "/api/login",
                     json={"email": "test@example.com", "password": "password"},
-                    headers={"Origin": "http://localhost:5173", "x-api-key": "secret_write_key"}
+                    headers={"Origin": "http://localhost:5173", "x-api-key": "secret_write_key"},
                 )
                 assert response.status_code == 200
                 assert response.json()["status"] == "error"
+
 
 def test_login_optional_auth(monkeypatch):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
@@ -56,6 +57,6 @@ def test_login_optional_auth(monkeypatch):
                 response = client.post(
                     "/api/login",
                     json={"email": "test@example.com", "password": "password"},
-                    headers={"Origin": "http://localhost:5173"}
+                    headers={"Origin": "http://localhost:5173"},
                 )
                 assert response.status_code == 200
