@@ -328,7 +328,7 @@ class SecretSetBody(BaseModel):
 
 
 class UnlockBody(BaseModel):
-    key_base64: str = Field(min_length=1)
+    key_base64: str = Field(min_length=1, max_length=4096)
 
 
 @asynccontextmanager
