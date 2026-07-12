@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import ipaddress
-import pytest
+
+from http_downloads import _host_is_blocked
+
 
 def test_ipv4_mapped_ipv6_is_global():
     # Test common IPv4-mapped IPv6 address for localhost
@@ -12,7 +16,6 @@ def test_ipv4_mapped_ipv6_is_global():
     # If this prints is_global: True and is_private: False, then our SSRF check might be bypassable
     # if it only checks these properties.
 
-from http_downloads import _host_is_blocked
 
 def test_host_is_blocked_mapped_ipv6():
     # This should be blocked

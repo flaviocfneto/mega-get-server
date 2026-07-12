@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from mega_service import redact_sensitive_text
+
 
 def test_enhanced_redaction_headers():
     # Proxy-Authorization
@@ -12,6 +15,7 @@ def test_enhanced_redaction_headers():
 
     # x-api-token
     assert redact_sensitive_text("x-api-token: mysecret") == "x-api-token: ***"
+
 
 def test_enhanced_redaction_paths():
     # New system paths
@@ -34,8 +38,11 @@ def test_enhanced_redaction_paths():
     assert "/etc/*** " in redact_sensitive_text("cat /etc/shadow ")
     assert "/app/*** " in redact_sensitive_text("app is in /app/bin ")
 
+
 def test_enhanced_redaction_regression():
     # Authorization header
     assert redact_sensitive_text("Authorization: Bearer secret") == "Authorization: ***"
     # AWS Secret Access Key
-    assert redact_sensitive_text("aws_secret_access_key=1234567890123456789012345678901234567890") == "aws_secret_access_key=***"
+    assert redact_sensitive_text("aws_secret_access_key=1234567890123456789012345678901234567890") == (
+        "aws_secret_access_key=***"
+    )
