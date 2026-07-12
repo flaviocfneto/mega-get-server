@@ -191,7 +191,7 @@ def redact_sensitive_text(text: str) -> str:
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
     # Supports prefixed keys like x-csrf-token. Non-greedy prefix to avoid ReDoS.
     masked = re.sub(
-        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-key|secret|sid|session|auth|authorization|csrf|xsrf)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
+        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|csrf|xsrf|x-amz-security-token)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
         r"\1\2***",
         masked,
     )
@@ -202,7 +202,9 @@ def redact_sensitive_text(text: str) -> str:
     # URL credentials (e.g. http://user:pass@host)
     masked = re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^:@\s/]+:[^@\s/]+@", r"\1***:***@", masked)
     # Bearer and Basic tokens (handles variable whitespace)
-    masked = re.sub(r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked)
+    masked = re.sub(
+        r"(?i)((?:authorization|proxy-authorization)\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked
+    )
     # Standalone API keys (e.g. x-api-key: secret)
     masked = re.sub(r"(?i)\b(x-api-key|api-key)\s*:\s*\S+", r"\1: ***", masked)
     # Opaque API keys (like sk-...)
@@ -237,8 +239,12 @@ def redact_sensitive_text(text: str) -> str:
 
     # Absolute server-side paths
     # Redact common app/system roots to avoid leaking internal filesystem layout
+    # Expanded list and delimiters (including parentheses) to prevent info leakage.
+    # Uses [^\s'\"()\]]* to avoid consuming trailing delimiters.
     masked = re.sub(
-        r"(?i)(^|\s|['\"])(/app|/data|/home/mega|/root|/etc|/var/log)(?:/|(?=[\s'\"$])|$)\S*", r"\1\2/***", masked
+        r"(?i)(^|\s|['\"(\[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"()\]$])|$)[^\s'\"()\]]*",
+        r"\1\2/***",
+        masked,
     )
 
     # Likely JWTs or similar dot-separated tokens
