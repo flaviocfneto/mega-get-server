@@ -255,3 +255,20 @@ Security redaction logic must account for the diverse ways sensitive data is ser
 
 **Prevention:**
 Use comprehensive regex patterns that explicitly handle optional quotes (single and double) for both keys and values, and accommodate multi-word tokens in sensitive fields like Authorization.
+
+## 2024-05-29 - [Enhanced Log Redaction for Cookies, URL Credentials, and JSON]
+**Vulnerability:**
+1. Sensitive headers like `Cookie` and `Set-Cookie` were not redacted in logs.
+2. URL credential redaction was limited to the `user:pass@host` format, missing `user@host` or single token formats.
+3. Link-local IP addresses (`169.254.x.x`) were exposed in logs.
+4. Path redaction failed when paths were enclosed in braces (common in JSON logs) due to missing delimiters in the regex.
+
+**Learning:**
+1. Log redaction must account for diverse authentication mechanisms (cookies) and network infrastructure details (link-local IPs) that can facilitate session hijacking or internal network reconnaissance.
+2. Regex-based redaction for structured formats like JSON requires broad delimiter support (braces, brackets, quotes) to ensure secrets aren't leaked due to adjacent punctuation.
+3. URL credential patterns must be flexible enough to handle various authentication schemes that only use a single identity token.
+
+**Prevention:**
+1. Include all common sensitive headers (Cookie, Set-Cookie, Authorization) in redaction keywords.
+2. Use generalized URL credential patterns that match any non-whitespace content before the '@' symbol in a URL.
+3. Expand path traversal redaction regex to include `{}` and other structured delimiters.

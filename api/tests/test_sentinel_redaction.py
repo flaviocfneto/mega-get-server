@@ -49,7 +49,7 @@ def test_redact_url_credentials():
     redacted = ms.redact_sensitive_text(raw)
     assert "password123" not in redacted
     assert "user" not in redacted
-    assert "http://***:***@" in redacted
+    assert "http://***@" in redacted
 
 
 def test_redact_x_csrf_token():

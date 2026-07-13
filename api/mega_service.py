@@ -191,7 +191,7 @@ def redact_sensitive_text(text: str) -> str:
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
     # Supports prefixed keys like x-csrf-token. Non-greedy prefix to avoid ReDoS.
     masked = re.sub(
-        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|csrf|xsrf|x-amz-security-token)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
+        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|csrf|xsrf|x-amz-security-token|cookie|set-cookie)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
         r"\1\2***",
         masked,
     )
@@ -199,8 +199,8 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(
         r"(?i)(mega-login\s+)(?:\"[^\"]*\"|'[^']*'|\S+)(\s+)(?:\"[^\"]*\"|'[^']*'|\S+)", r"\1***\2***", masked
     )
-    # URL credentials (e.g. http://user:pass@host)
-    masked = re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^:@\s/]+:[^@\s/]+@", r"\1***:***@", masked)
+    # URL credentials (e.g. http://user:pass@host, http://user@host)
+    masked = re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^@\s/]+@", r"\1***@", masked)
     # Bearer and Basic tokens (handles variable whitespace)
     masked = re.sub(
         r"(?i)((?:authorization|proxy-authorization)\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked
@@ -224,12 +224,13 @@ def redact_sensitive_text(text: str) -> str:
         if val and len(val) >= 8:
             masked = masked.replace(val, "***")
 
-    # Internal IPv4 addresses (10.x.x.x, 172.16-31.x.x, 192.168.x.x, 100.64-127.x.x)
+    # Internal IPv4 addresses (10.x.x.x, 172.16-31.x.x, 192.168.x.x, 100.64-127.x.x, 169.254.x.x)
     # Do these before generic dot-separated tokens to avoid partial redaction
     masked = re.sub(r"\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "10.***.***.***", masked)
     masked = re.sub(r"\b172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}\b", "172.***.***.***", masked)
     masked = re.sub(r"\b192\.168\.\d{1,3}\.\d{1,3}\b", "192.168.***.***", masked)
     masked = re.sub(r"\b100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.\d{1,3}\.\d{1,3}\b", "100.***.***.***", masked)
+    masked = re.sub(r"\b169\.254\.\d{1,3}\.\d{1,3}\b", "169.254.***.***", masked)
     # Internal IPv6 addresses (Unique Local Addresses starting with fc00::/7)
     masked = re.sub(r"\b[fF][cC|dD][0-9a-fA-F]{2}(?::[0-9a-fA-F]{0,4}){0,7}\b", "f***:***", masked)
 
@@ -239,10 +240,10 @@ def redact_sensitive_text(text: str) -> str:
 
     # Absolute server-side paths
     # Redact common app/system roots to avoid leaking internal filesystem layout
-    # Expanded list and delimiters (including parentheses) to prevent info leakage.
-    # Uses [^\s'\"()\]]* to avoid consuming trailing delimiters.
+    # Expanded list and delimiters (including braces) to prevent info leakage.
+    # Uses [^\s'\"(){}\]]* to avoid consuming trailing delimiters.
     masked = re.sub(
-        r"(?i)(^|\s|['\"(\[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"()\]$])|$)[^\s'\"()\]]*",
+        r"(?i)(^|\s|['\"({\[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"(){}\]$])|$)[^\s'\"(){}\]]*",
         r"\1\2/***",
         masked,
     )
