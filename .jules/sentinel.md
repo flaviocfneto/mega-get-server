@@ -255,3 +255,19 @@ Security redaction logic must account for the diverse ways sensitive data is ser
 
 **Prevention:**
 Use comprehensive regex patterns that explicitly handle optional quotes (single and double) for both keys and values, and accommodate multi-word tokens in sensitive fields like Authorization.
+
+## 2026-07-01 - [Enhanced Redaction for Structured Logs and Link-Local IPs]
+**Vulnerability:**
+1. Structured Data Bypass: Path redaction failed to handle JSON-formatted logs correctly, either missing paths due to restricted delimiters or over-redacting by consuming trailing braces.
+2. Incomplete IP Blocklist: Link-local IP redaction was limited to a single address (169.254.169.254), leaving other addresses in the 169.254.0.0/16 range exposed.
+3. Missing Session Keywords: Common session-carrying headers like `Cookie` and `Set-Cookie` were not included in the standard redaction keyword list.
+
+**Learning:**
+1. Delimiter sets for path redaction must include characters common in structured formats like JSON (e.g., `{`, `}`) to ensure robust detection and precise masking.
+2. Infrastructure-level security (like AWS IMDS) can be exposed through any address in the link-local range.
+3. Defense-in-depth requires masking session identifiers even if they are not the primary auth method.
+
+**Prevention:**
+1. Use comprehensive delimiter sets in regex-based redaction and verify against multiple serialization formats.
+2. Block or redact entire reserved IP ranges (e.g., 169.254.0.0/16) rather than individual addresses.
+3. Regularly audit log outputs for leaked session markers and expand the keyword blacklist.

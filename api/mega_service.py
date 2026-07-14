@@ -191,7 +191,7 @@ def redact_sensitive_text(text: str) -> str:
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
     # Supports prefixed keys like x-csrf-token. Non-greedy prefix to avoid ReDoS.
     masked = re.sub(
-        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|csrf|xsrf|x-amz-security-token)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
+        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|cookie|set-cookie|csrf|xsrf|x-amz-security-token)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
         r"\1\2***",
         masked,
     )
@@ -234,15 +234,15 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(r"\b[fF][cC|dD][0-9a-fA-F]{2}(?::[0-9a-fA-F]{0,4}){0,7}\b", "f***:***", masked)
 
     # Localhost and common local addresses
-    masked = re.sub(r"\b(localhost|127\.0\.0\.1|0\.0\.0\.0|169\.254\.169\.254)\b", "***", masked)
+    masked = re.sub(r"\b(localhost|127\.0\.0\.1|0\.0\.0\.0|169\.254\.\d{1,3}\.\d{1,3})\b", "***", masked)
     masked = re.sub(r"(?<![a-fA-F0-9])::1\b", "***", masked)
 
     # Absolute server-side paths
     # Redact common app/system roots to avoid leaking internal filesystem layout
-    # Expanded list and delimiters (including parentheses) to prevent info leakage.
-    # Uses [^\s'\"()\]]* to avoid consuming trailing delimiters.
+    # Expanded list and delimiters (including parentheses and braces) to prevent info leakage.
+    # Uses [^\s'\"(){}\]]* to avoid consuming trailing delimiters.
     masked = re.sub(
-        r"(?i)(^|\s|['\"(\[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"()\]$])|$)[^\s'\"()\]]*",
+        r"(?i)(^|\s|['\"({[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"(){}\]$])|$)[^\s'\"(){}\]]*",
         r"\1\2/***",
         masked,
     )
