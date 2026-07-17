@@ -25,7 +25,7 @@ async def api_terminal(
     if not raw:
         raise HTTPException(status_code=400, detail="Command is required")
 
-    if any(c in raw for c in "\n\r"):
+    if any(c in raw for c in "\n\r\x00"):
         return {
             "ok": False,
             "command": raw,
@@ -34,7 +34,17 @@ async def api_terminal(
             "blocked_reason": "injection_attempt",
         }
 
-    parts = shlex.split(raw)
+    try:
+        parts = shlex.split(raw)
+    except ValueError as e:
+        return {
+            "ok": False,
+            "command": raw,
+            "exit_code": 126,
+            "output": f"Blocked: invalid command syntax ({e}).",
+            "blocked_reason": "invalid_syntax",
+        }
+
     if not parts:
         raise HTTPException(status_code=400, detail="Command is required")
 
