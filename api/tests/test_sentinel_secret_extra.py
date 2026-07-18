@@ -37,6 +37,7 @@ def test_secret_set_exception_secure_message(monkeypatch, tmp_path):
     monkeypatch.setenv("API_AUTH_MODE", "optional")
 
     import crypt_utils
+
     monkeypatch.setattr(crypt_utils, "DEFAULT_DATA_DIR", str(data_dir))
     monkeypatch.setattr(crypt_utils, "SECRET_KEY_PATH", str(data_dir / "secret.key"))
     monkeypatch.setattr(crypt_utils, "SECRETS_BIN_PATH", str(data_dir / "secrets.bin"))
