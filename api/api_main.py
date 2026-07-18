@@ -535,7 +535,8 @@ async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depen
         ms.log_buffer.append(f"Secret '{body.key}' updated.")
         return {"success": True, "message": f"Secret '{body.key}' saved."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        # Prevent leaking file system or internal database details in case of save failure
+        raise HTTPException(status_code=500, detail="Failed to save secret") from e
 
 
 @app.post("/api/secrets/unlock")

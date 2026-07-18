@@ -1,3 +1,16 @@
+## 2026-07-17 - [Exposure of Webhook Secret Tokens in Logs and Exception Message Path Leakage]
+**Vulnerability:**
+1. Incoming Slack and Discord webhook URLs contain secret authentication/posting tokens in their URL paths. When notification attempts failed or were blocked, the full webhook URL (including the path secrets) was appended to the application's log buffer unredacted.
+2. The `/api/secrets/set` endpoint raised internal Python exceptions (like OSError) with `str(e)` directly back to the client on failure, leaking internal filesystem layout details (e.g. `/data/secrets.bin`).
+
+**Learning:**
+1. Redaction of credentials must target path-based secrets (like Slack/Discord webhook patterns) in addition to traditional standard query-parameters or keyword-value logs.
+2. Application-level API error messages should be generic and secure; raw exceptions should never be propagated to the client.
+
+**Prevention:**
+1. Maintain specific regex patterns to detect and mask Slack and Discord webhook secret paths in centralized log sanitization filters.
+2. Intercept exceptions in endpoint handlers and return controlled, generic error details (e.g., "Failed to save secret") instead of forwarding raw traceback strings.
+
 ## 2025-05-15 - [SSRF via DNS Resolution and Path Traversal in Admin Terminal]
 **Vulnerability:**
 1. SSRF: The application allowed downloading from arbitrary HTTP(S) URLs and only blocked private IP addresses when provided directly. It didn't resolve hostnames, allowing attackers to use domains pointing to internal IPs.
