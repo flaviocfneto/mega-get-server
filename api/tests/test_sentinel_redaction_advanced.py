@@ -64,3 +64,24 @@ def test_redact_paths_in_json():
     redacted = redact_sensitive_text(text)
     # Note: /app is the prefix we keep but mark as masked
     assert "/app/***" in redacted
+
+
+def test_redact_webhooks():
+    # Discord webhook
+    discord_url = "https://discord.com/api/webhooks/1234567890/my-super-secret-token"
+    redacted = redact_sensitive_text(discord_url)
+    assert "my-super-secret-token" not in redacted
+    assert "https://discord.com/api/webhooks/1234567890/***" in redacted
+
+    discord_url_app = "https://discordapp.com/api/webhooks/1234567890/my-super-secret-token"
+    redacted_app = redact_sensitive_text(discord_url_app)
+    assert "my-super-secret-token" not in redacted_app
+    assert "https://discordapp.com/api/webhooks/1234567890/***" in redacted_app
+
+    # Slack webhook
+    slack_url = "https://hooks.slack.com/services/T12345_678/B12345_678/my-super-secret-token-123"
+    redacted_slack = redact_sensitive_text(slack_url)
+    assert "T12345_678" not in redacted_slack
+    assert "B12345_678" not in redacted_slack
+    assert "my-super-secret-token-123" not in redacted_slack
+    assert "https://hooks.slack.com/services/***/***/***" in redacted_slack

@@ -255,6 +255,18 @@ def redact_sensitive_text(text: str) -> str:
     masked = re.sub(
         r"(?is)-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----.*?-----END [A-Z ]{0,32}PRIVATE KEY-----", "***", masked
     )
+    # Discord webhook URLs: mask the secret token in the path
+    masked = re.sub(
+        r"(?i)\b(https?://(?:discord|discordapp)\.com/api/webhooks/\d+/)[A-Za-z0-9_-]+\b",
+        r"\1***",
+        masked,
+    )
+    # Slack webhook URLs: mask the team, channel, and secret token in the path
+    masked = re.sub(
+        r"(?i)\b(https?://hooks\.slack\.com/services/)[A-Za-z0-9_]+/[A-Za-z0-9_]+/[A-Za-z0-9_-]+\b",
+        r"\1***/***/***",
+        masked,
+    )
     # URL query parameters
     masked = re.sub(r"(?i)([?&](?:token|apikey|api_key|key|secret|sid|password)=)[^&\s#]+", r"\1***", masked)
     # MEGAcmd session IDs (often look like alphanumeric strings after 'Session:')
