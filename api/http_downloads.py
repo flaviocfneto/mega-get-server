@@ -58,6 +58,8 @@ def validate_http_download_url(url: str) -> str:
     u = (url or "").strip()
     if not u:
         raise ValueError("URL is required")
+    if any(ord(c) < 32 or ord(c) == 127 for c in u):
+        raise ValueError("URL contains invalid control characters")
     parsed = urlparse(u)
     host = (parsed.hostname or "").lower()
     if parsed.scheme not in {"https", "http"}:
