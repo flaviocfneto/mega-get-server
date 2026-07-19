@@ -77,3 +77,10 @@ def test_safe_unlink_skips_outside_download_dir(tmp_path, monkeypatch):
     outside.write_text("nope")
     hd.safe_unlink_job_paths([str(outside)])
     assert outside.is_file()
+
+
+def test_validate_http_download_url_rejects_control_chars():
+    for char in ("\r", "\n", "\t", "\x00", "\x1f", "\x7f"):
+        url = f"https://example.com/file{char}.bin"
+        with pytest.raises(ValueError, match="control characters"):
+            hd.validate_http_download_url(url)

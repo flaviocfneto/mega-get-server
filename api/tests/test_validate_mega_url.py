@@ -21,3 +21,10 @@ def test_validate_mega_download_url_rejects_bad_scheme():
 def test_validate_mega_download_url_requires_non_empty():
     with pytest.raises(ValueError, match="URL"):
         ms.validate_mega_download_url("  ")
+
+
+def test_validate_mega_download_url_rejects_control_chars():
+    for char in ("\r", "\n", "\t", "\x00", "\x1f", "\x7f"):
+        url = f"https://mega.nz/file/x{char}y"
+        with pytest.raises(ValueError, match="control characters"):
+            ms.validate_mega_download_url(url)
