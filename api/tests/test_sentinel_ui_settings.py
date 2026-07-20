@@ -43,3 +43,28 @@ def test_watch_folder_path_valid_applied(client):
 
     resp = client.get("/api/config", headers=headers)
     assert resp.json().get("watch_folder_path") == "/data/safe/path"
+
+
+def test_settings_control_characters_rejected(client):
+    headers = {"X-API-KEY": "test-write-key", "Origin": "http://localhost:5173"}
+    # Get current config
+    resp = client.get("/api/config", headers=headers)
+    assert resp.status_code == 200
+    orig_webhook = resp.json().get("webhook_url") or ""
+    orig_watch = resp.json().get("watch_folder_path")
+    orig_action = resp.json().get("post_download_action") or ""
+
+    # Try payload containing control characters (e.g. newline, tab, null-byte)
+    payload = {
+        "webhook_url": "http://example.com/callback\n",
+        "watch_folder_path": "/data/watch\x00path",
+        "post_download_action": "echo\t'hello'",
+    }
+    resp = client.post("/api/config", json=payload, headers=headers)
+    assert resp.status_code == 200
+
+    # Verify they were NOT applied
+    resp = client.get("/api/config", headers=headers)
+    assert resp.json().get("webhook_url") == orig_webhook
+    assert resp.json().get("watch_folder_path") == orig_watch
+    assert resp.json().get("post_download_action") == orig_action

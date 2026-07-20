@@ -66,6 +66,11 @@ def merge_post_into_stored(body: dict[str, Any]) -> None:
             if val is None:
                 continue
 
+            # Defense-in-depth: Reject any ASCII control characters (like newlines, tabs, null-bytes) in sensitive settings
+            if key in {"webhook_url", "watch_folder_path", "post_download_action"}:
+                if any(ord(c) < 32 or ord(c) == 127 for c in str(val)):
+                    continue
+
             if key == "webhook_url":
                 url = str(val).strip()
                 if len(url) > 1024:
