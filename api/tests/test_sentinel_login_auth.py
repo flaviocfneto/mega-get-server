@@ -60,3 +60,34 @@ def test_login_optional_auth(monkeypatch):
                     headers={"Origin": "http://localhost:5173"},
                 )
                 assert response.status_code == 200
+
+
+def test_logout_clears_vault_credentials(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setattr("api_main._allow_origins", ["http://localhost:5173"])
+
+    # Mock vault
+    fake_vault = {"MEGA_EMAIL": "test@example.com", "MEGA_PASSWORD": "secret_password"}
+    monkeypatch.setattr("api_main.crypt_utils.SECRETS_BIN_PATH", "/tmp/fake.bin")
+    monkeypatch.setattr("os.path.exists", lambda p: True if "fake.bin" in p else False)
+
+    saved_vault = {}
+
+    def mock_save(data):
+        nonlocal saved_vault
+        saved_vault = data
+
+    monkeypatch.setattr("api_main.crypt_utils.load_vault", lambda: fake_vault)
+    monkeypatch.setattr("api_main.crypt_utils.save_vault", mock_save)
+
+    # Mock ms calls
+    with patch("mega_service.run_megacmd_command") as mock_run:
+        mock_run.return_value = {"ok": True, "output": "Mocked logout success"}
+        with patch("mega_service.get_account_info") as mock_acc:
+            mock_acc.return_value = {"is_logged_in": False}
+
+            with TestClient(api_main.app) as client:
+                response = client.post("/api/logout", headers={"Origin": "http://localhost:5173"})
+                assert response.status_code == 200
+                assert "MEGA_EMAIL" not in saved_vault
+                assert "MEGA_PASSWORD" not in saved_vault
