@@ -502,6 +502,17 @@ async def api_logout(request: Request, _: None = Depends(require_scope("write"))
     account = await ms.get_account_info()
     if not account["is_logged_in"]:
         ms.log_buffer.append("Logout completed.")
+        # Clear credentials from encrypted store on successful logout
+        try:
+            if os.path.exists(crypt_utils.SECRETS_BIN_PATH):
+                data_map = crypt_utils.load_vault()
+                if "MEGA_EMAIL" in data_map or "MEGA_PASSWORD" in data_map:
+                    data_map.pop("MEGA_EMAIL", None)
+                    data_map.pop("MEGA_PASSWORD", None)
+                    crypt_utils.save_vault(data_map)
+                    ms.log_buffer.append("Cleared stored credentials from vault.")
+        except Exception as e:
+            ms.log_buffer.append(f"Warning: Failed to clear credentials from store: {e}")
         return {"status": "success", "message": "Logged out.", "command": result}
     return {"status": "error", "message": result.get("output") or "Logout failed.", "command": result}
 
