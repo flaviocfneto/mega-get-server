@@ -25,7 +25,7 @@ async def api_terminal(
     if not raw:
         raise HTTPException(status_code=400, detail="Command is required")
 
-    if any(c in raw for c in "\n\r\x00"):
+    if any(ord(c) < 32 or ord(c) == 127 for c in raw):
         return {
             "ok": False,
             "command": raw,
