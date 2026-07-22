@@ -37,3 +37,20 @@ def test_terminal_null_byte_rejection(monkeypatch):
         assert data["ok"] is False
         assert data["blocked_reason"] == "injection_attempt"
         assert "Blocked: command contains restricted characters." in data["output"]
+
+
+def test_terminal_arbitrary_control_characters_rejected(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    with TestClient(app) as client:
+        for char in ("\x01", "\x02", "\x1b", "\x1f", "\x7f"):
+            res = client.post(
+                "/api/terminal",
+                json={"command": f"mega-whoami{char}extra"},
+                headers=SAFE_HEADERS,
+            )
+            assert res.status_code == 200
+            data = res.json()
+            assert data["ok"] is False
+            assert data["blocked_reason"] == "injection_attempt"
+            assert "Blocked: command contains restricted characters." in data["output"]
