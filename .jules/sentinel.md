@@ -1,3 +1,13 @@
+## 2026-07-18 - [Protocol-Less SSRF Bypass in Admin Terminal]
+**Vulnerability:**
+The administrative terminal `/api/terminal` allowed `wget2` commands to request internal/private IP ranges or `localhost` if the target URL lacked a protocol prefix (e.g., `wget2 localhost` or `wget2 127.0.0.1`). The existing SSRF validation was only triggered if a protocol scheme like `http://` or `https://` was explicitly found in the argument string, enabling attackers to bypass SSRF blocks because `wget2` automatically defaults to the `http` scheme.
+
+**Learning:**
+Security validations that rely on explicit protocol schemes (e.g., searching for `://`) can be easily bypassed in tools that tolerate or assume default schemes.
+
+**Prevention:**
+Parse command line arguments to identify positional URL arguments and URL-accepting flags. For any target that does not specify a protocol scheme, normalize it by prepending the default scheme (e.g., `http://`) before performing SSRF/host block checks.
+
 ## 2026-07-17 - [Exposure of Webhook Secret Tokens in Logs and Exception Message Path Leakage]
 **Vulnerability:**
 1. Incoming Slack and Discord webhook URLs contain secret authentication/posting tokens in their URL paths. When notification attempts failed or were blocked, the full webhook URL (including the path secrets) was appended to the application's log buffer unredacted.

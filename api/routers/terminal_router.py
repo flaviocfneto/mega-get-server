@@ -15,6 +15,63 @@ class TerminalBody(BaseModel):
     command: str = Field(min_length=1, max_length=512)
 
 
+def _extract_wget2_urls(parts: list[str]) -> list[str]:
+    flags_with_args = {
+        "-O",
+        "--output-document",
+        "-o",
+        "--output-file",
+        "-i",
+        "--input-file",
+        "-B",
+        "--base",
+        "-D",
+        "--domains",
+        "-I",
+        "--include-directories",
+        "-X",
+        "--exclude-directories",
+        "-C",
+        "--config",
+        "-P",
+        "--directory-prefix",
+        "-U",
+        "--user-agent",
+        "-t",
+        "--tries",
+        "-T",
+        "--timeout",
+        "--limit-rate",
+        "--user",
+        "--password",
+        "--proxy-user",
+        "--proxy-password",
+        "--quota",
+    }
+    urls = []
+    skip_next = False
+    for i, part in enumerate(parts):
+        if i == 0:
+            continue
+        if skip_next:
+            skip_next = False
+            continue
+        if part in flags_with_args:
+            if part in {"-B", "--base", "-i", "--input-file"} and i + 1 < len(parts):
+                urls.append(parts[i + 1])
+            skip_next = True
+            continue
+        if part.startswith("--") and "=" in part:
+            flag_name, flag_val = part.split("=", 1)
+            if flag_name.lower() in {"--base", "--referer", "--proxy", "--input-file"} or "://" in flag_val:
+                urls.append(flag_val)
+            continue
+        if part.startswith("-"):
+            continue
+        urls.append(part)
+    return urls
+
+
 @router.post("/terminal")
 @rate_limit("terminal", limit=15, window_seconds=60)
 async def api_terminal(
@@ -72,6 +129,33 @@ async def api_terminal(
     from urllib.parse import urlparse
 
     from http_downloads import _host_is_blocked
+
+    # Extract and validate all potential URLs/hosts for wget2, including protocol-less targets
+    if cmd == "wget2":
+        for url in _extract_wget2_urls(parts):
+            url_to_check = url
+            has_proto = False
+            for proto in ("http://", "https://", "ftp://", "file://", "data://", "gopher://", "php://", "dict://"):
+                if url.lower().startswith(proto) or ("://" in url and url.lower().split("://", 1)[0] + "://" == proto):
+                    has_proto = True
+                    idx = url.lower().find(proto)
+                    url_to_check = url[idx:]
+                    break
+            if not has_proto:
+                url_to_check = f"http://{url}"
+            try:
+                parsed = urlparse(url_to_check)
+                host = (parsed.hostname or "").lower()
+                if not host or _host_is_blocked(host):
+                    return {
+                        "ok": False,
+                        "command": raw,
+                        "exit_code": 126,
+                        "output": f"Blocked: untrusted host in URL '{url}'",
+                        "blocked_reason": "ssrf_attempt",
+                    }
+            except Exception:
+                pass
 
     # Harden terminal commands: prevent arbitrary path access and SSRF
     abs_download_dir = os.path.abspath(ms.DOWNLOAD_DIR)
