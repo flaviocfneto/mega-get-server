@@ -758,6 +758,16 @@ async def api_download(body: DownloadBody, request: Request, _: None = Depends(r
     return {"success": True, "message": "Download command submitted."}
 
 
+def validate_transfer_tag(tag: str) -> None:
+    if tag.isdigit():
+        return
+    if tag.startswith("h-"):
+        rest = tag[2:]
+        if len(rest) == 36 and all(c.isalnum() or c == "-" for c in rest):
+            return
+    raise HTTPException(status_code=400, detail="Invalid transfer tag format")
+
+
 @app.post("/api/transfers/cancel-all")
 @rate_limit("transfers_cancel_all", limit=20, window_seconds=60)
 async def api_transfers_cancel_all(request: Request, _: None = Depends(require_scope("write"))):
@@ -774,6 +784,7 @@ async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends
     affected = 0
     metadata_affected = 0
     for tag in body.tags:
+        validate_transfer_tag(tag)
         if hd.is_http_driver_tag(tag):
             if body.action == "pause":
                 ok, _err = await hd.http_pause(tag)
@@ -848,6 +859,7 @@ async def api_transfer_update(
     body: TransferUpdateBody,
     _: None = Depends(require_scope("write")),
 ):
+    validate_transfer_tag(tag)
     require_csrf_boundary(request)
     values: dict[str, Any] = {}
     if body.priority is not None:
@@ -873,6 +885,7 @@ async def api_transfer_limit(
     body: TransferLimitBody,
     _: None = Depends(require_scope("write")),
 ):
+    validate_transfer_tag(tag)
     require_csrf_boundary(request)
     limit = body.speed_limit_kbps
     tm.update(tag, {"speed_limit_kbps": limit})
@@ -889,6 +902,7 @@ async def api_transfer_limit(
 @app.post("/api/transfers/{tag}/pause")
 @rate_limit("transfer_pause", limit=60, window_seconds=60)
 async def api_transfer_pause(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    validate_transfer_tag(tag)
     require_csrf_boundary(request)
     if hd.is_http_driver_tag(tag):
         ok, err = await hd.http_pause(tag)
@@ -902,6 +916,7 @@ async def api_transfer_pause(tag: str, request: Request, _: None = Depends(requi
 @app.post("/api/transfers/{tag}/resume")
 @rate_limit("transfer_resume", limit=60, window_seconds=60)
 async def api_transfer_resume(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    validate_transfer_tag(tag)
     require_csrf_boundary(request)
     if hd.is_http_driver_tag(tag):
         ok, err = await hd.http_resume(tag)
@@ -915,6 +930,7 @@ async def api_transfer_resume(tag: str, request: Request, _: None = Depends(requ
 @app.post("/api/transfers/{tag}/retry")
 @rate_limit("transfer_retry", limit=60, window_seconds=60)
 async def api_transfer_retry(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    validate_transfer_tag(tag)
     require_csrf_boundary(request)
     if hd.is_http_driver_tag(tag):
         ok, err = await hd.http_retry(tag)
@@ -928,6 +944,7 @@ async def api_transfer_retry(tag: str, request: Request, _: None = Depends(requi
 @app.post("/api/transfers/{tag}/cancel")
 @rate_limit("transfer_cancel", limit=60, window_seconds=60)
 async def api_transfer_cancel(tag: str, request: Request, _: None = Depends(require_scope("write"))):
+    validate_transfer_tag(tag)
     require_csrf_boundary(request)
     if hd.is_http_driver_tag(tag):
         ok, err = await hd.http_cancel(tag)
