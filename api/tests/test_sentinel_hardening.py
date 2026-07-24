@@ -22,7 +22,7 @@ def test_transfer_update_oversized_tag_rejected(client):
     headers = {"X-API-KEY": "test-write-key", "Origin": "http://localhost:5173"}
     long_tag = "a" * 129
     payload = {"tags": [long_tag]}
-    resp = client.post("/api/transfers/some-tag/update", json=payload, headers=headers)
+    resp = client.post("/api/transfers/12345/update", json=payload, headers=headers)
     # Pydantic validation error
     assert resp.status_code == 422
 
@@ -31,14 +31,14 @@ def test_transfer_update_oversized_url_rejected(client):
     headers = {"X-API-KEY": "test-write-key", "Origin": "http://localhost:5173"}
     long_url = "https://example.com/" + "a" * 4100
     payload = {"url": long_url}
-    resp = client.post("/api/transfers/some-tag/update", json=payload, headers=headers)
+    resp = client.post("/api/transfers/12345/update", json=payload, headers=headers)
     assert resp.status_code == 422
 
 
 def test_transfer_update_invalid_priority_rejected(client):
     headers = {"X-API-KEY": "test-write-key", "Origin": "http://localhost:5173"}
     payload = {"priority": "SUPER_HIGH"}
-    resp = client.post("/api/transfers/some-tag/update", json=payload, headers=headers)
+    resp = client.post("/api/transfers/12345/update", json=payload, headers=headers)
     # Logic in handler returns 400 for invalid priority strings that pass length check
     assert resp.status_code == 400
 
@@ -47,11 +47,11 @@ def test_transfer_limit_out_of_range_rejected(client):
     headers = {"X-API-KEY": "test-write-key", "Origin": "http://localhost:5173"}
 
     # Negative
-    resp = client.post("/api/transfers/some-tag/limit", json={"speed_limit_kbps": -1}, headers=headers)
+    resp = client.post("/api/transfers/12345/limit", json={"speed_limit_kbps": -1}, headers=headers)
     assert resp.status_code == 422
 
     # Too large
-    resp = client.post("/api/transfers/some-tag/limit", json={"speed_limit_kbps": 2000000}, headers=headers)
+    resp = client.post("/api/transfers/12345/limit", json={"speed_limit_kbps": 2000000}, headers=headers)
     assert resp.status_code == 422
 
 
@@ -66,7 +66,7 @@ def test_bulk_add_tag_length_limit(client, monkeypatch):
     monkeypatch.setattr(tm, "update", lambda tag, val: updates.append((tag, val)))
 
     long_tag = "b" * 200
-    payload = {"tags": ["tag1"], "action": "add_tag", "value": long_tag}
+    payload = {"tags": ["12345"], "action": "add_tag", "value": long_tag}
     resp = client.post("/api/transfers/bulk", json=payload, headers=headers)
     assert resp.status_code == 200
 
