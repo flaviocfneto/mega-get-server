@@ -65,10 +65,7 @@ def test_bulk_invalid_transfer_tags_rejected(client):
     ]
 
     for tag in invalid_tags:
-        payload = {
-            "tags": ["123", tag],
-            "action": "pause"
-        }
+        payload = {"tags": ["123", tag], "action": "pause"}
         resp = client.post("/api/transfers/bulk", json=payload, headers=headers)
         assert resp.status_code == 400
         assert "Invalid transfer tag format" in resp.json().get("detail", "")
