@@ -47,6 +47,12 @@ def _extract_wget2_urls(parts: list[str]) -> list[str]:
         "--proxy-user",
         "--proxy-password",
         "--quota",
+        "--referer",
+        "--proxy",
+        "--http-proxy",
+        "--https-proxy",
+        "--ftp-proxy",
+        "--all-proxy",
     }
     urls = []
     skip_next = False
@@ -57,13 +63,22 @@ def _extract_wget2_urls(parts: list[str]) -> list[str]:
             skip_next = False
             continue
         if part in flags_with_args:
-            if part in {"-B", "--base", "-i", "--input-file"} and i + 1 < len(parts):
+            if part in {"-B", "--base", "-i", "--input-file", "--referer", "--proxy", "--http-proxy", "--https-proxy", "--ftp-proxy", "--all-proxy"} and i + 1 < len(parts):
                 urls.append(parts[i + 1])
             skip_next = True
             continue
         if part.startswith("--") and "=" in part:
             flag_name, flag_val = part.split("=", 1)
-            if flag_name.lower() in {"--base", "--referer", "--proxy", "--input-file"} or "://" in flag_val:
+            if flag_name.lower() in {
+                "--base",
+                "--referer",
+                "--proxy",
+                "--http-proxy",
+                "--https-proxy",
+                "--ftp-proxy",
+                "--all-proxy",
+                "--input-file",
+            } or "://" in flag_val:
                 urls.append(flag_val)
             continue
         if part.startswith("-"):
