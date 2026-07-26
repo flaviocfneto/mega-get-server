@@ -1,3 +1,13 @@
+## 2026-07-19 - [Tilde-Based Path Traversal Bypass in Admin Terminal]
+**Vulnerability:**
+The administrative terminal `/api/terminal` allowed commands like `mega-ls ~/some_folder` or `wget2 -O ~/secret.txt` to bypass path traversal restrictions. While the application normalized absolute and relative local paths against `DOWNLOAD_DIR`, it did not expand user home directory markers (e.g. `~` or `~user`), which could be expanded internally by system binaries to write/read outside of the boundary.
+
+**Learning:**
+Security path validation checks must account for tilde expansions if the underlying system tools expand user directories internally, even when subprocesses are executed without a shell wrapper.
+
+**Prevention:**
+Always use `os.path.expanduser` on any potential user-supplied filesystem path before validating it against the allowed directory boundaries.
+
 ## 2026-07-18 - [Protocol-Less SSRF Bypass in Admin Terminal]
 **Vulnerability:**
 The administrative terminal `/api/terminal` allowed `wget2` commands to request internal/private IP ranges or `localhost` if the target URL lacked a protocol prefix (e.g., `wget2 localhost` or `wget2 127.0.0.1`). The existing SSRF validation was only triggered if a protocol scheme like `http://` or `https://` was explicitly found in the argument string, enabling attackers to bypass SSRF blocks because `wget2` automatically defaults to the `http` scheme.

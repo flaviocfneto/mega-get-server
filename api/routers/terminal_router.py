@@ -239,10 +239,12 @@ async def api_terminal(
 
         # Normalize and validate ALL arguments as potential local paths
         # (even if they don't contain a slash, to prevent local access relative to CWD)
-        if os.path.isabs(potential_path):
-            abs_arg = os.path.abspath(potential_path)
+        # Expand user directories (e.g. ~ or ~user) to prevent tilde expansion bypasses.
+        expanded_path = os.path.expanduser(potential_path)
+        if os.path.isabs(expanded_path):
+            abs_arg = os.path.abspath(expanded_path)
         else:
-            abs_arg = os.path.abspath(os.path.join(abs_download_dir, potential_path))
+            abs_arg = os.path.abspath(os.path.join(abs_download_dir, expanded_path))
 
         try:
             if os.path.commonpath([abs_arg, abs_download_dir]) != abs_download_dir:
