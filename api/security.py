@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import threading
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
@@ -38,6 +39,9 @@ def require_scope(scope: str) -> Callable[..., None]:
 
 # Per-client-host sliding windows; not shared across processes (see INFRASTRUCTURE.md section 8.1).
 _rate_state: dict[str, deque[float]] = defaultdict(deque)
+_rate_windows: dict[str, int] = {}
+_rate_state_lock = threading.Lock()
+_last_cleanup_time = 0.0
 
 
 def rate_limit(
@@ -53,6 +57,7 @@ def rate_limit(
     def deco(fn: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(fn)
         async def wrapped(*args: Any, **kwargs: Any) -> Any:
+            global _last_cleanup_time
             request = kwargs.get("request")
             if request is None:
                 for a in args:
@@ -62,12 +67,30 @@ def rate_limit(
             client_host = request.client.host if isinstance(request, Request) and request.client else "unknown"
             key = f"{name}:{client_host}"
             now = time.time()
-            q = _rate_state[key]
-            while q and (now - q[0]) > window_seconds:
-                q.popleft()
-            if len(q) >= limit:
-                raise HTTPException(status_code=429, detail="Rate limit exceeded")
-            q.append(now)
+
+            with _rate_state_lock:
+                # Periodic cleanup of expired rate limit entries across all keys to prevent memory exhaustion / DoS
+                if now - _last_cleanup_time > 300.0:
+                    _last_cleanup_time = now
+                    for k in list(_rate_state.keys()):
+                        dq = _rate_state[k]
+                        win = _rate_windows.get(k, 60)
+                        # Purge expired timestamps from this deque using the key's target window
+                        while dq and (now - dq[0]) > win:
+                            dq.popleft()
+                        if not dq:
+                            _rate_state.pop(k, None)
+                            _rate_windows.pop(k, None)
+
+                # Process current key
+                _rate_windows[key] = window_seconds
+                q = _rate_state[key]
+                while q and (now - q[0]) > window_seconds:
+                    q.popleft()
+                if len(q) >= limit:
+                    raise HTTPException(status_code=429, detail="Rate limit exceeded")
+                q.append(now)
+
             return await fn(*args, **kwargs)
 
         return wrapped

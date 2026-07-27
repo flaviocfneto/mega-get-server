@@ -1,3 +1,13 @@
+## 2026-07-27 - [Cross-Endpoint Rate-Limit Bypass and DoS in In-Memory Rate Limiter]
+**Vulnerability:**
+The in-memory rate-limiter stored all clients' rate-limiting history in a single global dictionary `_rate_state` with no cleanup mechanism. Over time, unique client IP entries accumulated indefinitely, presenting a memory leak and Denial of Service (DoS) risk. When trying to implement a naive periodic cleanup of `_rate_state` by iterating through and purging expired entries, using the currently-running endpoint's `window_seconds` value to clean other keys introduced a critical rate-limit bypass: requests to an endpoint with a long window (e.g. 1 hour) could be prematurely deleted if a request to an endpoint with a short window (e.g. 60 seconds) ran the cleanup process.
+
+**Learning:**
+Global in-memory state tracking must be managed carefully. Naive cleanup loops that utilize local execution scope parameters (like local window duration) can corrupt or clear unrelated security contexts across different endpoints, leading to severe security control bypasses.
+
+**Prevention:**
+Always store metadata (such as the target window size) along with individual key state, or utilize a companion dictionary, so that each entry is parsed and pruned according to its own configured parameters rather than current local execution variables.
+
 ## 2026-07-19 - [Tilde-Based Path Traversal Bypass in Admin Terminal]
 **Vulnerability:**
 The administrative terminal `/api/terminal` allowed commands like `mega-ls ~/some_folder` or `wget2 -O ~/secret.txt` to bypass path traversal restrictions. While the application normalized absolute and relative local paths against `DOWNLOAD_DIR`, it did not expand user home directory markers (e.g. `~` or `~user`), which could be expanded internally by system binaries to write/read outside of the boundary.
