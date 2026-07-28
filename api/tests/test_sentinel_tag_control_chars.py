@@ -19,14 +19,18 @@ def client():
         yield c
 
 
-@pytest.mark.asyncio
-async def test_pending_queue_rejects_control_characters():
-    with pytest.raises(ValueError, match="Tags contain invalid control characters"):
-        await pq.add_item(
-            url="http://example.com/file.zip",
-            tags=["my\ntag"],
-            priority="NORMAL",
-        )
+def test_pending_queue_rejects_control_characters():
+    import asyncio
+
+    async def main():
+        with pytest.raises(ValueError, match="Tags contain invalid control characters"):
+            await pq.add_item(
+                url="http://example.com/file.zip",
+                tags=["my\ntag"],
+                priority="NORMAL",
+            )
+
+    asyncio.run(main())
 
 
 def test_api_download_rejects_tags_with_control_characters(client):
