@@ -651,6 +651,9 @@ async def api_queue_list(request: Request, _: None = Depends(require_scope("writ
 @rate_limit("queue_add", limit=30, window_seconds=60)
 async def api_queue_add(body: QueueAddBody, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if body.tags:
+        for t in body.tags:
+            validate_label_tag(t)
     try:
         _, url = hd.normalize_download_url(body.url)
     except ValueError as e:
@@ -727,6 +730,9 @@ async def api_queue_start_all(request: Request, _: None = Depends(require_scope(
 @rate_limit("download", limit=30, window_seconds=60)
 async def api_download(body: DownloadBody, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if body.tags:
+        for t in body.tags:
+            validate_label_tag(t)
     try:
         kind, url = hd.normalize_download_url(body.url)
     except ValueError as e:
@@ -758,6 +764,11 @@ async def api_download(body: DownloadBody, request: Request, _: None = Depends(r
     return {"success": True, "message": "Download command submitted."}
 
 
+def validate_label_tag(label: str) -> None:
+    if any(ord(c) < 32 or ord(c) == 127 for c in label):
+        raise HTTPException(status_code=400, detail="Tags contain invalid control characters")
+
+
 def validate_transfer_tag(tag: str) -> None:
     if tag.isdigit():
         return
@@ -781,6 +792,8 @@ async def api_transfers_cancel_all(request: Request, _: None = Depends(require_s
 @rate_limit("transfers_bulk", limit=20, window_seconds=60)
 async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if body.action in ("add_tag", "remove_tag") and body.value:
+        validate_label_tag(body.value)
     affected = 0
     metadata_affected = 0
     for tag in body.tags:
@@ -868,6 +881,8 @@ async def api_transfer_update(
             raise HTTPException(status_code=400, detail="priority must be LOW, NORMAL or HIGH")
         values["priority"] = pr
     if body.tags is not None:
+        for t in body.tags:
+            validate_label_tag(t)
         values["tags"] = [t.strip() for t in body.tags if t.strip()]
     if body.url is not None:
         values["url"] = body.url.strip()

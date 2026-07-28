@@ -48,6 +48,8 @@ def _normalize_tags(raw: list[str] | None) -> list[str]:
     out: list[str] = []
     for t in raw:
         s = str(t).strip()
+        if any(ord(c) < 32 or ord(c) == 127 for c in s):
+            raise ValueError("Tags contain invalid control characters")
         if s and s not in out:
             out.append(s)
     return out
