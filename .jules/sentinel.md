@@ -1,3 +1,13 @@
+## 2026-08-01 - [ASCII Control Characters in User-Supplied Tags/Labels]
+**Vulnerability:**
+User-supplied tags or labels (passed to `/api/download`, `/api/queue`, `/api/transfers/bulk`, and `/api/transfers/{tag}/update`) were stored in local JSON metadata and displayed in logs or the UI without validation. ASCII control characters (such as newlines, carriage returns, or null-bytes) could be injected inside tags to manipulate logs, spoof UI elements, or cause unexpected behavior when displayed or printed.
+
+**Learning:**
+Any user-supplied string that gets persisted in settings or metadata and potentially logged or printed must be validated to ensure it does not contain ASCII control characters. During testing, placing control characters at the start or end of the test payload can cause false negatives because standard stripping operations (like `str.strip()`) clean them automatically.
+
+**Prevention:**
+Always validate that string fields like tags or labels do not contain ASCII control characters (`ord(c) < 32 or ord(c) == 127`). When writing tests for control characters, always place the control character in the middle of the string to prevent `strip()` from masking the test payload.
+
 ## 2026-07-27 - [Cross-Endpoint Rate-Limit Bypass and DoS in In-Memory Rate Limiter]
 **Vulnerability:**
 The in-memory rate-limiter stored all clients' rate-limiting history in a single global dictionary `_rate_state` with no cleanup mechanism. Over time, unique client IP entries accumulated indefinitely, presenting a memory leak and Denial of Service (DoS) risk. When trying to implement a naive periodic cleanup of `_rate_state` by iterating through and purging expired entries, using the currently-running endpoint's `window_seconds` value to clean other keys introduced a critical rate-limit bypass: requests to an endpoint with a long window (e.g. 1 hour) could be prematurely deleted if a request to an endpoint with a short window (e.g. 60 seconds) ran the cleanup process.
