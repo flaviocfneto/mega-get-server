@@ -1,3 +1,13 @@
+## 2026-08-02 - [Permissive Default File Permissions on Local JSON Stores and History Cache]
+**Vulnerability:**
+Local application files like `pending_queue.json` (storing pending download URLs with potentially embedded credentials/tokens), `ui_settings.json` (storing plaintext custom webhooks), and `.mega-get-history.json` (storing past download URLs) were written to disk with default permissive file permissions (typically `0o644` modified by standard umask). This exposed sensitive tokens and private download parameters to non-privileged users or other containers/processes sharing the volume.
+
+**Learning:**
+Any local cache or flat-file database containing user data or credentials must have strict owner-only file permissions (`0o600` or `S_IRUSR | S_IWUSR`) applied immediately upon file creation. Using permissive default permissions on a shared multi-tenant host or shared Docker volumes poses a high risk of local file disclosure and token theft.
+
+**Prevention:**
+Always use `os.chmod` on the temporary file or target path immediately during creation or modification to restrict accessibility to the owning process user only.
+
 ## 2026-08-01 - [ASCII Control Characters in User-Supplied Tags/Labels]
 **Vulnerability:**
 User-supplied tags or labels (passed to `/api/download`, `/api/queue`, `/api/transfers/bulk`, and `/api/transfers/{tag}/update`) were stored in local JSON metadata and displayed in logs or the UI without validation. ASCII control characters (such as newlines, carriage returns, or null-bytes) could be injected inside tags to manipulate logs, spoof UI elements, or cause unexpected behavior when displayed or printed.
