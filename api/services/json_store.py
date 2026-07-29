@@ -22,4 +22,8 @@ def write_json_atomic(path: Path, data: dict[str, Any]) -> None:
     tmp = path.with_suffix(f"{path.suffix}.tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        os.chmod(tmp, 0o600)
+    except OSError:
+        pass
     os.replace(tmp, path)

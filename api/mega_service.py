@@ -344,6 +344,10 @@ def save_history() -> None:
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(_url_history[:URL_HISTORY_MAX], f, ensure_ascii=False)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
     except Exception:
         pass
 
