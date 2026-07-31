@@ -82,6 +82,7 @@ def _persist_daily_buckets() -> None:
         return
     try:
         from services.json_store import write_json_atomic
+
         write_json_atomic(DAILY_ANALYTICS_PATH, _daily_buckets)
     except OSError:
         pass
