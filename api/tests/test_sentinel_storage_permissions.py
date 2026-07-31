@@ -31,3 +31,19 @@ def test_save_history_writes_with_strict_permissions(tmp_path: Path, monkeypatch
     if os.name == "posix":
         mode = history_file.stat().st_mode
         assert stat.S_IMODE(mode) == 0o600
+
+
+def test_daily_analytics_writes_with_strict_permissions(tmp_path: Path, monkeypatch) -> None:
+    import api_main
+
+    analytics_file = tmp_path / "test_analytics.json"
+    monkeypatch.setattr(api_main, "DAILY_ANALYTICS_PATH", analytics_file)
+    monkeypatch.setattr(api_main, "_daily_loaded", True)
+    monkeypatch.setattr(api_main, "_daily_buckets", {"2026-08-03": {"bytes": 100, "count": 1}})
+
+    api_main._persist_daily_buckets()
+
+    assert analytics_file.exists()
+    if os.name == "posix":
+        mode = analytics_file.stat().st_mode
+        assert stat.S_IMODE(mode) == 0o600

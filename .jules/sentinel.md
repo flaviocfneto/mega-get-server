@@ -348,3 +348,13 @@ Use comprehensive regex patterns that explicitly handle optional quotes (single 
 **Prevention:**
 1. Always catch `ValueError` in syntax tokenization processes (such as `shlex.split`) and return clean, structured error responses.
 2. Reject any command string containing null bytes (`\x00`) early in the validation layer.
+
+## 2026-08-03 - [Insecure Default Permissions on Daily Analytics Local Store]
+**Vulnerability:**
+The daily analytics file `.mega-analytics-daily.json` was written to disk using standard python `Path.write_text` without setting strict owner-only file permissions or writing atomically. On a shared multi-tenant host, shared Docker volumes, or local processes, this exposed transfer stats/metadata to other unprivileged local users or processes.
+
+**Learning:**
+Any local store or database, even if it does not contain highly sensitive keys directly, must consistently follow the same security boundaries (strict `0o600` permissions and atomic writes) as other local datastores (`ui_settings.json`, `pending_queue.json`, `transfer_metadata.json`) to guarantee a reliable defense-in-depth security model and prevent partial info disclosure.
+
+**Prevention:**
+Always use secure atomic helpers like `write_json_atomic` which explicitly set strict owner-only file permissions (`0o600`) during file creation or update.
