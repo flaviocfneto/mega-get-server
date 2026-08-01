@@ -1,3 +1,13 @@
+## 2026-08-04 - [SSRF Protection Bypass in wget2 via Attached Short Flags]
+**Vulnerability:**
+The administrative terminal `/api/terminal` wrapped around the `wget2` executable to allow diagnostic requests, but blocked SSRF attempts. However, the command argument parser `_extract_wget2_urls` only parsed space-separated short flags (e.g., `-B localhost`) and equals-separated long flags. It completely skipped short flags when they had their arguments attached directly (e.g., `-Blocalhost` or `-i127.0.0.1`), allowing attackers to bypass SSRF validations because `wget2` inherently resolves and contacts those attached targets.
+
+**Learning:**
+Custom command-line parameter parsing logic in secure wrappers can easily overlook standard CLI-native argument behaviors like getopt's attached short flag arguments. If the validation logic skips checking tokens starting with `-` but containing attached values, the downstream binary will still parse and execute them.
+
+**Prevention:**
+Always inspect all command parts and specifically check for short flag prefixes (e.g., `.startswith("-B")` or `.startswith("-i")` where `len(part) > 2`) to extract and validate their attached values against SSRF and path traversal blocklists.
+
 ## 2026-08-02 - [Permissive Default File Permissions on Local JSON Stores and History Cache]
 **Vulnerability:**
 Local application files like `pending_queue.json` (storing pending download URLs with potentially embedded credentials/tokens), `ui_settings.json` (storing plaintext custom webhooks), and `.mega-get-history.json` (storing past download URLs) were written to disk with default permissive file permissions (typically `0o644` modified by standard umask). This exposed sensitive tokens and private download parameters to non-privileged users or other containers/processes sharing the volume.
