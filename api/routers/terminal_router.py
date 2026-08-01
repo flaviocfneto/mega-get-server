@@ -96,6 +96,10 @@ def _extract_wget2_urls(parts: list[str]) -> list[str]:
             ):
                 urls.append(flag_val)
             continue
+        if part.startswith("-") and not part.startswith("--") and len(part) > 2:
+            if part.startswith("-B") or part.startswith("-i"):
+                urls.append(part[2:])
+                continue
         if part.startswith("-"):
             continue
         urls.append(part)

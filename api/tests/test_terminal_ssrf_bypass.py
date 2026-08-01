@@ -28,6 +28,38 @@ def test_terminal_ssrf_bypass_uppercase_scheme(monkeypatch):
     assert data["blocked_reason"] == "ssrf_attempt"
 
 
+def test_terminal_ssrf_attached_short_flags(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
+    monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
+    monkeypatch.setattr(ms, "SIMULATE", True)
+
+    # Test attached -B flag
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 -Blocalhost http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: untrusted host in URL" in data["output"]
+    assert data["blocked_reason"] == "ssrf_attempt"
+
+    # Test attached -i flag
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 -i127.0.0.1 http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: untrusted host in URL" in data["output"]
+    assert data["blocked_reason"] == "ssrf_attempt"
+
+
 def test_terminal_ssrf_proxy_flag_bypass(monkeypatch):
     _rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")
