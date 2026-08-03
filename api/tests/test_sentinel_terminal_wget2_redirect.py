@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
-import pytest
-from fastapi.testclient import TestClient
-
 import mega_service as ms
+import pytest
 import security
 from api_main import app
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
