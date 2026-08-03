@@ -53,6 +53,7 @@ def _extract_wget2_urls(parts: list[str]) -> list[str]:
         "--https-proxy",
         "--ftp-proxy",
         "--all-proxy",
+        "--max-redirect",
     }
     urls = []
     skip_next = False
@@ -166,6 +167,49 @@ async def api_terminal(
 
     # Extract and validate all potential URLs/hosts for wget2, including protocol-less targets
     if cmd == "wget2":
+        # Enforce --max-redirect=0 to prevent redirect-based SSRF bypasses
+        has_max_redirect = False
+        skip_next = False
+        for i, part in enumerate(parts):
+            if skip_next:
+                skip_next = False
+                continue
+            if part == "--max-redirect":
+                has_max_redirect = True
+                if i + 1 < len(parts):
+                    val = parts[i + 1]
+                    if val != "0":
+                        return {
+                            "ok": False,
+                            "command": raw,
+                            "exit_code": 126,
+                            "output": "Blocked: --max-redirect must be 0 to prevent redirect-based SSRF.",
+                            "blocked_reason": "ssrf_attempt",
+                        }
+                    skip_next = True
+                else:
+                    return {
+                        "ok": False,
+                        "command": raw,
+                        "exit_code": 126,
+                        "output": "Blocked: --max-redirect must be 0 to prevent redirect-based SSRF.",
+                        "blocked_reason": "ssrf_attempt",
+                    }
+            elif part.startswith("--max-redirect="):
+                has_max_redirect = True
+                val = part.split("=", 1)[1]
+                if val != "0":
+                    return {
+                        "ok": False,
+                        "command": raw,
+                        "exit_code": 126,
+                        "output": "Blocked: --max-redirect must be 0 to prevent redirect-based SSRF.",
+                        "blocked_reason": "ssrf_attempt",
+                    }
+
+        if not has_max_redirect:
+            parts.append("--max-redirect=0")
+
         for url in _extract_wget2_urls(parts):
             url_to_check = url
             has_proto = False

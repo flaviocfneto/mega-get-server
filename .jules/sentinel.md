@@ -368,3 +368,13 @@ Any local store or database, even if it does not contain highly sensitive keys d
 
 **Prevention:**
 Always use secure atomic helpers like `write_json_atomic` which explicitly set strict owner-only file permissions (`0o600`) during file creation or update.
+
+## 2026-08-05 - [SSRF Bypass in wget2 via HTTP Redirects]
+**Vulnerability:**
+The administrative terminal `/api/terminal` parses and validates user-supplied `wget2` URL/host arguments against blocked internal and private IP ranges to prevent SSRF. However, because `wget2` by default follows HTTP redirects (up to 20), an attacker can easily bypass this defense-in-depth check by pointing `wget2` to a public URL under their control that redirects to an internal IP address (e.g. `127.0.0.1:8000`).
+
+**Learning:**
+SSRF IP validations that run purely during static command parsing are easily bypassed if downstream tools inherently support and execute dynamic HTTP redirects. Redirection behaviors must either be strictly disabled on the tool or fully handled by a proxy.
+
+**Prevention:**
+Always enforce `--max-redirect=0` on any `wget2` commands processed by the terminal wrapper. Block any user-supplied non-zero redirect values and automatically inject `--max-redirect=0` if omitted.
