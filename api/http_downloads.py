@@ -173,18 +173,28 @@ async def _resolve_and_validate_url(url: str, timeout: float = 10.0) -> tuple[st
             req = Request(current_url, method="HEAD", headers={"User-Agent": "FileTugger-HTTP-download/1.0"})
             opener = urllib.request.build_opener(_NoRedirectHandler)
             # Use asyncio.to_thread for blocking urllib calls
-            resp = await asyncio.to_thread(opener.open, req, timeout=timeout)
-            with resp:
-                if resp.status in (301, 302, 303, 307, 308):
-                    new_url = resp.headers.get("Location")
+            try:
+                resp = await asyncio.to_thread(opener.open, req, timeout=timeout)
+                with resp:
+                    if resp.status in (301, 302, 303, 307, 308):
+                        new_url = resp.headers.get("Location")
+                        if not new_url:
+                            return None, None
+                        current_url = urljoin(current_url, new_url)
+                        continue
+                    cl = resp.headers.get("Content-Length")
+                    content_length = int(cl) if cl and str(cl).isdigit() else None
+                    return current_url, content_length
+            except HTTPError as e:
+                if e.code in (301, 302, 303, 307, 308):
+                    new_url = e.headers.get("Location")
                     if not new_url:
                         return None, None
                     current_url = urljoin(current_url, new_url)
                     continue
-                cl = resp.headers.get("Content-Length")
-                content_length = int(cl) if cl and str(cl).isdigit() else None
-                return current_url, content_length
-        except (HTTPError, URLError, OSError, ValueError, TypeError):
+                else:
+                    break
+        except (URLError, OSError, ValueError, TypeError):
             break
     return None, None
 
