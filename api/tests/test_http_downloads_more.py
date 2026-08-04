@@ -675,6 +675,7 @@ def test_resolve_and_validate_url_redirect_success(monkeypatch):
             import io
             from email.message import Message
             from urllib.error import HTTPError
+
             headers = Message()
             headers["Location"] = "https://example.com/safe.bin"
             raise HTTPError(url, 302, "Found", headers, io.BytesIO())
@@ -700,6 +701,7 @@ def test_resolve_and_validate_url_redirect_blocked(monkeypatch):
         import io
         from email.message import Message
         from urllib.error import HTTPError
+
         headers = Message()
         headers["Location"] = "http://127.0.0.1/evil.bin"
         raise HTTPError(url, 302, "Found", headers, io.BytesIO())
