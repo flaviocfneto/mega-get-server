@@ -649,3 +649,66 @@ def test_prune_removes_registry_entry(monkeypatch):
 
     asyncio.run(main())
     assert tag not in hd._registry
+
+
+def test_resolve_and_validate_url_redirect_success(monkeypatch):
+    class _Resp:
+        def __init__(self):
+            self.status = 200
+            self.headers = {"Content-Length": "1024"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            pass
+
+        def close(self):
+            pass
+
+    calls = []
+
+    def mock_open(req, *args, **kwargs):
+        url = req.full_url if hasattr(req, "full_url") else req
+        calls.append(url)
+        if len(calls) == 1:
+            import io
+            from email.message import Message
+            from urllib.error import HTTPError
+            headers = Message()
+            headers["Location"] = "https://example.com/safe.bin"
+            raise HTTPError(url, 302, "Found", headers, io.BytesIO())
+        else:
+            return _Resp()
+
+    mock_opener = MagicMock()
+    mock_opener.open = mock_open
+    monkeypatch.setattr(hd.urllib.request, "build_opener", lambda *a: mock_opener)
+
+    url, cl = asyncio.run(hd._resolve_and_validate_url("https://initial.com/redirect"))
+    assert url == "https://example.com/safe.bin"
+    assert cl == 1024
+    assert len(calls) == 2
+
+
+def test_resolve_and_validate_url_redirect_blocked(monkeypatch):
+    calls = []
+
+    def mock_open(req, *args, **kwargs):
+        url = req.full_url if hasattr(req, "full_url") else req
+        calls.append(url)
+        import io
+        from email.message import Message
+        from urllib.error import HTTPError
+        headers = Message()
+        headers["Location"] = "http://127.0.0.1/evil.bin"
+        raise HTTPError(url, 302, "Found", headers, io.BytesIO())
+
+    mock_opener = MagicMock()
+    mock_opener.open = mock_open
+    monkeypatch.setattr(hd.urllib.request, "build_opener", lambda *a: mock_opener)
+
+    url, cl = asyncio.run(hd._resolve_and_validate_url("https://initial.com/redirect"))
+    assert url is None
+    assert cl is None
+    assert len(calls) == 1

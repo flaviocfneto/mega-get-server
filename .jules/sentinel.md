@@ -1,3 +1,13 @@
+## 2026-08-06 - [Redirect-Based SSRF Bypass and Broken Redirects in HTTP Downloads]
+**Vulnerability:**
+The HTTP download module `_resolve_and_validate_url` followed redirects manually to validate each hop against an SSRF blocklist. However, it used a custom `_NoRedirectHandler` with `urllib` which raised an `HTTPError` on encountering any 3xx redirect. The outer `try-except` block globally caught `HTTPError` and broke out of the loop immediately. This meant redirects were completely broken (preventing legitimate direct downloads from redirecting) and created potential gaps if any other handler could follow redirects without checking each intermediate hop.
+
+**Learning:**
+Custom redirect handler behaviors in standard libraries (like Python's `urllib`) often raise exceptions like `HTTPError` when redirects are aborted or custom-handled. If security wrapper loops globally catch all exceptions to break, they can inadvertently break core functionality (like legitimate redirect following) or bypass intended multi-hop SSRF validation.
+
+**Prevention:**
+Explicitly catch and inspect `HTTPError` exceptions within the redirect-following block. If the status is a 3xx code, extract the target `Location` header, update the loop's URL, and let the loop proceed to the next iteration to fully validate the scheme and host of the redirect target against the blocklist before sending the next request.
+
 ## 2026-08-04 - [SSRF Protection Bypass in wget2 via Attached Short Flags]
 **Vulnerability:**
 The administrative terminal `/api/terminal` wrapped around the `wget2` executable to allow diagnostic requests, but blocked SSRF attempts. However, the command argument parser `_extract_wget2_urls` only parsed space-separated short flags (e.g., `-B localhost`) and equals-separated long flags. It completely skipped short flags when they had their arguments attached directly (e.g., `-Blocalhost` or `-i127.0.0.1`), allowing attackers to bypass SSRF validations because `wget2` inherently resolves and contacts those attached targets.
