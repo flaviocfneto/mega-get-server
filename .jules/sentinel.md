@@ -1,3 +1,13 @@
+## 2026-08-07 - [TOCTOU Race Condition in Sensitive File Creation and Permissive Permissions]
+**Vulnerability:**
+Sensitive files containing encryption master keys, credentials, history, and debug log details (such as `secret.key`, `secrets.bin`, `.mega-get-history.json`, and `.mega-debug.log`) were written using Python's standard `open()` function, which creates files with default permissive permissions governed by umask (typically `0o644` or `0o664`), and then subsequently restricted using `os.chmod` to `0o600`. This created a Time-of-Check to Time-of-Use (TOCTOU) / race-condition window where non-privileged local users or processes could read sensitive data between creation and chmod.
+
+**Learning:**
+Relying on post-creation permission hardening (`os.chmod`) creates a race condition. Files containing sensitive credentials or cryptographic keys must always be initialized securely at the exact millisecond they are created.
+
+**Prevention:**
+Always use `os.open` with a strict `mode=0o600` and explicit file creation flags (`os.O_CREAT | os.O_WRONLY`) to ensure files are initialized with owner-only access from their first byte of existence, then wrap the file descriptor via Python's standard `open()`.
+
 ## 2026-08-06 - [Redirect-Based SSRF Bypass and Broken Redirects in HTTP Downloads]
 **Vulnerability:**
 The HTTP download module `_resolve_and_validate_url` followed redirects manually to validate each hop against an SSRF blocklist. However, it used a custom `_NoRedirectHandler` with `urllib` which raised an `HTTPError` on encountering any 3xx redirect. The outer `try-except` block globally caught `HTTPError` and broke out of the loop immediately. This meant redirects were completely broken (preventing legitimate direct downloads from redirecting) and created potential gaps if any other handler could follow redirects without checking each intermediate hop.

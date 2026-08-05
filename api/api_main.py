@@ -562,9 +562,9 @@ async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depen
 
         Fernet(body.key_base64.encode())
 
-        with open(crypt_utils.SECRET_KEY_PATH, "wb") as f:
+        fd = os.open(crypt_utils.SECRET_KEY_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with open(fd, "wb") as f:
             f.write(body.key_base64.encode())
-        os.chmod(crypt_utils.SECRET_KEY_PATH, 0o600)
 
         # Reload secrets into env
         ms.load_secrets_into_env()

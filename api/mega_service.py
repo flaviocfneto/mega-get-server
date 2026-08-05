@@ -41,7 +41,8 @@ def _debug_log(location: str, message: str, data: dict | None = None, hypothesis
             "timestamp": int(time.time() * 1000),
         }
         Path(DEBUG_LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
-        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+        fd = os.open(DEBUG_LOG_PATH, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        with open(fd, "a", encoding="utf-8") as f:
             f.write(json.dumps(payload, ensure_ascii=False) + "\n")
     except Exception:
         pass
@@ -342,12 +343,9 @@ def load_history() -> None:
 def save_history() -> None:
     path = get_history_path()
     try:
-        with open(path, "w", encoding="utf-8") as f:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with open(fd, "w", encoding="utf-8") as f:
             json.dump(_url_history[:URL_HISTORY_MAX], f, ensure_ascii=False)
-        try:
-            os.chmod(path, 0o600)
-        except OSError:
-            pass
     except Exception:
         pass
 
