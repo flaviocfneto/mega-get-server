@@ -19,10 +19,9 @@ def ensure_data_dir():
 def generate_key():
     ensure_data_dir()
     key = Fernet.generate_key()
-    with open(SECRET_KEY_PATH, "wb") as f:
+    fd = os.open(SECRET_KEY_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with open(fd, "wb") as f:
         f.write(key)
-    # Ensure strict permissions
-    os.chmod(SECRET_KEY_PATH, 0o600)
     return key
 
 
@@ -52,9 +51,9 @@ def save_vault(data_map: dict):
 
         encoded_data = json.dumps(data_map).encode("utf-8")
         encrypted = fernet.encrypt(encoded_data)
-        with open(SECRETS_BIN_PATH, "wb") as f:
+        fd = os.open(SECRETS_BIN_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with open(fd, "wb") as f:
             f.write(encrypted)
-        os.chmod(SECRETS_BIN_PATH, 0o600)
 
 
 def load_vault() -> dict:
