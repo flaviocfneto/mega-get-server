@@ -175,6 +175,7 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 _analytics_completed += 1
                 done_bytes = int(r.get("size_bytes", 0) or r.get("downloaded_bytes", 0) or 0)
                 _bump_daily_on_completed(done_bytes)
+                ms.clear_account_info_cache()
                 _fire_forget_webhook(
                     tag, str(r.get("filename", "unknown")), done_bytes, str(r.get("driver", "megacmd"))
                 )
@@ -197,6 +198,7 @@ def _update_analytics_from_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if prev in _IN_FLIGHT_STATES:
             _analytics_completed += 1
             _bump_daily_on_completed(bytes_done)
+            ms.clear_account_info_cache()
             _fire_forget_webhook(tag, str(snap.get("filename", "unknown")), bytes_done, "megacmd")
 
     total_downloaded = _total_persisted_downloaded_bytes() + inflight_downloaded
@@ -476,6 +478,7 @@ async def api_login(body: LoginBody, request: Request, _: None = Depends(require
         raise HTTPException(status_code=400, detail="Email and password are required")
 
     login_result = await ms.run_megacmd_command(["mega-login", email, password])
+    ms.clear_account_info_cache()
     account = await ms.get_account_info()
     if account["is_logged_in"]:
         ms.log_buffer.append(f"Login success: {account.get('email') or email}")
@@ -501,6 +504,7 @@ async def api_login(body: LoginBody, request: Request, _: None = Depends(require
 async def api_logout(request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
     result = await ms.run_megacmd_command(["mega-logout"])
+    ms.clear_account_info_cache()
     account = await ms.get_account_info()
     if not account["is_logged_in"]:
         ms.log_buffer.append("Logout completed.")
