@@ -196,42 +196,74 @@ def get_command_events() -> list[dict[str, Any]]:
     return list(_command_events)
 
 
+# Compiled regex patterns for redaction
+_EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]{1,3}[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+_STANDARD_SECRETS_RE = re.compile(
+    r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|csrf|xsrf|x-amz-security-token|cookie|set-cookie)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)'
+)
+_MEGACMD_LOGIN_RE = re.compile(r"(?i)(mega-login\s+)(?:\"[^\"]*\"|'[^']*'|\S+)(\s+)(?:\"[^\"]*\"|'[^']*'|\S+)")
+_URL_CREDENTIALS_RE = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^@\s/]+@")
+_BEARER_BASIC_RE = re.compile(
+    r"(?i)((?:authorization|proxy-authorization)\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+"
+)
+_STANDALONE_KEYS_RE = re.compile(r"(?i)\b(x-api-key|api-key)\s*:\s*\S+")
+_OPAQUE_KEYS_RE = re.compile(r"(?i)\bsk-[a-z0-9_-]{12,}\b")
+_GOOGLE_KEYS_RE = re.compile(r"\bAIza[0-9A-Za-z-_]{35}\b")
+_GITHUB_KEYS_RE = re.compile(r"\bgh[pousr]_[0-9A-Za-z]{36,251}\b")
+_AWS_SECRET_RE = re.compile(r"(?i)(aws_secret_access_key|aws_secret|secret_key)(\s*[:=]\s*)[A-Za-z0-9/+=]{40}\b")
+_IP_V4_10_RE = re.compile(r"\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")
+_IP_V4_172_RE = re.compile(r"\b172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}\b")
+_IP_V4_192_RE = re.compile(r"\b192\.168\.\d{1,3}\.\d{1,3}\b")
+_IP_V4_100_RE = re.compile(r"\b100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.\d{1,3}\.\d{1,3}\b")
+_IP_V4_169_RE = re.compile(r"\b169\.254\.\d{1,3}\.\d{1,3}\b")
+_IP_V6_ULA_RE = re.compile(r"\b[fF][cC|dD][0-9a-fA-F]{2}(?::[0-9a-fA-F]{0,4}){0,7}\b")
+_LOCALHOST_RE = re.compile(r"\b(localhost|127\.0\.0\.1|0\.0\.0\.0|169\.254\.169\.254)\b")
+_LOCALHOST_V6_RE = re.compile(r"(?<![a-fA-F0-9])::1\b")
+_PATHS_RE = re.compile(
+    r"(?i)(^|\s|['\"({\[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"(){}\]$])|$)[^\s'\"(){}\]]*"
+)
+_JWTS_RE = re.compile(r"\b[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\b")
+_PRIVATE_KEYS_RE = re.compile(r"(?is)-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----.*?-----END [A-Z ]{0,32}PRIVATE KEY-----")
+_DISCORD_WEBHOOK_RE = re.compile(r"(?i)\b(https?://(?:discord|discordapp)\.com/api/webhooks/\d+/)[A-Za-z0-9_-]+\b")
+_SLACK_WEBHOOK_RE = re.compile(
+    r"(?i)\b(https?://hooks\.slack\.com/services/)[A-Za-z0-9_]+/[A-Za-z0-9_]+/[A-Za-z0-9_-]+\b"
+)
+_QUERY_PARAMS_RE = re.compile(r"(?i)([?&](?:token|apikey|api_key|key|secret|sid|password)=)[^&\s#]+")
+_MEGACMD_SESS_RE = re.compile(r"(?i)\bSession\s*:\s*[A-Za-z0-9+/=]{6,}\b")
+_RAW_MEGA_SESS_RE = re.compile(r"\b[A-Za-z0-9+/=]{40,60}\b")
+_AWS_ACCESS_RE = re.compile(r"\bAKIA[A-Z0-9]{16}\b")
+_MEGA_URL_KEY_MODERN_RE = re.compile(r"(?i)(mega\.(?:nz|co\.nz|io)/(?:file|folder)/[A-Za-z0-9_-]+)#\S+")
+_MEGA_URL_KEY_LEGACY_RE = re.compile(r"(?i)(mega\.(?:nz|co\.nz|io)/#[A-Z]?![A-Za-z0-9_-]+)!\S+")
+_MEGA_FRAG_1_RE = re.compile(r"(?i)(#[A-Z]?![\w-]+)!\S+")
+_MEGA_FRAG_2_RE = re.compile(r"(?i)(#[A-Z]?![\w-]{8,})#\S+")
+
+
 def redact_sensitive_text(text: str) -> str:
     if not text:
         return text
     masked = text
     # Email redaction: redact most of the local part and the domain to hide PII
-    masked = re.sub(r"\b[A-Za-z0-9._%+-]{1,3}[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "***@***", masked)
+    masked = _EMAIL_RE.sub("***@***", masked)
     # Standard secret patterns (preserves separator)
     # Handles quoted keys/values and values with spaces (JSON logs, Bearer/Basic auth)
     # Supports prefixed keys like x-csrf-token. Non-greedy prefix to avoid ReDoS.
-    masked = re.sub(
-        r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|csrf|xsrf|x-amz-security-token|cookie|set-cookie)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)',
-        r"\1\2***",
-        masked,
-    )
+    masked = _STANDARD_SECRETS_RE.sub(r"\1\2***", masked)
     # MEGAcmd login specific redaction (handles quoted arguments with spaces)
-    masked = re.sub(
-        r"(?i)(mega-login\s+)(?:\"[^\"]*\"|'[^']*'|\S+)(\s+)(?:\"[^\"]*\"|'[^']*'|\S+)", r"\1***\2***", masked
-    )
+    masked = _MEGACMD_LOGIN_RE.sub(r"\1***\2***", masked)
     # URL credentials (e.g. http://user:pass@host, http://user@host)
-    masked = re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^@\s/]+@", r"\1***@", masked)
+    masked = _URL_CREDENTIALS_RE.sub(r"\1***@", masked)
     # Bearer and Basic tokens (handles variable whitespace)
-    masked = re.sub(
-        r"(?i)((?:authorization|proxy-authorization)\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+", r"\1***", masked
-    )
+    masked = _BEARER_BASIC_RE.sub(r"\1***", masked)
     # Standalone API keys (e.g. x-api-key: secret)
-    masked = re.sub(r"(?i)\b(x-api-key|api-key)\s*:\s*\S+", r"\1: ***", masked)
+    masked = _STANDALONE_KEYS_RE.sub(r"\1: ***", masked)
     # Opaque API keys (like sk-...)
-    masked = re.sub(r"(?i)\bsk-[a-z0-9_-]{12,}\b", "***", masked)
+    masked = _OPAQUE_KEYS_RE.sub("***", masked)
     # Google Cloud API Keys
-    masked = re.sub(r"\bAIza[0-9A-Za-z-_]{35}\b", "***", masked)
+    masked = _GOOGLE_KEYS_RE.sub("***", masked)
     # GitHub Personal Access Tokens
-    masked = re.sub(r"\bgh[pousr]_[0-9A-Za-z]{36,251}\b", "***", masked)
+    masked = _GITHUB_KEYS_RE.sub("***", masked)
     # AWS Secret Access Keys (only when following a keyword to avoid false positives)
-    masked = re.sub(
-        r"(?i)(aws_secret_access_key|aws_secret|secret_key)(\s*[:=]\s*)[A-Za-z0-9/+=]{40}\b", r"\1\2***", masked
-    )
+    masked = _AWS_SECRET_RE.sub(r"\1\2***", masked)
 
     # Specific environment-based secrets if present
     for env_key in ("API_ADMIN_KEY", "API_WRITE_KEY", "MEGA_EMAIL", "MEGA_PASSWORD"):
@@ -241,63 +273,49 @@ def redact_sensitive_text(text: str) -> str:
 
     # Internal IPv4 addresses (10.x.x.x, 172.16-31.x.x, 192.168.x.x, 100.64-127.x.x, 169.254.x.x)
     # Do these before generic dot-separated tokens to avoid partial redaction
-    masked = re.sub(r"\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "10.***.***.***", masked)
-    masked = re.sub(r"\b172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}\b", "172.***.***.***", masked)
-    masked = re.sub(r"\b192\.168\.\d{1,3}\.\d{1,3}\b", "192.168.***.***", masked)
-    masked = re.sub(r"\b100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.\d{1,3}\.\d{1,3}\b", "100.***.***.***", masked)
-    masked = re.sub(r"\b169\.254\.\d{1,3}\.\d{1,3}\b", "169.254.***.***", masked)
+    masked = _IP_V4_10_RE.sub("10.***.***.***", masked)
+    masked = _IP_V4_172_RE.sub("172.***.***.***", masked)
+    masked = _IP_V4_192_RE.sub("192.168.***.***", masked)
+    masked = _IP_V4_100_RE.sub("100.***.***.***", masked)
+    masked = _IP_V4_169_RE.sub("169.254.***.***", masked)
     # Internal IPv6 addresses (Unique Local Addresses starting with fc00::/7)
-    masked = re.sub(r"\b[fF][cC|dD][0-9a-fA-F]{2}(?::[0-9a-fA-F]{0,4}){0,7}\b", "f***:***", masked)
+    masked = _IP_V6_ULA_RE.sub("f***:***", masked)
 
     # Localhost and common local addresses
-    masked = re.sub(r"\b(localhost|127\.0\.0\.1|0\.0\.0\.0|169\.254\.169\.254)\b", "***", masked)
-    masked = re.sub(r"(?<![a-fA-F0-9])::1\b", "***", masked)
+    masked = _LOCALHOST_RE.sub("***", masked)
+    masked = _LOCALHOST_V6_RE.sub("***", masked)
 
     # Absolute server-side paths
     # Redact common app/system roots to avoid leaking internal filesystem layout
     # Expanded list and delimiters (including braces) to prevent info leakage.
     # Uses [^\s'\"(){}\]]* to avoid consuming trailing delimiters.
-    masked = re.sub(
-        r"(?i)(^|\s|['\"({\[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"(){}\]$])|$)[^\s'\"(){}\]]*",
-        r"\1\2/***",
-        masked,
-    )
+    masked = _PATHS_RE.sub(r"\1\2/***", masked)
 
     # Likely JWTs or similar dot-separated tokens
     # Using more specific length bounds to avoid false positives on public IPs (e.g. 1.1.1.1)
-    masked = re.sub(r"\b[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\b", "***", masked)
+    masked = _JWTS_RE.sub("***", masked)
     # Private keys (bounded prefix to avoid ReDoS)
-    masked = re.sub(
-        r"(?is)-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----.*?-----END [A-Z ]{0,32}PRIVATE KEY-----", "***", masked
-    )
+    masked = _PRIVATE_KEYS_RE.sub("***", masked)
     # Discord webhook URLs: mask the secret token in the path
-    masked = re.sub(
-        r"(?i)\b(https?://(?:discord|discordapp)\.com/api/webhooks/\d+/)[A-Za-z0-9_-]+\b",
-        r"\1***",
-        masked,
-    )
+    masked = _DISCORD_WEBHOOK_RE.sub(r"\1***", masked)
     # Slack webhook URLs: mask the team, channel, and secret token in the path
-    masked = re.sub(
-        r"(?i)\b(https?://hooks\.slack\.com/services/)[A-Za-z0-9_]+/[A-Za-z0-9_]+/[A-Za-z0-9_-]+\b",
-        r"\1***/***/***",
-        masked,
-    )
+    masked = _SLACK_WEBHOOK_RE.sub(r"\1***/***/***", masked)
     # URL query parameters
-    masked = re.sub(r"(?i)([?&](?:token|apikey|api_key|key|secret|sid|password)=)[^&\s#]+", r"\1***", masked)
+    masked = _QUERY_PARAMS_RE.sub(r"\1***", masked)
     # MEGAcmd session IDs (often look like alphanumeric strings after 'Session:')
-    masked = re.sub(r"(?i)\bSession\s*:\s*[A-Za-z0-9+/=]{6,}\b", "Session:***", masked)
+    masked = _MEGACMD_SESS_RE.sub("Session:***", masked)
     # Raw MEGA session IDs (often 43-58 chars base64-like)
-    masked = re.sub(r"\b[A-Za-z0-9+/=]{40,60}\b", "***", masked)
+    masked = _RAW_MEGA_SESS_RE.sub("***", masked)
     # AWS Access Key IDs
-    masked = re.sub(r"\bAKIA[A-Z0-9]{16}\b", "***", masked)
+    masked = _AWS_ACCESS_RE.sub("***", masked)
 
     # MEGA URL keys: modern (#KEY) and legacy (#!ID!KEY, #F!ID!KEY, etc.)
     # Redact everything after '#' in a MEGA URL or the part after the '!' following the legacy ID
-    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz|io)/(?:file|folder)/[A-Za-z0-9_-]+)#\S+", r"\1#***", masked)
-    masked = re.sub(r"(?i)(mega\.(?:nz|co\.nz|io)/#[A-Z]?![A-Za-z0-9_-]+)!\S+", r"\1!***", masked)
+    masked = _MEGA_URL_KEY_MODERN_RE.sub(r"\1#***", masked)
+    masked = _MEGA_URL_KEY_LEGACY_RE.sub(r"\1!***", masked)
     # Generalized MEGA fragments redaction (e.g. for cases where the full URL is not present)
-    masked = re.sub(r"(?i)(#[A-Z]?![\w-]+)!\S+", r"\1!***", masked)
-    masked = re.sub(r"(?i)(#[A-Z]?![\w-]{8,})#\S+", r"\1#***", masked)
+    masked = _MEGA_FRAG_1_RE.sub(r"\1!***", masked)
+    masked = _MEGA_FRAG_2_RE.sub(r"\1#***", masked)
 
     return masked
 
@@ -539,6 +557,18 @@ def summarize_transfer_parse(raw: str, parsed: list[dict[str, Any]]) -> dict[str
     }
 
 
+# Compiled regex patterns for transfer list parsing
+_HEADER_MATCH_RE = re.compile(r"^\s*TYPE\s+.*\bTAG\b.*\bSTATE\b", re.IGNORECASE)
+_SIM_MATCH_RE = re.compile(r"^\s*(\d+)\s+(\w+)\s+(\d+)%\s+(.+)$")
+_REAL_MATCH_RE = re.compile(
+    rf"({_TRANSFER_ARROW_CLASS})\s+(\d+)\s+(.*?)\s+(\d+(?:\.\d+)?)\s*%\s+of\s+([\d.]+)\s*([KMGT]?B)\s+(\w+)\s*$"
+)
+_RELAXED_MATCH_RE = re.compile(
+    rf"({_TRANSFER_ARROW_CLASS})\s+(\d+)\s+(.*?)\s+(\d+(?:\.\d+)?)\s*%\s+(?:of\s+[\d.]+\s*[KMGT]?B\s+)?(\w+)\s*$"
+)
+_DL_MATCH_RE = re.compile(r"(?i)^\s*(?:download|upload)\s+(\d+)\s+(\w+)\s+(\d+(?:\.\d+)?)%\s+(.+)$")
+
+
 def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     if not raw or not raw.strip():
@@ -558,10 +588,10 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
             continue
 
         # Only skip a clear MEGAcmd table header, not random paths containing words like STATE.
-        if re.search(r"^\s*TYPE\s+.*\bTAG\b.*\bSTATE\b", line, re.IGNORECASE):
+        if _HEADER_MATCH_RE.search(line):
             continue
 
-        sim_match = re.match(r"^\s*(\d+)\s+(\w+)\s+(\d+)%\s+(.+)$", line)
+        sim_match = _SIM_MATCH_RE.match(line)
         if sim_match:
             tag, state, pct, path = sim_match.groups()
             filename = path.split("/")[-1] if "/" in path else path
@@ -577,10 +607,7 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
             )
             continue
 
-        real_match = re.search(
-            rf"({_TRANSFER_ARROW_CLASS})\s+(\d+)\s+(.*?)\s+(\d+(?:\.\d+)?)\s*%\s+of\s+([\d.]+)\s*([KMGT]?B)\s+(\w+)\s*$",
-            line,
-        )
+        real_match = _REAL_MATCH_RE.search(line)
 
         if real_match:
             _direction, tag, path_part, pct, size_val, size_unit, state = real_match.groups()
@@ -618,10 +645,7 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
             continue
 
         # Alternate MEGAcmd line: progress % without "of <size>" before state (or truncated path).
-        relaxed_match = re.search(
-            rf"({_TRANSFER_ARROW_CLASS})\s+(\d+)\s+(.*?)\s+(\d+(?:\.\d+)?)\s*%\s+(?:of\s+[\d.]+\s*[KMGT]?B\s+)?(\w+)\s*$",
-            line,
-        )
+        relaxed_match = _RELAXED_MATCH_RE.search(line)
         if relaxed_match:
             _d, tag, path_part, pct, state = relaxed_match.groups()
             path_part = path_part.strip()
@@ -645,10 +669,7 @@ def parse_transfer_list(raw: str) -> list[dict[str, Any]]:
             continue
 
         # Table-style: optional DOWNLOAD/UPLOAD keyword, tag, state, percent, path (no arrow).
-        dl_match = re.match(
-            r"(?i)^\s*(?:download|upload)\s+(\d+)\s+(\w+)\s+(\d+(?:\.\d+)?)%\s+(.+)$",
-            line,
-        )
+        dl_match = _DL_MATCH_RE.match(line)
         if dl_match:
             tag, state, pct, path = dl_match.groups()
             path = path.strip()
@@ -695,12 +716,20 @@ def normalize_transfer_state(state: str) -> str:
     return u
 
 
+# Compiled regex patterns for account info / df parsing
+_BUSINESS_RE = re.compile(r"\bbusiness\b")
+_PRO_RE = re.compile(r"\bpro\b")
+_BYTES_RE = re.compile(r"(\d+)\s*bytes")
+_DF_LINE_VALS_RE = re.compile(r"(?im)^\s*([a-z][a-z0-9 _/\-]{1,50})\s*:\s*(\d+)\s*bytes\b")
+_DF_BW_RE = re.compile(r"(?im)^\s*(?:transfer|bandwidth|traffic)[^:\n]*:\s*(\d+)\s*bytes\s*(?:/|of)\s*(\d+)\s*bytes\b")
+
+
 def _infer_account_type_from_text(text: str) -> str:
     """Best-effort plan label from mega-whoami / mega-df output (MEGAcmd varies by locale/version)."""
     t = (text or "").lower()
-    if re.search(r"\bbusiness\b", t):
+    if _BUSINESS_RE.search(t):
         return "BUSINESS"
-    if re.search(r"\bpro\b", t) or "mega pro" in t or "pro lite" in t:
+    if _PRO_RE.search(t) or "mega pro" in t or "pro lite" in t:
         return "PRO"
     return "UNKNOWN"
 
@@ -711,7 +740,7 @@ def _parse_mega_df_bytes_and_bw(df_text: str) -> tuple[int, int, int, int, bool]
     Bandwidth is only set when at least four byte counts appear (common mega-df layout).
     """
     low = df_text.lower()
-    nums = [int(n) for n in re.findall(r"(\d+)\s*bytes", low)]
+    nums = [int(n) for n in _BYTES_RE.findall(low)]
 
     # Default fallback: historic positional parsing.
     storage_confident = len(nums) >= 2
@@ -722,7 +751,7 @@ def _parse_mega_df_bytes_and_bw(df_text: str) -> tuple[int, int, int, int, bool]
 
     # Try label-driven extraction first; MEGAcmd formats vary by platform/version.
     line_vals: list[tuple[str, int]] = []
-    for m in re.finditer(r"(?im)^\s*([a-z][a-z0-9 _/\-]{1,50})\s*:\s*(\d+)\s*bytes\b", low):
+    for m in _DF_LINE_VALS_RE.finditer(low):
         label = m.group(1).strip()
         val = int(m.group(2))
         line_vals.append((label, val))
@@ -751,10 +780,7 @@ def _parse_mega_df_bytes_and_bw(df_text: str) -> tuple[int, int, int, int, bool]
     # If labeled bandwidth was not found, parse line forms like:
     # "Transfer quota: 123 bytes of 456 bytes"
     if bl == 0:
-        m = re.search(
-            r"(?im)^\s*(?:transfer|bandwidth|traffic)[^:\n]*:\s*(\d+)\s*bytes\s*(?:/|of)\s*(\d+)\s*bytes\b",
-            low,
-        )
+        m = _DF_BW_RE.search(low)
         if m:
             bu = int(m.group(1))
             bl = int(m.group(2))
