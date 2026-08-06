@@ -201,9 +201,7 @@ _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]{1,3}[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+
 _STANDARD_SECRETS_RE = re.compile(
     r'(?i)(["\']?[\w-]{0,32}?(?:password|token|apikey|api_key|x-api-token|x-api-key|secret|sid|session|auth|authorization|proxy-authorization|csrf|xsrf|x-amz-security-token|cookie|set-cookie)["\']?)(\s*[:=]\s*)(?:["\'].*?["\']|(?:bearer|basic)\s*\S*|\S+)'
 )
-_MEGACMD_LOGIN_RE = re.compile(
-    r"(?i)(mega-login\s+)(?:\"[^\"]*\"|'[^']*'|\S+)(\s+)(?:\"[^\"]*\"|'[^']*'|\S+)"
-)
+_MEGACMD_LOGIN_RE = re.compile(r"(?i)(mega-login\s+)(?:\"[^\"]*\"|'[^']*'|\S+)(\s+)(?:\"[^\"]*\"|'[^']*'|\S+)")
 _URL_CREDENTIALS_RE = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^@\s/]+@")
 _BEARER_BASIC_RE = re.compile(
     r"(?i)((?:authorization|proxy-authorization)\s*:\s*(?:bearer|basic)\s+)[A-Za-z0-9\-\._~\+/=]+"
@@ -212,9 +210,7 @@ _STANDALONE_KEYS_RE = re.compile(r"(?i)\b(x-api-key|api-key)\s*:\s*\S+")
 _OPAQUE_KEYS_RE = re.compile(r"(?i)\bsk-[a-z0-9_-]{12,}\b")
 _GOOGLE_KEYS_RE = re.compile(r"\bAIza[0-9A-Za-z-_]{35}\b")
 _GITHUB_KEYS_RE = re.compile(r"\bgh[pousr]_[0-9A-Za-z]{36,251}\b")
-_AWS_SECRET_RE = re.compile(
-    r"(?i)(aws_secret_access_key|aws_secret|secret_key)(\s*[:=]\s*)[A-Za-z0-9/+=]{40}\b"
-)
+_AWS_SECRET_RE = re.compile(r"(?i)(aws_secret_access_key|aws_secret|secret_key)(\s*[:=]\s*)[A-Za-z0-9/+=]{40}\b")
 _IP_V4_10_RE = re.compile(r"\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")
 _IP_V4_172_RE = re.compile(r"\b172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}\b")
 _IP_V4_192_RE = re.compile(r"\b192\.168\.\d{1,3}\.\d{1,3}\b")
@@ -227,12 +223,8 @@ _PATHS_RE = re.compile(
     r"(?i)(^|\s|['\"({\[:=])(/app|/data|/home/mega|/root|/etc|/var/log|/tmp|/proc|/sys|/dev)(?:/|(?=[\s'\"(){}\]$])|$)[^\s'\"(){}\]]*"
 )
 _JWTS_RE = re.compile(r"\b[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\b")
-_PRIVATE_KEYS_RE = re.compile(
-    r"(?is)-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----.*?-----END [A-Z ]{0,32}PRIVATE KEY-----"
-)
-_DISCORD_WEBHOOK_RE = re.compile(
-    r"(?i)\b(https?://(?:discord|discordapp)\.com/api/webhooks/\d+/)[A-Za-z0-9_-]+\b"
-)
+_PRIVATE_KEYS_RE = re.compile(r"(?is)-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----.*?-----END [A-Z ]{0,32}PRIVATE KEY-----")
+_DISCORD_WEBHOOK_RE = re.compile(r"(?i)\b(https?://(?:discord|discordapp)\.com/api/webhooks/\d+/)[A-Za-z0-9_-]+\b")
 _SLACK_WEBHOOK_RE = re.compile(
     r"(?i)\b(https?://hooks\.slack\.com/services/)[A-Za-z0-9_]+/[A-Za-z0-9_]+/[A-Za-z0-9_-]+\b"
 )
