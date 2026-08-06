@@ -13,6 +13,7 @@ os.environ.setdefault("MEGA_SIMULATE", "1")
 # Auth-specific tests will explicitly set this to 'strict' via monkeypatch.
 os.environ.setdefault("API_AUTH_MODE", "optional")
 
+import mega_service as ms
 import pytest
 import security
 import transfer_metadata as tm
@@ -24,6 +25,8 @@ def clear_caches():
     """Automatically clear module-level caches between tests."""
     tm.clear_cache()
     us.clear_cache()
+    ms.clear_transfer_list_cache()
+    ms.clear_account_info_cache()
 
 
 @pytest.fixture(autouse=True)

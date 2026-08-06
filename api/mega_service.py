@@ -116,6 +116,18 @@ def clear_transfer_list_cache() -> None:
     _transfer_list_cache_time = 0
 
 
+# Cache for account info to prevent expensive subprocess spawns on every poll.
+_account_info_cache: dict[str, Any] | None = None
+_account_info_cache_time: float = 0
+_ACCOUNT_INFO_CACHE_TTL = 5.0  # 5 seconds cache to cover concurrent API polls
+
+
+def clear_account_info_cache() -> None:
+    global _account_info_cache, _account_info_cache_time
+    _account_info_cache = None
+    _account_info_cache_time = 0
+
+
 _log_notify: Callable[[], None] | None = None
 
 
@@ -1033,8 +1045,13 @@ async def command_probe() -> list[dict[str, Any]]:
 
 
 async def get_account_info() -> dict[str, Any]:
+    global _account_info_cache, _account_info_cache_time
+    now = time.monotonic()
+    if _account_info_cache is not None and (now - _account_info_cache_time) < _ACCOUNT_INFO_CACHE_TTL:
+        return _account_info_cache
+
     if SIMULATE:
-        return {
+        res = {
             "email": "simulated@local",
             "is_logged_in": True,
             "account_type": "FREE",
@@ -1044,6 +1061,9 @@ async def get_account_info() -> dict[str, Any]:
             "bandwidth_used_bytes": 0,
             "details_partial": True,
         }
+        _account_info_cache = res
+        _account_info_cache_time = now
+        return res
 
     who = await run_megacmd_command(["mega-whoami"])
     out_txt = (who.get("stdout") or "").strip()
@@ -1078,7 +1098,7 @@ async def get_account_info() -> dict[str, Any]:
                 account_type = d_infer
             if storage_ok:
                 details_partial = False
-    return {
+    res = {
         "email": email,
         "is_logged_in": logged_in,
         "account_type": account_type,
@@ -1088,6 +1108,9 @@ async def get_account_info() -> dict[str, Any]:
         "bandwidth_used_bytes": bandwidth_used,
         "details_partial": details_partial,
     }
+    _account_info_cache = res
+    _account_info_cache_time = now
+    return res
 
 
 async def run_mega_transfers_action(action: str, tag: str) -> None:
