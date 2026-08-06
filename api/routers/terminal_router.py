@@ -213,11 +213,14 @@ async def api_terminal(
         for url in _extract_wget2_urls(parts):
             url_to_check = url
             has_proto = False
-            for proto in ("http://", "https://", "ftp://", "file://", "data://", "gopher://", "php://", "dict://"):
-                if url.lower().startswith(proto) or ("://" in url and url.lower().split("://", 1)[0] + "://" == proto):
+            for proto in ("http", "https", "ftp", "file", "data", "gopher", "php", "dict"):
+                prefix = f"{proto}:"
+                if url.lower().startswith(prefix):
                     has_proto = True
-                    idx = url.lower().find(proto)
-                    url_to_check = url[idx:]
+                    rest = url[len(prefix) :]
+                    while rest.startswith("/"):
+                        rest = rest[1:]
+                    url_to_check = f"http://{rest}"
                     break
             if not has_proto:
                 url_to_check = f"http://{url}"
@@ -240,15 +243,20 @@ async def api_terminal(
 
     for part in parts[1:]:
         # 1. URL/SSRF Validation
-        # Check for protocol prefixes anywhere in the argument (e.g., --base=http://...)
+        # Check for protocol prefixes anywhere in the argument (e.g., --base=http://... or --base=http:...)
         part_l = part.lower()
         # Expanded protocol list to prevent SSRF and Local File Disclosure (LFD)
-        for proto in ("http://", "https://", "ftp://", "file://", "data://", "gopher://", "php://", "dict://"):
-            if proto in part_l:
-                idx = part_l.find(proto)
+        for proto in ("http", "https", "ftp", "file", "data", "gopher", "php", "dict"):
+            prefix = f"{proto}:"
+            if prefix in part_l:
+                idx = part_l.find(prefix)
                 url_to_check = part[idx:]
+                rest = url_to_check[len(prefix) :]
+                while rest.startswith("/"):
+                    rest = rest[1:]
+                normalized_url = f"http://{rest}"
                 try:
-                    parsed = urlparse(url_to_check)
+                    parsed = urlparse(normalized_url)
                     host = (parsed.hostname or "").lower()
                     if _host_is_blocked(host):
                         return {
