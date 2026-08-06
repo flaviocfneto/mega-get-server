@@ -1,3 +1,13 @@
+## 2026-08-08 - [SSRF Bypass in Admin Terminal via Slash-Less URL Schemes]
+**Vulnerability:**
+The administrative terminal `/api/terminal` parses and validates command arguments (including `wget2` URL-accepting flags like `--base=...`) to block SSRF requests. However, the protocol identification logic was looking for `://` delimiters (such as `http://` or `https://`). Attackers could bypass this check entirely by providing slash-less URL schemes like `http:localhost` or `--base=http:localhost`. Downstream tools like `wget2` normalize and resolve these as valid HTTP URLs targeting `localhost`, whilst standard URL-parsing checks were bypassed or treated them as benign local paths under `DOWNLOAD_DIR` (e.g. `/data/http:localhost`).
+
+**Learning:**
+Relying on standard delimiters like `://` to detect network protocol prefixes within command line arguments is highly fragile. Command-line clients are often extremely permissive in normalization, converting schemes with a single colon and no slashes (e.g., `http:host`) into standard requests.
+
+**Prevention:**
+Always scan and extract protocol schemes using a scheme-only and colon boundary (e.g., `scheme:`). Once identified, strip any leading slashes from the rest of the target, reconstruct it as a standard fully-qualified URL (`http://{rest}`), and feed it to robust parsing libraries for host verification before allowing execution.
+
 ## 2026-08-07 - [TOCTOU Race Condition in Sensitive File Creation and Permissive Permissions]
 **Vulnerability:**
 Sensitive files containing encryption master keys, credentials, history, and debug log details (such as `secret.key`, `secrets.bin`, `.mega-get-history.json`, and `.mega-debug.log`) were written using Python's standard `open()` function, which creates files with default permissive permissions governed by umask (typically `0o644` or `0o664`), and then subsequently restricted using `os.chmod` to `0o600`. This created a Time-of-Check to Time-of-Use (TOCTOU) / race-condition window where non-privileged local users or processes could read sensitive data between creation and chmod.

@@ -54,3 +54,32 @@ def test_terminal_arbitrary_control_characters_rejected(monkeypatch):
             assert data["ok"] is False
             assert data["blocked_reason"] == "injection_attempt"
             assert "Blocked: command contains restricted characters." in data["output"]
+
+
+def test_terminal_protocol_less_slash_less_ssrf_blocked(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    with TestClient(app) as client:
+        # Test command with protocol-less/slash-less target (http:localhost) in wget2 specific check
+        res1 = client.post(
+            "/api/terminal",
+            json={"command": "wget2 http:localhost"},
+            headers=SAFE_HEADERS,
+        )
+        assert res1.status_code == 200
+        data1 = res1.json()
+        assert data1["ok"] is False
+        assert data1["blocked_reason"] == "ssrf_attempt"
+        assert "Blocked: untrusted host in URL" in data1["output"]
+
+        # Test command with general argument check containing protocol-less/slash-less target
+        res2 = client.post(
+            "/api/terminal",
+            json={"command": "wget2 --base=http:localhost"},
+            headers=SAFE_HEADERS,
+        )
+        assert res2.status_code == 200
+        data2 = res2.json()
+        assert data2["ok"] is False
+        assert data2["blocked_reason"] == "ssrf_attempt"
+        assert "Blocked: untrusted host in URL" in data2["output"]
