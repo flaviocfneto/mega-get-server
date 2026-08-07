@@ -476,6 +476,10 @@ async def api_login(body: LoginBody, request: Request, _: None = Depends(require
     password = body.password or ""
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
+    if any(ord(c) < 32 or ord(c) == 127 for c in email):
+        raise HTTPException(status_code=400, detail="Email contains invalid control characters")
+    if any(ord(c) < 32 or ord(c) == 127 for c in password):
+        raise HTTPException(status_code=400, detail="Password contains invalid control characters")
 
     login_result = await ms.run_megacmd_command(["mega-login", email, password])
     ms.clear_account_info_cache()
@@ -540,6 +544,8 @@ async def api_secrets_status(request: Request, _: None = Depends(require_scope("
 @rate_limit("secrets_set", limit=20, window_seconds=60)
 async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depends(require_scope("admin"))):
     require_csrf_boundary(request)
+    if any(ord(c) < 32 or ord(c) == 127 for c in body.value):
+        raise HTTPException(status_code=400, detail="Secret value contains invalid control characters")
     if not os.path.exists(crypt_utils.SECRET_KEY_PATH):
         crypt_utils.generate_key()
         ms.log_buffer.append("Encryption key generated automatically.")
@@ -891,6 +897,8 @@ async def api_transfer_update(
             validate_label_tag(t)
         values["tags"] = [t.strip() for t in body.tags if t.strip()]
     if body.url is not None:
+        if any(ord(c) < 32 or ord(c) == 127 for c in body.url):
+            raise HTTPException(status_code=400, detail="URL contains invalid control characters")
         values["url"] = body.url.strip()
     if not values:
         raise HTTPException(status_code=400, detail="No valid fields to update")
