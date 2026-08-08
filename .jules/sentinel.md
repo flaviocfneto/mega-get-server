@@ -1,3 +1,13 @@
+## 2026-08-09 - [Sensitive Data Leakage and JSON Corruption in Debug Logging]
+**Vulnerability:**
+The `_debug_log` function in `api/mega_service.py` originally appended unredacted dictionary payloads (potentially containing passwords, emails, Slack/Discord webhooks, or internal server layouts) directly to the debug log `.mega-debug.log`. Attempts to run generic regex-based log redaction on the final serialized JSON string corrupted the JSON structure itself (e.g., removing quotes from keys or string literals that matched secret keywords like `hypothesisId` containing `sid`), rendering the log file unparseable.
+
+**Learning:**
+Regex-based log redaction on pre-serialized structured data (like JSON string representation) is prone to syntax corruption and key context loss. When redacting structured logs, redaction must be performed at the object data level before serialization, using a context-aware recursive tree walker that identifies sensitive dictionary keys and values.
+
+**Prevention:**
+Implement a recursive sanitization tree walker (`redact_data_structure`) that inspects both keys and nested string values prior to JSON serialization. Key-aware matching replaces sensitive field values (such as passwords, tokens, keys) with asterisks, while standalone format patterns (such as emails, webhook URLs, IPs) are handled using traditional redaction regexes, keeping JSON output 100% valid and secure.
+
 ## 2026-08-08 - [SSRF Bypass in Admin Terminal via Slash-Less URL Schemes]
 **Vulnerability:**
 The administrative terminal `/api/terminal` parses and validates command arguments (including `wget2` URL-accepting flags like `--base=...`) to block SSRF requests. However, the protocol identification logic was looking for `://` delimiters (such as `http://` or `https://`). Attackers could bypass this check entirely by providing slash-less URL schemes like `http:localhost` or `--base=http:localhost`. Downstream tools like `wget2` normalize and resolve these as valid HTTP URLs targeting `localhost`, whilst standard URL-parsing checks were bypassed or treated them as benign local paths under `DOWNLOAD_DIR` (e.g. `/data/http:localhost`).

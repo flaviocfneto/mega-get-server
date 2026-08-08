@@ -29,6 +29,37 @@ DEBUG_LOG_PATH = os.environ.get(
 )
 
 
+def redact_data_structure(data: Any, is_sensitive_key: bool = False) -> Any:
+    sensitive_key_keywords = {
+        "password",
+        "token",
+        "apikey",
+        "api_key",
+        "secret",
+        "sid",
+        "session",
+        "auth",
+        "authorization",
+        "cookie",
+        "set-cookie",
+        "csrf",
+        "xsrf",
+        "key",
+    }
+    if isinstance(data, str):
+        if is_sensitive_key:
+            return "***"
+        return redact_sensitive_text(data)
+    elif isinstance(data, dict):
+        return {
+            k: redact_data_structure(v, is_sensitive_key=any(kw in k.lower() for kw in sensitive_key_keywords))
+            for k, v in data.items()
+        }
+    elif isinstance(data, list):
+        return [redact_data_structure(x, is_sensitive_key) for x in data]
+    return data
+
+
 def _debug_log(location: str, message: str, data: dict | None = None, hypothesis_id: str = "") -> None:
     try:
         payload = {
@@ -40,10 +71,12 @@ def _debug_log(location: str, message: str, data: dict | None = None, hypothesis
             "data": data or {},
             "timestamp": int(time.time() * 1000),
         }
+        redacted_payload = redact_data_structure(payload)
+        raw_json = json.dumps(redacted_payload, ensure_ascii=False)
         Path(DEBUG_LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(DEBUG_LOG_PATH, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         with open(fd, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            f.write(raw_json + "\n")
     except Exception:
         pass
 
