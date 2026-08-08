@@ -25,7 +25,7 @@ def test_debug_log_redaction_and_permissions(tmp_path: Path, monkeypatch) -> Non
         location="test_security_redaction",
         message="Simulating a transaction with sensitive data",
         data=sensitive_data,
-        hypothesis_id="T_SEC"
+        hypothesis_id="T_SEC",
     )
 
     # 1. Verify that the file exists

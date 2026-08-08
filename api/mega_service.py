@@ -31,8 +31,20 @@ DEBUG_LOG_PATH = os.environ.get(
 
 def redact_data_structure(data: Any, is_sensitive_key: bool = False) -> Any:
     sensitive_key_keywords = {
-        "password", "token", "apikey", "api_key", "secret", "sid", "session",
-        "auth", "authorization", "cookie", "set-cookie", "csrf", "xsrf", "key"
+        "password",
+        "token",
+        "apikey",
+        "api_key",
+        "secret",
+        "sid",
+        "session",
+        "auth",
+        "authorization",
+        "cookie",
+        "set-cookie",
+        "csrf",
+        "xsrf",
+        "key",
     }
     if isinstance(data, str):
         if is_sensitive_key:
@@ -40,10 +52,7 @@ def redact_data_structure(data: Any, is_sensitive_key: bool = False) -> Any:
         return redact_sensitive_text(data)
     elif isinstance(data, dict):
         return {
-            k: redact_data_structure(
-                v,
-                is_sensitive_key=any(kw in k.lower() for kw in sensitive_key_keywords)
-            )
+            k: redact_data_structure(v, is_sensitive_key=any(kw in k.lower() for kw in sensitive_key_keywords))
             for k, v in data.items()
         }
     elif isinstance(data, list):
