@@ -44,7 +44,15 @@ def clear_cache() -> None:
 
 
 def get(tag: str) -> dict[str, Any]:
-    return load_all().get(tag, {})
+    global _cache
+    if _cache is None:
+        load_all()  # Safely loads and locks internally
+    with _lock:
+        if _cache is not None:
+            val = _cache.get(tag)
+            if val is not None:
+                return copy.deepcopy(val)
+        return {}
 
 
 def update(tag: str, values: dict[str, Any]) -> dict[str, Any]:
