@@ -9,3 +9,7 @@
 ## 2025-05-17 - Pre-compiling Regex in Core Log Redaction & Parsing Routines
 **Learning:** Text-heavy, highly-frequent operations like log redaction (which runs for every appended log line) and CLI output transfer parsing suffer from substantial CPU overhead when compiling regular expressions dynamically inside loops or functions at runtime. Hoisting all regular expression definitions to the module scope using `re.compile()` completely eliminates dynamic compilation and cache lookup overhead.
 **Action:** Always pre-compile regular expression patterns at the module scope for hot paths, loops, or functions called repeatedly under rapid load or continuous log streams.
+
+## 2025-05-18 - Deepcopying Entire Cache Structure in Transfer List Hot Paths
+**Learning:** Standard memory/state defense techniques (e.g. returning deep copies of cached dictionaries to prevent mutation) can cause severe O(N^2) CPU overhead when called sequentially inside rendering or API loops. In our transfer metadata registry, lookup of a single tag's metadata triggered a deepcopy of the entire database, which was performed N times for every poll, resulting in massive CPU waste and GC thrashing.
+**Action:** Always lookup target entries directly in the cached collections and deepcopy *only* the specific requested element (O(1)) instead of copying the whole structure.
