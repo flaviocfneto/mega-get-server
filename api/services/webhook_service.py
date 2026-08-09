@@ -1,8 +1,47 @@
 from __future__ import annotations
 
+import asyncio
+import ipaddress
+import socket
 from typing import Any
 
 import httpx
+
+
+class SafeAsyncHTTPTransport(httpx.AsyncHTTPTransport):
+    """
+    Custom AsyncHTTPTransport that resolves hostnames exactly once, validates
+    all resolved IP addresses against the SSRF host blocklist, and pins the request
+    to the first safe IP to prevent DNS rebinding SSRF attacks.
+    """
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        import http_downloads as hd
+
+        host = request.url.host
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            try:
+                # Resolve host exactly once
+                port = request.url.port or (443 if request.url.scheme == "https" else 80)
+                addr_info = await asyncio.to_thread(socket.getaddrinfo, host, port)
+                if not addr_info:
+                    raise httpx.ConnectError(f"DNS resolution failed for {host}")
+
+                # Check all resolved IPs to prevent SSRF and DNS rebinding
+                for item in addr_info:
+                    ip_str = item[4][0]
+                    if hd._host_is_blocked(ip_str):
+                        raise httpx.ConnectError(f"DNS resolution resolved to a blocked IP: {ip_str}")
+
+                # Pin the request target to the first resolved IP
+                target_ip = addr_info[0][4][0]
+                request.extensions["sni_hostname"] = host
+                request.url = request.url.copy_with(host=target_ip)
+            except Exception as e:
+                raise httpx.ConnectError(f"DNS pinning/SSRF validation failed: {e}") from e
+        return await super().handle_async_request(request)
 
 
 async def send_webhook_notification(payload: dict[str, Any]) -> None:
@@ -32,7 +71,8 @@ async def send_webhook_notification(payload: dict[str, Any]) -> None:
         return
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        transport = SafeAsyncHTTPTransport()
+        async with httpx.AsyncClient(transport=transport, timeout=10.0) as client:
             # We don't follow redirects for webhooks to prevent SSRF bypasses via redirects
             # and because most webhooks should be direct.
             resp = await client.post(webhook_url, json=payload, follow_redirects=False)

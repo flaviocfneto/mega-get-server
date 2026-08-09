@@ -418,3 +418,13 @@ SSRF IP validations that run purely during static command parsing are easily byp
 
 **Prevention:**
 Always enforce `--max-redirect=0` on any `wget2` commands processed by the terminal wrapper. Block any user-supplied non-zero redirect values and automatically inject `--max-redirect=0` if omitted.
+
+## 2026-08-10 - [DNS Rebinding SSRF in Webhook Notifications]
+**Vulnerability:**
+The webhook notification system originally performed static host-based SSRF checks on configured webhook URLs. However, because `httpx` would resolve the hostname independently during the actual HTTP connection, attackers could exploit DNS Rebinding by returning a safe public IP during the check phase and a private/internal IP (like `127.0.0.1`) during the connection phase, completely bypassing the host validation.
+
+**Learning:**
+SSRF checks that resolve hostnames separately from the actual HTTP client connection are inherently vulnerable to DNS Rebinding. For complete protection, host resolution must be done exactly once, validated, and then pinned to the verified IP for the duration of the request lifecycle.
+
+**Prevention:**
+Implement a custom `AsyncHTTPTransport` that intercepts outgoing requests, performs non-blocking DNS resolution on hostnames, verifies all resulting IP addresses against the SSRF blocklist, and dynamically rewrites the request destination to the safe IP while preserving the original host via the SNI header.
