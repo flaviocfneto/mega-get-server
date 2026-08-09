@@ -51,6 +51,7 @@ def test_webhook_dns_rebinding_blocked(monkeypatch):
     ms.log_buffer.clear()
 
     import socket
+
     call_count = 0
 
     def mock_getaddrinfo(host, port, *args, **kwargs):
@@ -80,6 +81,7 @@ def test_webhook_dns_pinning_success(monkeypatch):
     ms.log_buffer.clear()
 
     import socket
+
     def mock_getaddrinfo(host, port, *args, **kwargs):
         # Return a safe public IP
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 443))]
@@ -88,6 +90,7 @@ def test_webhook_dns_pinning_success(monkeypatch):
 
     # We mock AsyncHTTPTransport.handle_async_request to verify pinning and SNI
     import httpx
+
     captured_request = []
 
     async def mock_handle_async_request(self, request: httpx.Request) -> httpx.Response:

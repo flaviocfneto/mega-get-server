@@ -14,6 +14,7 @@ class SafeAsyncHTTPTransport(httpx.AsyncHTTPTransport):
     all resolved IP addresses against the SSRF host blocklist, and pins the request
     to the first safe IP to prevent DNS rebinding SSRF attacks.
     """
+
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         import http_downloads as hd
 
