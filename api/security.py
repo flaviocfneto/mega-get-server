@@ -166,15 +166,26 @@ def require_csrf_boundary(request: Request) -> None:
     raise HTTPException(status_code=503, detail=f"CSRF policy misconfigured: unsupported mode '{mode}'")
 
 
+def _csrf_cookie_samesite() -> str:
+    return os.environ.get("CSRF_COOKIE_SAMESITE", "strict").strip().lower()
+
+
 def set_csrf_cookie(response: Response) -> str:
     """Generate and set a new CSRF cookie on the response."""
     token = secrets.token_urlsafe(32)
+    samesite = _csrf_cookie_samesite()
+    if samesite not in {"lax", "strict", "none"}:
+        samesite = "strict"
+    secure_cookie = os.environ.get("SECURE_COOKIES", "0") == "1"
+    if samesite == "none":
+        # None requires Secure=True in modern browsers
+        secure_cookie = True
     response.set_cookie(
         key="csrftoken",
         value=token,
         httponly=False,  # Frontend needs to read it to put it in the header
-        samesite="lax",
-        secure=os.environ.get("SECURE_COOKIES", "0") == "1",
+        samesite=samesite,
+        secure=secure_cookie,
     )
     return token
 

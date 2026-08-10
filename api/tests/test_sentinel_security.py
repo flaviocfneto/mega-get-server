@@ -94,3 +94,39 @@ def test_terminal_mega_get_argument_count_restrictions(monkeypatch):
     )
     assert response.status_code == 200
     assert response.json().get("blocked_reason") is None
+
+
+def test_csrf_cookie_samesite_hardening(monkeypatch):
+    import security
+    from fastapi import Response
+
+    # 1. Unset environment (should default to strict)
+    monkeypatch.delenv("CSRF_COOKIE_SAMESITE", raising=False)
+    monkeypatch.setenv("SECURE_COOKIES", "0")
+    resp = Response()
+    security.set_csrf_cookie(resp)
+    cookie = resp.headers.get("set-cookie")
+    assert "samesite=strict" in cookie.lower()
+    assert "secure" not in cookie.lower()
+
+    # 2. Configured as lax
+    monkeypatch.setenv("CSRF_COOKIE_SAMESITE", "lax")
+    resp = Response()
+    security.set_csrf_cookie(resp)
+    cookie = resp.headers.get("set-cookie")
+    assert "samesite=lax" in cookie.lower()
+
+    # 3. Configured as none (should force secure=True)
+    monkeypatch.setenv("CSRF_COOKIE_SAMESITE", "none")
+    resp = Response()
+    security.set_csrf_cookie(resp)
+    cookie = resp.headers.get("set-cookie")
+    assert "samesite=none" in cookie.lower()
+    assert "secure" in cookie.lower()
+
+    # 4. Configured as invalid (should fallback to strict)
+    monkeypatch.setenv("CSRF_COOKIE_SAMESITE", "invalid_value")
+    resp = Response()
+    security.set_csrf_cookie(resp)
+    cookie = resp.headers.get("set-cookie")
+    assert "samesite=strict" in cookie.lower()
