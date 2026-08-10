@@ -97,8 +97,8 @@ def test_terminal_mega_get_argument_count_restrictions(monkeypatch):
 
 
 def test_csrf_cookie_samesite_hardening(monkeypatch):
-    from fastapi import Response
     import security
+    from fastapi import Response
 
     # 1. Unset environment (should default to strict)
     monkeypatch.delenv("CSRF_COOKIE_SAMESITE", raising=False)
