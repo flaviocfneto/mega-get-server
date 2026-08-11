@@ -804,6 +804,8 @@ async def api_transfers_cancel_all(request: Request, _: None = Depends(require_s
 @rate_limit("transfers_bulk", limit=20, window_seconds=60)
 async def api_transfers_bulk(body: BulkBody, request: Request, _: None = Depends(require_scope("write"))):
     require_csrf_boundary(request)
+    if body.action not in {"pause", "resume", "cancel", "remove", "set_priority", "add_tag", "remove_tag"}:
+        raise HTTPException(status_code=400, detail="Unsupported bulk action")
     if body.action in ("add_tag", "remove_tag") and body.value:
         validate_label_tag(body.value)
     affected = 0
@@ -899,7 +901,11 @@ async def api_transfer_update(
     if body.url is not None:
         if any(ord(c) < 32 or ord(c) == 127 for c in body.url):
             raise HTTPException(status_code=400, detail="URL contains invalid control characters")
-        values["url"] = body.url.strip()
+        try:
+            _, validated_url = hd.normalize_download_url(body.url)
+            values["url"] = validated_url
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
     if not values:
         raise HTTPException(status_code=400, detail="No valid fields to update")
     tm.update(tag, values)

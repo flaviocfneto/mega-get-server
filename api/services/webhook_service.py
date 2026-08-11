@@ -21,6 +21,8 @@ class SafeAsyncHTTPTransport(httpx.AsyncHTTPTransport):
         host = request.url.host
         try:
             ipaddress.ip_address(host)
+            if hd._host_is_blocked(host):
+                raise httpx.ConnectError(f"Direct IP is blocked: {host}")
         except ValueError:
             try:
                 # Resolve host exactly once
