@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+
 import api_main
-import pytest
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 from services.webhook_service import SafeAsyncHTTPTransport
 
