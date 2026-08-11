@@ -1,3 +1,13 @@
+## 2026-08-11 - [Lazy Imports for Circular Security Dependencies]
+**Vulnerability:**
+SSRF validation on outgoing webhooks requires resolving and checking IP addresses using `_host_is_blocked`, which is defined in `api/http_downloads.py`. However, `api/http_downloads.py` imports `notify_download_completed` from `api/services/webhook_service.py` to trigger completion webhooks, leading to a circular import if `http_downloads` is imported at the module level in `webhook_service.py`.
+
+**Learning:**
+Security utilities (like SSRF host validation) that are shared across module boundaries often reside in modules that also trigger notifications, creating tight cross-module dependencies. Importing these security modules at the top level results in standard Python circular dependency errors during server initialization.
+
+**Prevention:**
+Always use lazy function-level imports (e.g. `import http_downloads as hd` inside helper functions) when integrating core validation mechanisms inside webhook transports or other downstream services to prevent module-level load-time circular dependencies.
+
 ## 2026-08-09 - [Sensitive Data Leakage and JSON Corruption in Debug Logging]
 **Vulnerability:**
 The `_debug_log` function in `api/mega_service.py` originally appended unredacted dictionary payloads (potentially containing passwords, emails, Slack/Discord webhooks, or internal server layouts) directly to the debug log `.mega-debug.log`. Attempts to run generic regex-based log redaction on the final serialized JSON string corrupted the JSON structure itself (e.g., removing quotes from keys or string literals that matched secret keywords like `hypothesisId` containing `sid`), rendering the log file unparseable.
