@@ -51,10 +51,10 @@ def test_terminal_generic_attached_flag_path_traversal(monkeypatch):
     monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
 
-    # Use a flag not explicitly handled before (like -C for config file)
+    # Use a flag not explicitly handled before (like -P for directory-prefix)
     response = client.post(
         "/api/terminal",
-        json={"command": "wget2 -C/etc/shadow http://example.com"},
+        json={"command": "wget2 -P/etc/shadow http://example.com"},
         headers={"Origin": "http://testserver"},
     )
     assert response.status_code == 200

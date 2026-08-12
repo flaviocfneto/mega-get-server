@@ -66,7 +66,7 @@ Local application files like `pending_queue.json` (storing pending download URLs
 Any local cache or flat-file database containing user data or credentials must have strict owner-only file permissions (`0o600` or `S_IRUSR | S_IWUSR`) applied immediately upon file creation. Using permissive default permissions on a shared multi-tenant host or shared Docker volumes poses a high risk of local file disclosure and token theft.
 
 **Prevention:**
-Always use `os.chmod` on the temporary file or target path immediately during creation or modification to restrict accessibility to the owning process user only.
+Always use `os.chmod` on the temporary file or path to restrict accessibility to the owning process user only.
 
 ## 2026-08-01 - [ASCII Control Characters in User-Supplied Tags/Labels]
 **Vulnerability:**
@@ -438,3 +438,13 @@ SSRF checks that resolve hostnames separately from the actual HTTP client connec
 
 **Prevention:**
 Implement a custom `AsyncHTTPTransport` that intercepts outgoing requests, performs non-blocking DNS resolution on hostnames, verifies all resulting IP addresses against the SSRF blocklist, and dynamically rewrites the request destination to the safe IP while preserving the original host via the SNI header.
+
+## 2026-08-11 - [Wget2 Config Loading SSRF and LFD Bypass in Admin Terminal]
+**Vulnerability:**
+The administrative terminal parses and validates command arguments (including `wget2` options) to block SSRF and local file disclosures. However, users could supply configuration loading flags (such as `-C` or `--config`) to load a malicious local config file or fetch a remote config file. This loaded configuration could redefine standard behaviors, default options, and request destinations, effectively bypassing all command argument validation boundaries.
+
+**Learning:**
+Diagnostic CLI wrappers like the admin terminal can easily be bypassed if the wrapped tools support customizable configuration loading flags. If configuration files can define arbitrary proxies, targets, or local reads, the static parameter checks will not suffice.
+
+**Prevention:**
+Explicitly scan for and block any flag patterns matching custom config loading (such as `-C` or `--config` in detached, attached, or equal-separated syntax). For defense-in-depth, automatically append the `--no-config` flag to all executed `wget2` invocations when missing, securing the tool context entirely from external profile manipulation.
