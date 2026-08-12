@@ -92,6 +92,7 @@ def test_terminal_wget2_no_config_appended(monkeypatch):
     monkeypatch.setattr(ms, "SIMULATE", True)
 
     executed_parts = None
+
     async def mock_run_megacmd_command(parts, cwd=None):
         nonlocal executed_parts
         executed_parts = parts

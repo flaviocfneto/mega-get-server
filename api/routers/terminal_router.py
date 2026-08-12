@@ -169,7 +169,12 @@ async def api_terminal(
     if cmd == "wget2":
         # Block custom configuration loading to prevent SSRF/LFD bypasses
         for part in parts:
-            if part == "-C" or part == "--config" or part.startswith("--config=") or (part.startswith("-C") and len(part) > 2):
+            if (
+                part == "-C"
+                or part == "--config"
+                or part.startswith("--config=")
+                or (part.startswith("-C") and len(part) > 2)
+            ):
                 return {
                     "ok": False,
                     "command": raw,
