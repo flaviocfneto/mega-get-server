@@ -28,6 +28,87 @@ def test_terminal_ssrf_bypass_uppercase_scheme(monkeypatch):
     assert data["blocked_reason"] == "ssrf_attempt"
 
 
+def test_terminal_wget2_config_blocking(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
+    monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
+    monkeypatch.setattr(ms, "SIMULATE", True)
+
+    # Test space-separated -C
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 -C /etc/passwd http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: custom configuration files are not allowed." in data["output"]
+    assert data["blocked_reason"] == "config_bypass_attempt"
+
+    # Test space-separated --config
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 --config /etc/passwd http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: custom configuration files are not allowed." in data["output"]
+    assert data["blocked_reason"] == "config_bypass_attempt"
+
+    # Test equals-separated --config
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 --config=/etc/passwd http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: custom configuration files are not allowed." in data["output"]
+    assert data["blocked_reason"] == "config_bypass_attempt"
+
+    # Test attached -C
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 -C/etc/passwd http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Blocked: custom configuration files are not allowed." in data["output"]
+    assert data["blocked_reason"] == "config_bypass_attempt"
+
+
+def test_terminal_wget2_no_config_appended(monkeypatch):
+    _rate_state.clear()
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://testserver")
+    monkeypatch.setattr(ms, "DOWNLOAD_DIR", "/data")
+    monkeypatch.setattr(ms, "SIMULATE", True)
+
+    executed_parts = None
+    async def mock_run_megacmd_command(parts, cwd=None):
+        nonlocal executed_parts
+        executed_parts = parts
+        return {"ok": True, "exit_code": 0, "stdout": "Mocked", "stderr": ""}
+
+    monkeypatch.setattr(ms, "run_megacmd_command", mock_run_megacmd_command)
+
+    response = client.post(
+        "/api/terminal",
+        json={"command": "wget2 http://example.com"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert response.status_code == 200
+    assert "--no-config" in executed_parts
+    assert "--max-redirect=0" in executed_parts
+
+
 def test_terminal_ssrf_attached_short_flags(monkeypatch):
     _rate_state.clear()
     monkeypatch.setenv("API_AUTH_MODE", "optional")

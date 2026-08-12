@@ -167,6 +167,21 @@ async def api_terminal(
 
     # Extract and validate all potential URLs/hosts for wget2, including protocol-less targets
     if cmd == "wget2":
+        # Block custom configuration loading to prevent SSRF/LFD bypasses
+        for part in parts:
+            if part == "-C" or part == "--config" or part.startswith("--config=") or (part.startswith("-C") and len(part) > 2):
+                return {
+                    "ok": False,
+                    "command": raw,
+                    "exit_code": 126,
+                    "output": "Blocked: custom configuration files are not allowed.",
+                    "blocked_reason": "config_bypass_attempt",
+                }
+
+        # Auto-append --no-config if not present
+        if "--no-config" not in parts:
+            parts.append("--no-config")
+
         # Enforce --max-redirect=0 to prevent redirect-based SSRF bypasses
         has_max_redirect = False
         skip_next = False
