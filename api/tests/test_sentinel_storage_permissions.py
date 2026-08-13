@@ -51,8 +51,9 @@ def test_daily_analytics_writes_with_strict_permissions(tmp_path: Path, monkeypa
 
 def test_http_download_writes_with_strict_permissions(tmp_path: Path, monkeypatch) -> None:
     import asyncio
-    import http_downloads as hd
     from unittest.mock import AsyncMock, MagicMock
+
+    import http_downloads as hd
 
     monkeypatch.setattr(mega_service, "DOWNLOAD_DIR", str(tmp_path))
     monkeypatch.setattr(mega_service, "SIMULATE", False)
