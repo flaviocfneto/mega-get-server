@@ -498,6 +498,13 @@ async def _run_job_inner(job: HttpJob, pending_id: str | None) -> None:
     job.state = "ACTIVE"
     ms.log_buffer.append(f"HTTP download started: {ms.redact_sensitive_text(job.url)[:120]}")
 
+    # Pre-create out_path with strict owner-only permissions (0o600) to eliminate any TOCTOU window
+    try:
+        fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.close(fd)
+    except OSError as e:
+        ms.log_buffer.append(f"Warning: Failed to pre-create download file with strict permissions: {e}")
+
     argv = _http_download_argv(exe, job.url, out_path, speed_kbps)
     proc = await asyncio.create_subprocess_exec(
         *argv,
@@ -537,6 +544,11 @@ async def _run_job_inner(job: HttpJob, pending_id: str | None) -> None:
     rc = proc.returncode if proc.returncode is not None else -1
     if rc == 0 and os.path.isfile(out_path):
         try:
+            # Set strict owner-only permissions (0o600) as a defense-in-depth measure
+            try:
+                os.chmod(out_path, 0o600)
+            except OSError:
+                pass
             fs = os.path.getsize(out_path)
             job.downloaded_bytes = fs
             if job.size_bytes <= 0:

@@ -47,3 +47,60 @@ def test_daily_analytics_writes_with_strict_permissions(tmp_path: Path, monkeypa
     if os.name == "posix":
         mode = analytics_file.stat().st_mode
         assert stat.S_IMODE(mode) == 0o600
+
+
+def test_http_download_writes_with_strict_permissions(tmp_path: Path, monkeypatch) -> None:
+    import asyncio
+    import http_downloads as hd
+    from unittest.mock import AsyncMock, MagicMock
+
+    monkeypatch.setattr(mega_service, "DOWNLOAD_DIR", str(tmp_path))
+    monkeypatch.setattr(mega_service, "SIMULATE", False)
+    monkeypatch.setattr(hd, "_resolved_http_download_executable", lambda: "/bin/true")
+    monkeypatch.setattr(hd, "_resolve_and_validate_url", AsyncMock(return_value=("https://example.com/z.bin", 1024)))
+
+    async def fake_exec(*args, **kwargs):
+        # Find output path from args
+        argv = list(args)
+        o_idx = argv.index("-O")
+        out_path = argv[o_idx + 1]
+
+        # Verify that the file was ALREADY pre-created with 0o600 before wget2 is even executed (TOCTOU protection!)
+        if os.name == "posix":
+            assert os.path.isfile(out_path)
+            mode = os.stat(out_path).st_mode
+            assert stat.S_IMODE(mode) == 0o600
+
+        # Simulate writing the downloaded bytes
+        with open(out_path, "wb") as f:
+            f.write(b"downloaded contents")
+
+        proc = MagicMock()
+        proc.pid = 4242
+        proc.returncode = 0
+
+        class _Stderr:
+            async def readline(self):
+                return b""
+
+        proc.stderr = _Stderr()
+        proc.wait = AsyncMock(return_value=0)
+        proc.terminate = MagicMock()
+        proc.kill = MagicMock()
+        return proc
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+    tag = "h-550e8400-e29b-41d4-a716-446655440000"
+    job = hd.HttpJob(tag=tag, url="https://example.com/z.bin", labels=[], priority="NORMAL")
+
+    async def main():
+        await hd._run_job_inner(job, None)
+
+    asyncio.run(main())
+
+    assert job.state == "COMPLETED"
+    assert os.path.isfile(job.output_file)
+    if os.name == "posix":
+        mode = os.stat(job.output_file).st_mode
+        assert stat.S_IMODE(mode) == 0o600
