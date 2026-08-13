@@ -1,3 +1,13 @@
+## 2026-08-13 - [TOCTOU Prevention in HTTP Download File Permissions]
+**Vulnerability:**
+Generic HTTP downloads performed via external processes (like Wget2) create files on disk using the active umask (typically `0o644` or `0o664`). If the download contains sensitive information, other local unprivileged users or sharing container processes could read its contents while it is in the process of downloading, creating a Time-of-Check to Time-of-Use (TOCTOU) race condition / file exposure window.
+
+**Learning:**
+Setting file permissions using `os.chmod` only *after* the download finishes leaves a significant vulnerability window open. To completely eliminate any exposure window, files must be pre-created with strict owner-only permissions (`0o600`) at the exact moment of file creation before the external download executable starts writing.
+
+**Prevention:**
+Always pre-initialize output targets using `os.open` with a strict `0o600` mode flag prior to launching subprocesses, so that the underlying operating system enforces the restricted access from the very first byte of downloaded data.
+
 ## 2026-08-11 - [Lazy Imports for Circular Security Dependencies]
 **Vulnerability:**
 SSRF validation on outgoing webhooks requires resolving and checking IP addresses using `_host_is_blocked`, which is defined in `api/http_downloads.py`. However, `api/http_downloads.py` imports `notify_download_completed` from `api/services/webhook_service.py` to trigger completion webhooks, leading to a circular import if `http_downloads` is imported at the module level in `webhook_service.py`.
