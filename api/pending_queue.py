@@ -63,6 +63,13 @@ def _normalize_priority(p: str | None) -> str:
 
 
 def _load_items_unlocked() -> list[dict[str, Any]]:
+    if os.name == "posix" and QUEUE_PATH.is_file():
+        try:
+            st = os.stat(QUEUE_PATH)
+            if (st.st_mode & 0o777) != 0o600:
+                os.chmod(QUEUE_PATH, 0o600)
+        except OSError:
+            pass
     data = read_json_dict(QUEUE_PATH)
     items = data.get("items")
     if not isinstance(items, list):

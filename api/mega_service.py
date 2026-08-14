@@ -394,6 +394,13 @@ def load_history() -> None:
     path = get_history_path()
     if not os.path.isfile(path):
         return
+    if os.name == "posix":
+        try:
+            st = os.stat(path)
+            if (st.st_mode & 0o777) != 0o600:
+                os.chmod(path, 0o600)
+        except OSError:
+            pass
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)

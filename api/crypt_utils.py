@@ -28,6 +28,13 @@ def generate_key():
 def load_key():
     if not os.path.exists(SECRET_KEY_PATH):
         return None
+    if os.name == "posix":
+        try:
+            st = os.stat(SECRET_KEY_PATH)
+            if (st.st_mode & 0o777) != 0o600:
+                os.chmod(SECRET_KEY_PATH, 0o600)
+        except OSError:
+            pass
     with open(SECRET_KEY_PATH, "rb") as f:
         return f.read()
 
@@ -60,6 +67,13 @@ def load_vault() -> dict:
     with _lock:
         if not os.path.exists(SECRETS_BIN_PATH):
             return {}
+        if os.name == "posix":
+            try:
+                st = os.stat(SECRETS_BIN_PATH)
+                if (st.st_mode & 0o777) != 0o600:
+                    os.chmod(SECRETS_BIN_PATH, 0o600)
+            except OSError:
+                pass
 
         fernet = get_fernet()
         if not fernet:

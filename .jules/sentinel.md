@@ -1,3 +1,13 @@
+## 2026-08-14 - [On-the-Fly Permission Hardening of Existing Local Stores]
+**Vulnerability:**
+While secure atomic file helpers ensure files are created with strict permissions (`0o600`), existing persistent stores containing sensitive data (encryption keys, login credentials, history logs, pending queue URLs, settings containing webhook secrets, and analytics) could have been pre-created or modified with permissive access permissions (e.g. `0o644` or `0o664`) outside of the application's runtime context. This left sensitive user metadata, secrets, and credentials readable by unauthorized local users/processes on shared host environments.
+
+**Learning:**
+Enforcing permissions purely during file creation leaves a security gap if files are deployed, restored, or manually edited outside the application's atomic creation path. True defense-in-depth requires verifying and actively correcting permissions of existing sensitive files back to strict owner-only (`0o600`) settings whenever they are loaded or accessed at runtime.
+
+**Prevention:**
+Always perform an active, non-blocking check (`os.stat` / `os.chmod`) when opening or parsing existing configurations, keys, or log files. If the active permission bits on POSIX systems do not match `0o600`, dynamically adjust them to restrict read/write access to the owning process user only.
+
 ## 2026-08-13 - [TOCTOU Prevention in HTTP Download File Permissions]
 **Vulnerability:**
 Generic HTTP downloads performed via external processes (like Wget2) create files on disk using the active umask (typically `0o644` or `0o664`). If the download contains sensitive information, other local unprivileged users or sharing container processes could read its contents while it is in the process of downloading, creating a Time-of-Check to Time-of-Use (TOCTOU) race condition / file exposure window.
