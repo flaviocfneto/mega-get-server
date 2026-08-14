@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import os
 import threading
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,13 @@ def load_stored() -> dict[str, Any]:
     with _lock:
         if _cache is not None:
             return copy.deepcopy(_cache)
+        if os.name == "posix" and SETTINGS_PATH.is_file():
+            try:
+                st = os.stat(SETTINGS_PATH)
+                if (st.st_mode & 0o777) != 0o600:
+                    os.chmod(SETTINGS_PATH, 0o600)
+            except OSError:
+                pass
         _cache = read_json_dict(SETTINGS_PATH)
         return copy.deepcopy(_cache)
 

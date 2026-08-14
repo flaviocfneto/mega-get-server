@@ -63,6 +63,13 @@ def _ensure_daily_loaded() -> None:
     _daily_loaded = True
     _daily_buckets = {}
     if DAILY_ANALYTICS_PATH.is_file():
+        if os.name == "posix":
+            try:
+                st = os.stat(DAILY_ANALYTICS_PATH)
+                if (st.st_mode & 0o777) != 0o600:
+                    os.chmod(DAILY_ANALYTICS_PATH, 0o600)
+            except OSError:
+                pass
         try:
             raw = json.loads(DAILY_ANALYTICS_PATH.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
