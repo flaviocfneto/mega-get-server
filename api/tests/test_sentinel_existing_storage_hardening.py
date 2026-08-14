@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import json
 import os
 import stat
 from pathlib import Path
-
-from cryptography.fernet import Fernet
 
 import crypt_utils
 import mega_service
 import pending_queue
 import ui_settings
+from cryptography.fernet import Fernet
 
 
 def test_crypt_utils_existing_files_hardening(tmp_path: Path, monkeypatch) -> None:
