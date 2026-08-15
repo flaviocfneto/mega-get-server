@@ -25,14 +25,21 @@ def test_watch_folder_path_traversal_blocked(client):
     assert resp.status_code == 200
     orig_path = resp.json().get("watch_folder_path")
 
-    # Try traversal
-    payload = {"watch_folder_path": "/data/../etc"}
-    resp = client.post("/api/config", json=payload, headers=headers)
-    assert resp.status_code == 200
+    # Try various path traversal and relative path payloads
+    traversal_payloads = [
+        "/data/../etc",
+        "/downloads/watch/../../etc/passwd",
+        "relative/path/to/watch",
+        "watch_folder",
+        "../watch",
+    ]
+    for p in traversal_payloads:
+        resp = client.post("/api/config", json={"watch_folder_path": p}, headers=headers)
+        assert resp.status_code == 200
 
-    # Verify it was NOT applied
-    resp = client.get("/api/config", headers=headers)
-    assert resp.json().get("watch_folder_path") == orig_path
+        # Verify it was NOT applied
+        resp = client.get("/api/config", headers=headers)
+        assert resp.json().get("watch_folder_path") == orig_path
 
 
 def test_watch_folder_path_valid_applied(client):

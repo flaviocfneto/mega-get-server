@@ -95,10 +95,13 @@ def merge_post_into_stored(body: dict[str, Any]) -> None:
 
             if key == "watch_folder_path":
                 path = str(val).strip()
-                if len(path) > 1024 or ".." in path:
-                    # Basic path traversal protection for watch folder
+                # Validate that path is an absolute path and does not contain relative traversal components
+                if len(path) > 1024 or not os.path.isabs(path):
                     continue
-                stored[key] = path
+                norm_path = os.path.normpath(path)
+                if ".." in norm_path.split(os.sep) or ".." in path:
+                    continue
+                stored[key] = norm_path
                 continue
 
             if key == "post_download_action":
