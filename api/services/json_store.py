@@ -9,6 +9,13 @@ from typing import Any
 def read_json_dict(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
+    if os.name == "posix":
+        try:
+            st = os.stat(path)
+            if (st.st_mode & 0o777) != 0o600:
+                os.chmod(path, 0o600)
+        except OSError:
+            pass
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)

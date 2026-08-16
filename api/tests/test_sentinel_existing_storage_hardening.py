@@ -103,3 +103,37 @@ def test_daily_analytics_existing_file_hardening(tmp_path: Path, monkeypatch) ->
 
     api_main._ensure_daily_loaded()
     assert stat.S_IMODE(analytics_file.stat().st_mode) == 0o600
+
+
+def test_transfer_metadata_existing_file_hardening(tmp_path: Path, monkeypatch) -> None:
+    if os.name != "posix":
+        return
+
+    import transfer_metadata
+
+    meta_file = tmp_path / "test_existing_meta.json"
+    monkeypatch.setattr(transfer_metadata, "META_PATH", meta_file)
+    monkeypatch.setattr(transfer_metadata, "_cache", None)
+
+    meta_file.write_text("{}", encoding="utf-8")
+    os.chmod(meta_file, 0o644)
+    assert stat.S_IMODE(meta_file.stat().st_mode) == 0o644
+
+    transfer_metadata.load_all()
+    assert stat.S_IMODE(meta_file.stat().st_mode) == 0o600
+
+
+def test_read_json_dict_existing_file_hardening(tmp_path: Path) -> None:
+    if os.name != "posix":
+        return
+
+    from services.json_store import read_json_dict
+
+    json_file = tmp_path / "test_existing_generic.json"
+    json_file.write_text('{"key": "value"}', encoding="utf-8")
+    os.chmod(json_file, 0o666)
+    assert stat.S_IMODE(json_file.stat().st_mode) == 0o666
+
+    res = read_json_dict(json_file)
+    assert res == {"key": "value"}
+    assert stat.S_IMODE(json_file.stat().st_mode) == 0o600
