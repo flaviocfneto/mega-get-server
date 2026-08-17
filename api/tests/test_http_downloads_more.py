@@ -522,15 +522,13 @@ def test_http_cancel_kills_on_wait_timeout(tmp_path, monkeypatch, meta_path):
     proc = MagicMock()
     proc.returncode = None
     proc.kill = MagicMock()
-
-    async def proc_wait():
-        return 0
-
-    proc.wait = proc_wait
+    proc.wait = AsyncMock(return_value=0)
     job.proc = proc
     hd._registry[tag] = job
 
-    async def boom_wait_for(_coro, timeout=8.0):
+    async def boom_wait_for(coro, timeout=8.0):
+        if asyncio.iscoroutine(coro):
+            coro.close()
         raise TimeoutError
 
     monkeypatch.setattr(hd.asyncio, "wait_for", boom_wait_for)
