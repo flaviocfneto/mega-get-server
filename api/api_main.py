@@ -417,6 +417,11 @@ async def add_security_headers(request: Request, call_next):
     # Prevent IE from opening HTML in the context of the site
     response.headers["X-Download-Options"] = "noopen"
 
+    # Prevent sensitive API responses from being cached by browsers or proxy caches
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+
     # CSP connect-src: allow self and configured trusted origins
     # We sanitize each origin to prevent CSP directive injection via CORS_ALLOW_ORIGINS.
     trusted_origins = os.environ.get("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")
