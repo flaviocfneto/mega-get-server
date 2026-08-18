@@ -289,6 +289,7 @@ def _http_download_argv(exe: str, url: str, out_path: str, speed_limit_kbps: int
         "--timeout=60",
         "--tries=3",
         "--max-redirect=0",
+        "--no-config",
         "--trust-server-names",
         "--content-disposition",
         "-O",
