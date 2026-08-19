@@ -101,3 +101,17 @@ def test_transfer_actions_non_simulated_error_and_success(monkeypatch):
     asyncio.run(ms.run_mega_transfers_action("pause", "7"))
     logs2 = "\n".join(ms.log_buffer.get_lines()).lower()
     assert "command sent for transfer 7" in logs2
+
+
+def test_run_megacmd_command_exception_redaction(monkeypatch):
+    async def fake_exec(*args, **kwargs):
+        raise RuntimeError("Execution error with password=SuperSecretPassword123 and token=abc123secret")
+
+    monkeypatch.setattr(ms.asyncio, "create_subprocess_exec", fake_exec)
+    res = asyncio.run(ms.run_megacmd_command(["mega-transfers"]))
+    assert res["ok"] is False
+    assert "SuperSecretPassword123" not in res["output"]
+    assert "abc123secret" not in res["output"]
+    assert "***" in res["output"]
+    assert "SuperSecretPassword123" not in res["stderr"]
+    assert "***" in res["stderr"]

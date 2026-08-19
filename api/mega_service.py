@@ -1078,13 +1078,14 @@ async def run_megacmd_command(args: list[str], cwd: str | None = None) -> dict[s
             "timestamp": started,
         }
     except Exception as e:
+        err_msg = redact_sensitive_text(str(e)) if redact_output else str(e)
         event = {
             "ok": False,
             "command": " ".join(safe_args),
             "exit_code": -1,
             "stdout": "",
-            "stderr": str(e),
-            "output": str(e),
+            "stderr": err_msg[:2000],
+            "output": err_msg[:2000],
             "timestamp": started,
         }
     _record_command_event(event)
