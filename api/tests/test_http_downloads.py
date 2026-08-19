@@ -46,6 +46,8 @@ def test_http_download_argv_wget2_flags(monkeypatch):
     assert "--progress=bar:force" in argv
     assert "--http2" in argv
     assert "--compression=gzip,deflate,br" in argv
+    assert "--max-redirect=0" in argv
+    assert "--no-config" in argv
     assert "--show-progress" not in argv
     assert argv[-1] == "https://example.com/a.bin"
 
