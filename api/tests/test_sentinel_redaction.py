@@ -67,3 +67,20 @@ def test_redact_quoted_login():
     assert "user name" not in redacted
     assert "pass word" not in redacted
     assert "mega-login *** ***" in redacted
+
+
+def test_redact_query_param_secrets():
+    params = [
+        ("access_token", "secret_acc_123"),
+        ("auth_token", "secret_auth_123"),
+        ("secret_token", "secret_sec_123"),
+        ("auth", "secret_a_123"),
+        ("code", "secret_c_123"),
+        ("sig", "secret_sig_123"),
+        ("signature", "secret_sign_123"),
+    ]
+    for param_key, secret in params:
+        url = f"https://example.com/webhook?{param_key}={secret}"
+        redacted = ms.redact_sensitive_text(url)
+        assert secret not in redacted, f"Failed for {param_key}"
+        assert f"{param_key}=***" in redacted, f"Failed for {param_key}"

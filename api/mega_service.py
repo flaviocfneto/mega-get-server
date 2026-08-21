@@ -261,7 +261,9 @@ _DISCORD_WEBHOOK_RE = re.compile(r"(?i)\b(https?://(?:discord|discordapp)\.com/a
 _SLACK_WEBHOOK_RE = re.compile(
     r"(?i)\b(https?://hooks\.slack\.com/services/)[A-Za-z0-9_]+/[A-Za-z0-9_]+/[A-Za-z0-9_-]+\b"
 )
-_QUERY_PARAMS_RE = re.compile(r"(?i)([?&](?:token|apikey|api_key|key|secret|sid|password)=)[^&\s#]+")
+_QUERY_PARAMS_RE = re.compile(
+    r"(?i)([?&](?:token|access_token|auth_token|secret_token|apikey|api_key|key|secret|sid|password|auth|code|sig|signature)=)[^&\s#]+"
+)
 _MEGACMD_SESS_RE = re.compile(r"(?i)\bSession\s*:\s*[A-Za-z0-9+/=]{6,}\b")
 _RAW_MEGA_SESS_RE = re.compile(r"\b[A-Za-z0-9+/=]{40,60}\b")
 _AWS_ACCESS_RE = re.compile(r"\bAKIA[A-Z0-9]{16}\b")
