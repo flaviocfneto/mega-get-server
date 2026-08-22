@@ -66,3 +66,14 @@ def test_api_transfer_update_rejects_control_characters(test_client, monkeypatch
     )
     assert res.status_code == 400
     assert "URL contains invalid control characters" in res.json()["detail"]
+
+
+def test_api_secrets_unlock_rejects_control_characters(test_client):
+    # Control character in key_base64
+    res = test_client.post(
+        "/api/secrets/unlock",
+        json={"key_base64": "invalid\nkey\x00data"},
+        headers={"x-api-key": "admin-secret", **SAFE_HEADERS},
+    )
+    assert res.status_code == 400
+    assert "Key contains invalid control characters" in res.json()["detail"]
