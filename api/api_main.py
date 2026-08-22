@@ -578,6 +578,8 @@ async def api_secrets_set(body: SecretSetBody, request: Request, _: None = Depen
 @rate_limit("secrets_unlock", limit=5, window_seconds=60)
 async def api_secrets_unlock(body: UnlockBody, request: Request, _: None = Depends(require_scope("admin"))):
     require_csrf_boundary(request)
+    if any(ord(c) < 32 or ord(c) == 127 for c in body.key_base64):
+        raise HTTPException(status_code=400, detail="Key contains invalid control characters")
     try:
         # Try to use it
         from cryptography.fernet import Fernet
