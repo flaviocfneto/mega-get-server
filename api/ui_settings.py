@@ -105,8 +105,9 @@ def merge_post_into_stored(body: dict[str, Any]) -> None:
                 continue
 
             if key == "post_download_action":
-                action = str(val).strip()
-                if len(action) > 1024:
+                action = str(val).strip().lower()
+                allowed_actions = {"", "none", "notify", "extract", "delete", "move"}
+                if action not in allowed_actions:
                     continue
                 stored[key] = action
                 continue
