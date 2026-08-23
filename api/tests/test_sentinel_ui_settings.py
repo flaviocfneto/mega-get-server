@@ -75,3 +75,30 @@ def test_settings_control_characters_rejected(client):
     assert resp.json().get("webhook_url") == orig_webhook
     assert resp.json().get("watch_folder_path") == orig_watch
     assert resp.json().get("post_download_action") == orig_action
+
+
+def test_post_download_action_whitelist_enforced(client):
+    headers = {"X-API-KEY": "test-write-key", "Origin": "http://localhost:5173"}
+    resp = client.get("/api/config", headers=headers)
+    assert resp.status_code == 200
+    orig_action = resp.json().get("post_download_action") or ""
+
+    # Arbitrary strings/commands should be rejected and ignored
+    invalid_payloads = [
+        "rm -rf /",
+        "systemctl reboot",
+        "echo pwned",
+        "unsupported_action",
+    ]
+    for act in invalid_payloads:
+        resp = client.post("/api/config", json={"post_download_action": act}, headers=headers)
+        assert resp.status_code == 200
+        resp = client.get("/api/config", headers=headers)
+        assert resp.json().get("post_download_action") == orig_action
+
+    # Valid whitelisted actions should be accepted
+    for valid_act in ["none", "notify", "extract", "delete", "move", ""]:
+        resp = client.post("/api/config", json={"post_download_action": valid_act}, headers=headers)
+        assert resp.status_code == 200
+        resp = client.get("/api/config", headers=headers)
+        assert resp.json().get("post_download_action") == valid_act
