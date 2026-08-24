@@ -84,6 +84,9 @@ def _host_is_blocked(hostname: str) -> bool:
     # First, try if it's already an IP address
     try:
         ip = ipaddress.ip_address(h)
+        mapped = getattr(ip, "ipv4_mapped", None)
+        if mapped:
+            ip = mapped
         return bool(
             not ip.is_global
             or ip.is_private
@@ -104,6 +107,9 @@ def _host_is_blocked(hostname: str) -> bool:
         for _, _, _, _, sockaddr in addr_info:
             ip_str = sockaddr[0]
             ip = ipaddress.ip_address(ip_str)
+            mapped = getattr(ip, "ipv4_mapped", None)
+            if mapped:
+                ip = mapped
             if (
                 not ip.is_global
                 or ip.is_private
