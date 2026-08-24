@@ -35,6 +35,18 @@ def test_host_is_blocked_handles_unresolvable():
     assert hd._host_is_blocked("this-does-not-exist.invalid") is True
 
 
+def test_host_is_blocked_ipv4_mapped_and_numeric():
+    # IPv4-mapped IPv6 loopback and private IPs
+    assert hd._host_is_blocked("::ffff:127.0.0.1") is True
+    assert hd._host_is_blocked("::ffff:192.168.1.1") is True
+    assert hd._host_is_blocked("::ffff:7f00:1") is True
+
+    # Octal, Hex, and Integer IPv4 representations resolved via socket.getaddrinfo
+    assert hd._host_is_blocked("0177.0.0.1") is True
+    assert hd._host_is_blocked("0x7f000001") is True
+    assert hd._host_is_blocked("2130706433") is True
+
+
 def test_resolve_and_validate_url_scheme_bypass():
     # Mocking urllib.request.build_opener to return a redirect to ftp:// on first call.
     mock_resp_redirect = MagicMock()
