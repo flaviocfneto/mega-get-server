@@ -74,10 +74,16 @@ def test_redact_query_param_secrets():
         ("access_token", "secret_acc_123"),
         ("auth_token", "secret_auth_123"),
         ("secret_token", "secret_sec_123"),
+        ("refresh_token", "secret_ref_123"),
         ("auth", "secret_a_123"),
         ("code", "secret_c_123"),
         ("sig", "secret_sig_123"),
         ("signature", "secret_sign_123"),
+        ("api-key", "secret_apikey_123"),
+        ("session_id", "secret_sessid_123"),
+        ("access_key", "secret_acckey_123"),
+        ("auth_key", "secret_authkey_123"),
+        ("secret_key", "secret_seckey_123"),
     ]
     for param_key, secret in params:
         url = f"https://example.com/webhook?{param_key}={secret}"
