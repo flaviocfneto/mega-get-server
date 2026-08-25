@@ -262,7 +262,7 @@ _SLACK_WEBHOOK_RE = re.compile(
     r"(?i)\b(https?://hooks\.slack\.com/services/)[A-Za-z0-9_]+/[A-Za-z0-9_]+/[A-Za-z0-9_-]+\b"
 )
 _QUERY_PARAMS_RE = re.compile(
-    r"(?i)([?&](?:token|access_token|auth_token|secret_token|apikey|api_key|key|secret|sid|password|auth|code|sig|signature)=)[^&\s#]+"
+    r"(?i)([?&](?:token|access_token|auth_token|secret_token|refresh_token|user_token|apikey|api_key|api-key|key|secret|secret_key|sid|session_id|password|auth|auth_key|access_key|code|sig|signature)=)[^&\s#]+"
 )
 _MEGACMD_SESS_RE = re.compile(r"(?i)\bSession\s*:\s*[A-Za-z0-9+/=]{6,}\b")
 _RAW_MEGA_SESS_RE = re.compile(r"\b[A-Za-z0-9+/=]{40,60}\b")
