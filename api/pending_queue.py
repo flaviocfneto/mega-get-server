@@ -56,6 +56,8 @@ def _normalize_tags(raw: list[str] | None) -> list[str]:
 
 
 def _normalize_priority(p: str | None) -> str:
+    if p and any(ord(c) < 32 or ord(c) == 127 for c in p):
+        raise ValueError("Priority contains invalid control characters")
     pr = (p or "NORMAL").strip().upper()
     if pr not in {"LOW", "NORMAL", "HIGH"}:
         raise ValueError("priority must be LOW, NORMAL or HIGH")

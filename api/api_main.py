@@ -764,6 +764,9 @@ async def api_download(body: DownloadBody, request: Request, _: None = Depends(r
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
+    if body.priority and any(ord(c) < 32 or ord(c) == 127 for c in body.priority):
+        raise HTTPException(status_code=400, detail="Priority contains invalid control characters")
+
     if not body.autostart:
         try:
             item = await pq.add_item(url=url, tags=body.tags, priority=body.priority)

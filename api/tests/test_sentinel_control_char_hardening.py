@@ -77,3 +77,23 @@ def test_api_secrets_unlock_rejects_control_characters(test_client):
     )
     assert res.status_code == 400
     assert "Key contains invalid control characters" in res.json()["detail"]
+
+
+def test_api_download_and_queue_reject_priority_control_characters(test_client):
+    # Control character in priority field for download
+    res1 = test_client.post(
+        "/api/download",
+        json={"url": "https://example.com/file.zip", "priority": "HIGH\nINJECTION"},
+        headers={"x-api-key": "write-secret", **SAFE_HEADERS},
+    )
+    assert res1.status_code == 400
+    assert "Priority contains invalid control characters" in res1.json()["detail"]
+
+    # Control character in priority field for queue add
+    res2 = test_client.post(
+        "/api/queue",
+        json={"url": "https://example.com/file.zip", "priority": "LOW\x00INJECTION"},
+        headers={"x-api-key": "write-secret", **SAFE_HEADERS},
+    )
+    assert res2.status_code == 400
+    assert "Priority contains invalid control characters" in res2.json()["detail"]
