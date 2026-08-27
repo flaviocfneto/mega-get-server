@@ -130,3 +130,20 @@ def test_csrf_cookie_samesite_hardening(monkeypatch):
     security.set_csrf_cookie(resp)
     cookie = resp.headers.get("set-cookie")
     assert "samesite=strict" in cookie.lower()
+
+
+def test_csrf_boundary_referer_normalization(monkeypatch):
+    monkeypatch.setenv("API_AUTH_MODE", "optional")
+    monkeypatch.setenv("CSRF_ENFORCEMENT_MODE", "origin_only")
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "http://localhost:5173")
+
+    # Malformed / scheme-less referer headers should be rejected with 403
+    invalid_referers = ["invalid-referer", "javascript:alert(1)", "relative/path"]
+    for ref in invalid_referers:
+        response = client.delete("/api/history", headers={"Referer": ref})
+        assert response.status_code == 403
+        assert "CSRF boundary violation: invalid referer" in response.json()["detail"]
+
+    # Valid trusted referer should pass
+    response = client.delete("/api/history", headers={"Referer": "http://localhost:5173/page"})
+    assert response.status_code == 200
