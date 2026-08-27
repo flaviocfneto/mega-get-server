@@ -166,15 +166,16 @@ export function SystemConsoleView({
             <button
               type="button"
               onClick={exportLogs}
-              className="rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--ft-accent)]"
+              className={`rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--ft-accent)] ${ftFocusRing}`}
               title="Export Logs"
+              aria-label="Export logs"
             >
               <FileText className="h-4 w-4" aria-hidden />
             </button>
             <button
               type="button"
               onClick={() => void clearLogs()}
-              className="text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400"
+              className={`rounded px-1 text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400 ${ftFocusRing}`}
             >
               Clear
             </button>
@@ -213,7 +214,7 @@ export function SystemConsoleView({
             <button
               type="button"
               onClick={clearTerminalOutput}
-              className="text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400"
+              className={`rounded px-1 text-[10px] font-bold uppercase text-gray-500 transition-colors hover:text-rose-400 ${ftFocusRing}`}
             >
               Clear terminal
             </button>
@@ -338,8 +339,9 @@ export function SystemConsoleView({
                     <button
                       type="button"
                       onClick={() => void copyToClipboard(entry.out)}
-                      className="absolute right-0 top-0 rounded p-1 opacity-0 transition-opacity hover:bg-white/10 group-hover/entry:opacity-100"
+                      className={`absolute right-0 top-0 rounded p-1 opacity-0 transition-opacity hover:bg-white/10 group-hover/entry:opacity-100 focus-visible:opacity-100 ${ftFocusRing}`}
                       title="Copy output"
+                      aria-label="Copy output"
                     >
                       <Copy className="h-3 w-3 text-white/40" />
                     </button>
@@ -358,14 +360,21 @@ export function SystemConsoleView({
             >
               <span className="font-bold text-emerald-500" aria-hidden>{'>'}</span>
               <input
+                id="terminal-command-input"
                 type="text"
                 value={terminalInput}
                 onChange={(e) => setTerminalInput(e.target.value)}
                 placeholder="Enter MEGAcmd command..."
+                aria-label="MEGAcmd command"
                 className="flex-1 border-none bg-transparent text-white placeholder:text-white/20 focus:outline-none"
               />
-              <button type="submit" className="rounded-lg p-1 text-emerald-500 transition-colors hover:bg-white/10">
-                <Send className="h-4 w-4" />
+              <button
+                type="submit"
+                title="Execute command"
+                aria-label="Execute command"
+                className={`rounded-lg p-1 text-emerald-500 transition-colors hover:bg-white/10 ${ftFocusRing}`}
+              >
+                <Send className="h-4 w-4" aria-hidden />
               </button>
             </form>
           </div>
