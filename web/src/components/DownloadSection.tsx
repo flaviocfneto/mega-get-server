@@ -73,6 +73,8 @@ export function DownloadSection({
           </div>
           {lastDownloadStatus && (
             <div
+              aria-live="polite"
+              aria-atomic="true"
               className={`mb-4 rounded-xl border px-3 py-2 text-xs ${
                 lastDownloadStatus.phase === 'failed'
                   ? 'border-[var(--ft-danger)]/40 bg-[var(--ft-danger-bg)] text-[var(--ft-danger)]'
@@ -177,7 +179,8 @@ export function DownloadSection({
                   onChange={(e) => onNewDownloadTagsChange(e.target.value)}
                   placeholder="Tags (comma separated)…"
                   className="flex-1 bg-transparent text-sm placeholder:text-[var(--muted-foreground)]/60 focus:outline-none"
-                  aria-label="Tags"
+                  aria-label="Tags (comma separated)"
+                  title="Tags (comma separated)"
                 />
               </div>
               <div className="flex items-center gap-2 rounded-xl border border-[var(--ft-border)] bg-[var(--background)] px-4 py-2">
