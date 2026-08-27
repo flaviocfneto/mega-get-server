@@ -135,6 +135,8 @@ def require_csrf_boundary(request: Request) -> None:
     if referer:
         try:
             ref_parsed = urlparse(referer)
+            if not ref_parsed.scheme or not ref_parsed.netloc:
+                raise HTTPException(status_code=403, detail="CSRF boundary violation: invalid referer")
             ref_origin = f"{ref_parsed.scheme}://{ref_parsed.netloc}".lower()
         except ValueError:
             raise HTTPException(status_code=403, detail="CSRF boundary violation: invalid referer") from None
