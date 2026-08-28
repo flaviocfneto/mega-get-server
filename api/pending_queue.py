@@ -18,7 +18,17 @@ _JSON_MAX_BYTES = 2 * 1024 * 1024
 _LAST_ERROR_MAX = 512
 _MAX_TAGS = 50
 
+# Performance optimization: In-memory cache for pending queue data to eliminate
+# disk I/O overhead on high-frequency API polling calls (/api/queue).
+_cache: list[dict[str, Any]] | None = None
+_cache_mtime_ns: int | None = None
 _lock: Any = None  # asyncio.Lock, set lazily
+
+
+def clear_cache() -> None:
+    global _cache, _cache_mtime_ns
+    _cache = None
+    _cache_mtime_ns = None
 
 
 def _get_lock():
@@ -64,19 +74,48 @@ def _normalize_priority(p: str | None) -> str:
     return pr
 
 
+def _update_cache_after_write(new_items: list[dict[str, Any]]) -> None:
+    global _cache, _cache_mtime_ns
+    _cache = new_items
+    try:
+        if QUEUE_PATH.is_file():
+            _cache_mtime_ns = os.stat(QUEUE_PATH).st_mtime_ns
+        else:
+            _cache_mtime_ns = None
+    except OSError:
+        _cache_mtime_ns = None
+
+
 def _load_items_unlocked() -> list[dict[str, Any]]:
-    if os.name == "posix" and QUEUE_PATH.is_file():
+    global _cache, _cache_mtime_ns
+    if QUEUE_PATH.is_file():
+        if os.name == "posix":
+            try:
+                st = os.stat(QUEUE_PATH)
+                if (st.st_mode & 0o777) != 0o600:
+                    os.chmod(QUEUE_PATH, 0o600)
+            except OSError:
+                pass
         try:
             st = os.stat(QUEUE_PATH)
-            if (st.st_mode & 0o777) != 0o600:
-                os.chmod(QUEUE_PATH, 0o600)
+            if _cache is not None and _cache_mtime_ns == st.st_mtime_ns:
+                return _cache
         except OSError:
             pass
+    else:
+        _cache = []
+        _cache_mtime_ns = None
+        return _cache
+
     data = read_json_dict(QUEUE_PATH)
     items = data.get("items")
     if not isinstance(items, list):
-        return []
-    return [x for x in items if isinstance(x, dict)]
+        items_list = []
+    else:
+        items_list = [x for x in items if isinstance(x, dict)]
+
+    _update_cache_after_write(items_list)
+    return items_list
 
 
 def _check_json_size(items: list[dict[str, Any]]) -> None:
@@ -107,12 +146,13 @@ async def list_items() -> list[dict[str, Any]]:
 
 
 async def add_item(*, url: str, tags: list[str] | None, priority: str | None) -> dict[str, Any]:
+    global _cache, _cache_mtime_ns
     tags_n = _normalize_tags(tags)
     pr = _normalize_priority(priority)
     async with _get_lock():
-        items = _load_items_unlocked()
+        current_items = _load_items_unlocked()
         cap = max_items()
-        pending_count = sum(1 for x in items if str(x.get("status", "PENDING")).upper() == "PENDING")
+        pending_count = sum(1 for x in current_items if str(x.get("status", "PENDING")).upper() == "PENDING")
         if pending_count >= cap:
             raise ValueError("Pending queue is full")
         item = {
@@ -124,21 +164,24 @@ async def add_item(*, url: str, tags: list[str] | None, priority: str | None) ->
             "status": "PENDING",
             "last_error": None,
         }
-        items.append(item)
-        _check_json_size(items)
-        write_json_atomic(QUEUE_PATH, {"items": items})
+        new_items = list(current_items) + [item]
+        _check_json_size(new_items)
+        write_json_atomic(QUEUE_PATH, {"items": new_items})
+        _update_cache_after_write(new_items)
     return item_to_api_row(item)
 
 
 async def remove_item(item_id: str) -> bool:
+    global _cache, _cache_mtime_ns
     async with _get_lock():
-        items = _load_items_unlocked()
-        n0 = len(items)
-        items = [x for x in items if str(x.get("id")) != item_id]
-        if len(items) == n0:
+        current_items = _load_items_unlocked()
+        n0 = len(current_items)
+        new_items = [x for x in current_items if str(x.get("id")) != item_id]
+        if len(new_items) == n0:
             return False
-        _check_json_size(items)
-        write_json_atomic(QUEUE_PATH, {"items": items})
+        _check_json_size(new_items)
+        write_json_atomic(QUEUE_PATH, {"items": new_items})
+        _update_cache_after_write(new_items)
     return True
 
 
@@ -156,22 +199,32 @@ async def set_item_status(
     status: str,
     last_error: str | None = None,
 ) -> bool:
+    global _cache, _cache_mtime_ns
     async with _get_lock():
-        items = _load_items_unlocked()
+        current_items = _load_items_unlocked()
         found = False
-        for x in items:
+        new_items = []
+        for x in current_items:
             if str(x.get("id")) == item_id:
-                x["status"] = status
+                item_copy = dict(x)
+                item_copy["status"] = status
                 if last_error is not None:
-                    x["last_error"] = last_error[:_LAST_ERROR_MAX] if last_error else None
+                    item_copy["last_error"] = last_error[:_LAST_ERROR_MAX] if last_error else None
                 else:
-                    x["last_error"] = x.get("last_error")
+                    item_copy["last_error"] = item_copy.get("last_error")
+                new_items.append(item_copy)
                 found = True
-                break
+            else:
+                new_items.append(x)
         if not found:
             return False
-        _check_json_size(items)
-        write_json_atomic(QUEUE_PATH, {"items": items})
+        _check_json_size(new_items)
+        write_json_atomic(QUEUE_PATH, {"items": new_items})
+        _cache = new_items
+        try:
+            _cache_mtime_ns = os.stat(QUEUE_PATH).st_mtime_ns
+        except OSError:
+            _cache_mtime_ns = None
     return True
 
 
@@ -184,18 +237,22 @@ async def mark_dispatching(item_id: str) -> tuple[dict[str, Any] | None, str]:
     PENDING -> DISPATCHING for a specific id.
     Returns (row_or_none, code): code is ok | not_found | already_dispatching | not_pending.
     """
+    global _cache, _cache_mtime_ns
     async with _get_lock():
-        items = _load_items_unlocked()
-        for x in items:
+        current_items = _load_items_unlocked()
+        for i, x in enumerate(current_items):
             if str(x.get("id")) != item_id:
                 continue
             st = str(x.get("status", "")).upper()
             if st == "PENDING":
-                x["status"] = "DISPATCHING"
-                row = dict(x)
-                _check_json_size(items)
-                write_json_atomic(QUEUE_PATH, {"items": items})
-                return row, "ok"
+                item_copy = dict(x)
+                item_copy["status"] = "DISPATCHING"
+                new_items = list(current_items)
+                new_items[i] = item_copy
+                _check_json_size(new_items)
+                write_json_atomic(QUEUE_PATH, {"items": new_items})
+                _update_cache_after_write(new_items)
+                return item_copy, "ok"
             if st == "DISPATCHING":
                 return dict(x), "already_dispatching"
             return None, "not_pending"

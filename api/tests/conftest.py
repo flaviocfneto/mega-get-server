@@ -14,6 +14,7 @@ os.environ.setdefault("MEGA_SIMULATE", "1")
 os.environ.setdefault("API_AUTH_MODE", "optional")
 
 import mega_service as ms
+import pending_queue as pq
 import pytest
 import security
 import transfer_metadata as tm
@@ -25,6 +26,7 @@ def clear_caches():
     """Automatically clear module-level caches between tests."""
     tm.clear_cache()
     us.clear_cache()
+    pq.clear_cache()
     ms.clear_transfer_list_cache()
     ms.clear_account_info_cache()
 
