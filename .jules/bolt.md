@@ -13,3 +13,7 @@
 ## 2025-05-18 - Deepcopying Entire Cache Structure in Transfer List Hot Paths
 **Learning:** Standard memory/state defense techniques (e.g. returning deep copies of cached dictionaries to prevent mutation) can cause severe O(N^2) CPU overhead when called sequentially inside rendering or API loops. In our transfer metadata registry, lookup of a single tag's metadata triggered a deepcopy of the entire database, which was performed N times for every poll, resulting in massive CPU waste and GC thrashing.
 **Action:** Always lookup target entries directly in the cached collections and deepcopy *only* the specific requested element (O(1)) instead of copying the whole structure.
+
+## 2025-05-19 - Safe In-Memory JSON Store Caching with Disk Modification Validation
+**Learning:** High-frequency API polling endpoints reading JSON store files off disk (e.g., `/api/queue` calling `read_json_dict`) incur noticeable filesystem and JSON parsing overhead per request. Caching store contents in memory eliminates disk reads, but updating state before atomic disk writes can pollute memory if disk writes fail or validation raises errors. Furthermore, naive caching ignores external process modifications on disk unless `os.stat().st_mtime_ns` is verified prior to serving cached data.
+**Action:** Always validate state and write atomically to disk *before* updating module-level in-memory caches, track `st_mtime_ns` to validate cache freshness against disk changes across process boundaries, and register cache clear hooks in test fixtures.
