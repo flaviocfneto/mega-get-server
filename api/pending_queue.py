@@ -21,13 +21,15 @@ _MAX_TAGS = 50
 # Performance optimization: In-memory cache for pending queue data to eliminate
 # disk I/O overhead on high-frequency API polling calls (/api/queue).
 _cache: list[dict[str, Any]] | None = None
+_api_rows_cache: list[dict[str, Any]] | None = None
 _cache_mtime_ns: int | None = None
 _lock: Any = None  # asyncio.Lock, set lazily
 
 
 def clear_cache() -> None:
-    global _cache, _cache_mtime_ns
+    global _cache, _api_rows_cache, _cache_mtime_ns
     _cache = None
+    _api_rows_cache = None
     _cache_mtime_ns = None
 
 
@@ -75,8 +77,10 @@ def _normalize_priority(p: str | None) -> str:
 
 
 def _update_cache_after_write(new_items: list[dict[str, Any]]) -> None:
-    global _cache, _cache_mtime_ns
+    global _cache, _api_rows_cache, _cache_mtime_ns
     _cache = new_items
+    # Pre-project API rows during store updates to avoid repetitive formatting on list_items()
+    _api_rows_cache = [item_to_api_row(x) for x in new_items]
     try:
         if QUEUE_PATH.is_file():
             _cache_mtime_ns = os.stat(QUEUE_PATH).st_mtime_ns
@@ -87,7 +91,7 @@ def _update_cache_after_write(new_items: list[dict[str, Any]]) -> None:
 
 
 def _load_items_unlocked() -> list[dict[str, Any]]:
-    global _cache, _cache_mtime_ns
+    global _cache, _api_rows_cache, _cache_mtime_ns
     if QUEUE_PATH.is_file():
         if os.name == "posix":
             try:
@@ -103,9 +107,8 @@ def _load_items_unlocked() -> list[dict[str, Any]]:
         except OSError:
             pass
     else:
-        _cache = []
-        _cache_mtime_ns = None
-        return _cache
+        _update_cache_after_write([])
+        return _cache or []
 
     data = read_json_dict(QUEUE_PATH)
     items = data.get("items")
@@ -140,9 +143,14 @@ def item_to_api_row(d: dict[str, Any]) -> dict[str, Any]:
 
 
 async def list_items() -> list[dict[str, Any]]:
+    # Performance optimization: Use pre-projected _api_rows_cache built during _update_cache_after_write
+    # to avoid re-normalizing dict fields and creating new string/list copies for every item on high-frequency API polls.
+    global _api_rows_cache
     async with _get_lock():
         items = _load_items_unlocked()
-    return [item_to_api_row(x) for x in items]
+        if _api_rows_cache is None:
+            _api_rows_cache = [item_to_api_row(x) for x in items]
+        return [{**x, "tags": list(x["tags"])} for x in _api_rows_cache]
 
 
 async def add_item(*, url: str, tags: list[str] | None, priority: str | None) -> dict[str, Any]:
@@ -199,7 +207,6 @@ async def set_item_status(
     status: str,
     last_error: str | None = None,
 ) -> bool:
-    global _cache, _cache_mtime_ns
     async with _get_lock():
         current_items = _load_items_unlocked()
         found = False
@@ -220,11 +227,7 @@ async def set_item_status(
             return False
         _check_json_size(new_items)
         write_json_atomic(QUEUE_PATH, {"items": new_items})
-        _cache = new_items
-        try:
-            _cache_mtime_ns = os.stat(QUEUE_PATH).st_mtime_ns
-        except OSError:
-            _cache_mtime_ns = None
+        _update_cache_after_write(new_items)
     return True
 
 
