@@ -105,4 +105,25 @@ describe('DownloadSection', () => {
     screen.getByRole('button', { name: /retry/i }).click();
     expect(onRetryLast).toHaveBeenCalledTimes(1);
   });
+
+  it('provides accessible attributes for last status banner and tags input', () => {
+    render(
+      <DownloadSection
+        {...baseProps()}
+        lastDownloadStatus={{
+          phase: 'active',
+          message: 'Download active',
+          url: 'https://example.com/file.zip',
+          updatedAt: Date.now(),
+        }}
+      />,
+    );
+
+    const statusBanner = screen.getByText('Download active').closest('div.mb-4');
+    expect(statusBanner).toHaveAttribute('aria-live', 'polite');
+    expect(statusBanner).toHaveAttribute('aria-atomic', 'true');
+
+    const tagsInput = screen.getByRole('textbox', { name: /tags \(comma separated\)/i });
+    expect(tagsInput).toHaveAttribute('title', 'Tags (comma separated)');
+  });
 });
