@@ -1,3 +1,4 @@
+import {memo} from 'react';
 import {Filter, SortAsc, SortDesc, Tag} from 'lucide-react';
 import type {TransferPriority, TransferState} from '../../types';
 import {ftFocusRing} from '../../lib/ftUi';
@@ -16,7 +17,8 @@ type Props = {
   onClearFilters: () => void;
 };
 
-export function TransfersFilterBar({
+// Wrap in React.memo to avoid unnecessary re-renders during high-frequency polling ticks.
+export const TransfersFilterBar = memo(function TransfersFilterBar({
   filterState,
   onFilterState,
   filterPriority,
@@ -117,4 +119,4 @@ export function TransfersFilterBar({
       </div>
     </div>
   );
-}
+});

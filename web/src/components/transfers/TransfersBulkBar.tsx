@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {memo, useEffect, useState} from 'react';
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {Pause, Play, RefreshCw, X} from 'lucide-react';
 import {ftFocusRing} from '../../lib/ftUi';
@@ -13,7 +13,8 @@ type Props = {
   onDeselectAll: () => void;
 };
 
-export function TransfersBulkBar({
+// Wrap in React.memo to prevent re-renders on high-frequency polling when selection state is unchanged.
+export const TransfersBulkBar = memo(function TransfersBulkBar({
   count,
   onPause,
   onResume,
@@ -137,4 +138,4 @@ export function TransfersBulkBar({
       )}
     </AnimatePresence>
   );
-}
+});
