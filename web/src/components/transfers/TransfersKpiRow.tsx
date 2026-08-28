@@ -1,12 +1,37 @@
+import {memo, useMemo} from 'react';
 import type {Transfer} from '../../types';
 
 type Props = {transfers: Transfer[]};
 
-export function TransfersKpiRow({transfers}: Props) {
-  const active = transfers.filter((t) => t.state === 'ACTIVE').length;
-  const queued = transfers.filter((t) => t.state === 'QUEUED').length;
-  const failed = transfers.filter((t) => t.state === 'FAILED' || t.state === 'RETRYING').length;
-  const completed = transfers.filter((t) => t.state === 'COMPLETED').length;
+// Wrap in React.memo to prevent unnecessary re-renders when parent state updates.
+export const TransfersKpiRow = memo(function TransfersKpiRow({transfers}: Props) {
+  // Compute transfer count metrics in a single O(N) loop instead of 4 separate array filter passes.
+  const {active, queued, failed, completed} = useMemo(() => {
+    let activeCount = 0;
+    let queuedCount = 0;
+    let failedCount = 0;
+    let completedCount = 0;
+
+    for (const transfer of transfers) {
+      const state = transfer.state;
+      if (state === 'ACTIVE') {
+        activeCount++;
+      } else if (state === 'QUEUED') {
+        queuedCount++;
+      } else if (state === 'FAILED' || state === 'RETRYING') {
+        failedCount++;
+      } else if (state === 'COMPLETED') {
+        completedCount++;
+      }
+    }
+
+    return {
+      active: activeCount,
+      queued: queuedCount,
+      failed: failedCount,
+      completed: completedCount,
+    };
+  }, [transfers]);
 
   const items = [
     {label: 'Active', value: active, desc: 'Downloading now', tone: 'teal' as const},
@@ -43,4 +68,4 @@ export function TransfersKpiRow({transfers}: Props) {
       ))}
     </div>
   );
-}
+});
