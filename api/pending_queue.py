@@ -200,6 +200,12 @@ async def set_item_status(
     last_error: str | None = None,
 ) -> bool:
     global _cache, _cache_mtime_ns
+    if not isinstance(status, str):
+        raise ValueError("Invalid queue item status")
+    st_upper = status.strip().upper()
+    allowed_statuses = {"PENDING", "DISPATCHING", "ACTIVE", "QUEUED", "RETRYING", "PAUSED", "COMPLETED", "FAILED"}
+    if any(ord(c) < 32 or ord(c) == 127 for c in status) or st_upper not in allowed_statuses:
+        raise ValueError("Invalid queue item status")
     async with _get_lock():
         current_items = _load_items_unlocked()
         found = False
