@@ -12,8 +12,8 @@ export const TransfersKpiRow = memo(function TransfersKpiRow({transfers}: Props)
     let failedCount = 0;
     let completedCount = 0;
 
-    for (let i = 0; i < transfers.length; i++) {
-      const state = transfers[i].state;
+    for (const transfer of transfers) {
+      const state = transfer.state;
       if (state === 'ACTIVE') {
         activeCount++;
       } else if (state === 'QUEUED') {
