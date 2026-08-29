@@ -21,6 +21,7 @@ export function SidebarNav({activeId, onSelect}: Props) {
               key={id}
               type="button"
               onClick={() => onSelect(id)}
+              title={label}
               aria-current={active ? 'page' : undefined}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-colors ${ftFocusRing} ${
                 active

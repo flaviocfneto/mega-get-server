@@ -17,9 +17,11 @@ describe('SidebarNav', () => {
     expect(onSelect).toHaveBeenCalledWith('history');
   });
 
-  it('includes Logs & Terminal primary section', () => {
+  it('includes Logs & Terminal primary section and title tooltip attributes', () => {
     render(<SidebarNav activeId="transfers" onSelect={vi.fn()} />);
-    expect(screen.getByRole('button', {name: 'Logs & Terminal'})).toBeInTheDocument();
+    const button = screen.getByRole('button', {name: 'Logs & Terminal'});
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute('title', 'Logs & Terminal');
   });
 });
 
@@ -34,8 +36,10 @@ describe('BottomNav', () => {
     expect(onSelect).toHaveBeenCalledWith('transfers');
   });
 
-  it('uses shortLabel for Logs & Terminal section', () => {
+  it('uses shortLabel for Logs & Terminal section with full label as title', () => {
     render(<BottomNav activeId="transfers" onSelect={vi.fn()} />);
-    expect(screen.getByRole('button', {name: 'System'})).toBeInTheDocument();
+    const button = screen.getByRole('button', {name: 'System'});
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute('title', 'Logs & Terminal');
   });
 });
