@@ -207,6 +207,14 @@ async def set_item_status(
     status: str,
     last_error: str | None = None,
 ) -> bool:
+    if not isinstance(status, str):
+        raise ValueError("status must be a string")
+    if any(ord(c) < 32 or ord(c) == 127 for c in status):
+        raise ValueError("Status contains invalid control characters")
+    st_upper = status.strip().upper()
+    allowed_statuses = {"PENDING", "DISPATCHING", "ACTIVE", "QUEUED", "RETRYING", "PAUSED", "COMPLETED", "FAILED"}
+    if st_upper not in allowed_statuses:
+        raise ValueError(f"Invalid queue item status: {status}")
     async with _get_lock():
         current_items = _load_items_unlocked()
         found = False
