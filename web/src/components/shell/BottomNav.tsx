@@ -23,6 +23,7 @@ export function BottomNav({activeId, onSelect}: Props) {
               key={id}
               type="button"
               onClick={() => onSelect(id)}
+              title={label}
               aria-current={active ? 'page' : undefined}
               className={`flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 text-[9px] font-bold transition-colors sm:text-[10px] ${ftFocusRing} ${
                 active
