@@ -98,6 +98,7 @@ export function PendingQueuePanel({
                     disabled={busy}
                     onClick={() => onStart(item.id)}
                     className={`inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold ${ftBtnPrimarySm} ${ftFocusRing} disabled:opacity-50`}
+                    aria-label={`Start transfer for ${item.url}`}
                   >
                     <Play className="h-3 w-3" aria-hidden />
                     Start
@@ -109,6 +110,7 @@ export function PendingQueuePanel({
                     disabled={busy}
                     onClick={() => onRemove(item.id)}
                     className={`inline-flex items-center gap-1 rounded-lg border border-[var(--ft-border)] px-2 py-1.5 text-xs font-bold text-[var(--muted-foreground)] hover:bg-[var(--muted)] ${ftFocusRing} disabled:opacity-50`}
+                    aria-label={`Remove ${item.url} from queue`}
                   >
                     <Trash2 className="h-3 w-3" aria-hidden />
                     Remove
