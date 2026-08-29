@@ -174,6 +174,7 @@ export function HistoryView({
                     selectedHistory.has(h.url) ? 'text-[var(--ft-accent)]' : 'text-[var(--muted-foreground)]/40'
                   }`}
                   aria-pressed={selectedHistory.has(h.url)}
+                  aria-label={selectedHistory.has(h.url) ? `Deselect ${h.url} from history` : `Select ${h.url} from history`}
                 >
                   {selectedHistory.has(h.url) ? (
                     <CheckSquare className="h-4 w-4" aria-hidden />
@@ -185,6 +186,7 @@ export function HistoryView({
                   type="button"
                   onClick={() => setUrl(h.url)}
                   className="flex min-w-0 flex-1 items-center justify-between gap-3 py-4 pr-4 text-left transition-colors hover:bg-[var(--muted)]"
+                  aria-label={`Reuse URL ${h.url}`}
                 >
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate text-xs text-[var(--muted-foreground)] transition-colors group-hover:text-[var(--ft-accent)]">
