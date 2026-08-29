@@ -35,7 +35,7 @@ describe('HistoryView', () => {
     expect(screen.getByPlaceholderText(/Search history/)).toBeInTheDocument();
   });
 
-  it('shows filtered rows when history exists', () => {
+  it('shows filtered rows with keyboard focus ring styles on interactive buttons when history exists', () => {
     const item = {url: 'https://mega.nz/file/x', timestamp: new Date().toISOString()};
     render(
       <HistoryView
@@ -52,5 +52,11 @@ describe('HistoryView', () => {
       />,
     );
     expect(screen.getByText('https://mega.nz/file/x')).toBeInTheDocument();
+
+    const selectBtn = screen.getByRole('button', {name: `Select ${item.url} from history`});
+    expect(selectBtn).toHaveClass('focus-visible:ring-2');
+
+    const reuseBtn = screen.getByRole('button', {name: `Reuse URL ${item.url}`});
+    expect(reuseBtn).toHaveClass('focus-visible:ring-2');
   });
 });
