@@ -92,7 +92,7 @@ export const TransferRowCard = memo(function TransferRowCard({
           onClick={onToggleSelect}
           className={`rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] ${ftFocusRing}`}
           aria-pressed={selected}
-          aria-label={selected ? 'Deselect transfer' : 'Select transfer'}
+          aria-label={selected ? `Deselect transfer ${t.filename}` : `Select transfer ${t.filename}`}
         >
           {selected ? (
             <CheckSquare className="h-5 w-5 text-[var(--ft-accent)]" aria-hidden />
@@ -116,7 +116,7 @@ export const TransferRowCard = memo(function TransferRowCard({
                 onClick={handleCopy}
                 className="rounded p-1 opacity-0 transition-opacity group-hover/title:opacity-100 focus-visible:opacity-100 hover:bg-[var(--muted)]"
                 title={copied ? 'Copied!' : 'Copy filename'}
-                aria-label={copied ? 'Copied!' : 'Copy filename'}
+                aria-label={copied ? `Copied filename for ${t.filename}` : `Copy filename for ${t.filename}`}
               >
                 {copied ? (
                   <Check className="h-3 w-3 text-[var(--ft-success)]" />
@@ -210,7 +210,7 @@ export const TransferRowCard = memo(function TransferRowCard({
                       onBlur={(e) => onSetSpeedLimit(parseInt(e.target.value, 10) || 0)}
                       className="w-12 bg-transparent text-[9px] font-bold focus:outline-none"
                       title="Speed limit (KB/s)"
-                      aria-label="Speed limit kilobytes per second"
+                      aria-label={`Speed limit in kilobytes per second for ${t.filename}`}
                     />
                     <span className="text-[8px] uppercase opacity-40">KB/s</span>
                   </div>
@@ -224,7 +224,7 @@ export const TransferRowCard = memo(function TransferRowCard({
                   onClick={() => onAction('retry')}
                   className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] ${ftFocusRing}`}
                   title="Retry"
-                  aria-label="Retry"
+                  aria-label={`Retry transfer for ${t.filename}`}
                 >
                   <RotateCcw className="h-4 w-4" />
                 </button>
@@ -235,7 +235,7 @@ export const TransferRowCard = memo(function TransferRowCard({
                   onClick={() => onAction('resume')}
                   className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] ${ftFocusRing}`}
                   title="Resume"
-                  aria-label="Resume"
+                  aria-label={`Resume transfer for ${t.filename}`}
                 >
                   <Play className="h-4 w-4 fill-current" />
                 </button>
@@ -245,7 +245,7 @@ export const TransferRowCard = memo(function TransferRowCard({
                   onClick={() => onAction('pause')}
                   className={`rounded-lg p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] ${ftFocusRing}`}
                   title="Pause"
-                  aria-label="Pause"
+                  aria-label={`Pause transfer for ${t.filename}`}
                 >
                   <Pause className="h-4 w-4 fill-current" />
                 </button>
@@ -259,7 +259,7 @@ export const TransferRowCard = memo(function TransferRowCard({
                     : 'hover:bg-[var(--ft-danger-bg)] hover:text-[var(--ft-danger)]'
                 } ${ftFocusRing}`}
                 title={showConfirmCancel ? 'Confirm cancel?' : 'Cancel'}
-                aria-label={showConfirmCancel ? 'Confirm cancel?' : 'Cancel'}
+                aria-label={showConfirmCancel ? `Confirm cancel transfer for ${t.filename}?` : `Cancel transfer for ${t.filename}`}
               >
                 <X className="h-4 w-4" />
                 {showConfirmCancel && (
