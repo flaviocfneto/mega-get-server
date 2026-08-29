@@ -172,7 +172,7 @@ export function HistoryView({
                   }}
                   className={`p-4 transition-colors hover:bg-[var(--muted)] ${
                     selectedHistory.has(h.url) ? 'text-[var(--ft-accent)]' : 'text-[var(--muted-foreground)]/40'
-                  }`}
+                  } ${ftFocusRing}`}
                   aria-pressed={selectedHistory.has(h.url)}
                   aria-label={selectedHistory.has(h.url) ? `Deselect ${h.url} from history` : `Select ${h.url} from history`}
                 >
@@ -185,7 +185,7 @@ export function HistoryView({
                 <button
                   type="button"
                   onClick={() => setUrl(h.url)}
-                  className="flex min-w-0 flex-1 items-center justify-between gap-3 py-4 pr-4 text-left transition-colors hover:bg-[var(--muted)]"
+                  className={`flex min-w-0 flex-1 items-center justify-between gap-3 py-4 pr-4 text-left transition-colors hover:bg-[var(--muted)] ${ftFocusRing}`}
                   aria-label={`Reuse URL ${h.url}`}
                 >
                   <div className="flex min-w-0 flex-col">
