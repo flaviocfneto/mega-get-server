@@ -70,6 +70,7 @@ def test_safe_async_http_transport_blocks_direct_ip():
 
 def test_transfer_metadata_update_rejects_control_characters():
     import transfer_metadata as tm
+
     with pytest.raises(ValueError, match="Metadata value contains invalid control characters"):
         tm.update("12345", {"tags": ["valid", "invalid\x00tag"]})
 
