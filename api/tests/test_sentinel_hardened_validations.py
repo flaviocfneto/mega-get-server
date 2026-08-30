@@ -66,3 +66,12 @@ def test_safe_async_http_transport_blocks_direct_ip():
         assert "Direct IP is blocked" in str(exc_info.value)
 
     asyncio.run(run_test())
+
+
+def test_transfer_metadata_update_rejects_control_characters():
+    import transfer_metadata as tm
+    with pytest.raises(ValueError, match="Metadata value contains invalid control characters"):
+        tm.update("12345", {"tags": ["valid", "invalid\x00tag"]})
+
+    with pytest.raises(ValueError, match="Metadata value contains invalid control characters"):
+        tm.update("12345", {"url": "http://example.com/file\r\n"})

@@ -55,7 +55,24 @@ def get(tag: str) -> dict[str, Any]:
         return {}
 
 
+def _validate_metadata_values(values: dict[str, Any]) -> None:
+    def _check_obj(v: Any) -> None:
+        if isinstance(v, str):
+            if any(ord(c) < 32 or ord(c) == 127 for c in v):
+                raise ValueError("Metadata value contains invalid control characters")
+        elif isinstance(v, list):
+            for item in v:
+                _check_obj(item)
+        elif isinstance(v, dict):
+            for k, val in v.items():
+                _check_obj(k)
+                _check_obj(val)
+
+    _check_obj(values)
+
+
 def update(tag: str, values: dict[str, Any]) -> dict[str, Any]:
+    _validate_metadata_values(values)
     with _lock:
         data = load_all()
         current = data.get(tag, {})
