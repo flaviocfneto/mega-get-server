@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import http_downloads as hd
 import mega_service as ms
 import pytest
@@ -88,18 +90,22 @@ def test_validate_http_download_url_rejects_control_chars():
             hd.validate_http_download_url(url)
 
 
-@pytest.mark.asyncio
-async def test_http_download_path_traversal_defense(tmp_path, monkeypatch):
+def test_http_download_path_traversal_defense(tmp_path, monkeypatch):
     d_dir = tmp_path / "downloads"
     d_dir.mkdir()
     monkeypatch.setattr(ms, "DOWNLOAD_DIR", str(d_dir))
 
-    job = hd.HttpJob(tag="h-12345678-1234-1234-1234-123456789012", url="https://example.com/file.bin", labels=[], priority="NORMAL")
+    job = hd.HttpJob(
+        tag="h-12345678-1234-1234-1234-123456789012", url="https://example.com/file.bin", labels=[], priority="NORMAL"
+    )
 
     # Mock _safe_output_basename to return a path traversal string
     monkeypatch.setattr(hd, "_safe_output_basename", lambda url, tag: "../../../etc/passwd")
 
-    await hd._run_job_inner(job, pending_id=None)
+    async def main():
+        await hd._run_job_inner(job, pending_id=None)
+
+    asyncio.run(main())
 
     assert job.state == "FAILED"
     assert "outside download directory" in (job.last_error or "")

@@ -439,7 +439,9 @@ async def _run_job_inner(job: HttpJob, pending_id: str | None) -> None:
         job.last_error = "Invalid output path outside download directory"
         job.done_event.set()
         if pending_id:
-            await pq.set_item_status(pending_id, status="FAILED", last_error="Invalid output path outside download directory")
+            await pq.set_item_status(
+                pending_id, status="FAILED", last_error="Invalid output path outside download directory"
+            )
         _schedule_prune(job.tag, _FAILED_PRUNE_SEC)
         return
 
