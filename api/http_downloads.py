@@ -433,6 +433,16 @@ async def _run_job_inner(job: HttpJob, pending_id: str | None) -> None:
     os.makedirs(download_dir_abs, exist_ok=True)
     out_name = _safe_output_basename(job.url, job.tag)
     out_path = os.path.join(download_dir_abs, out_name)
+
+    if not _is_under_download_dir(out_path):
+        job.state = "FAILED"
+        job.last_error = "Invalid output path outside download directory"
+        job.done_event.set()
+        if pending_id:
+            await pq.set_item_status(pending_id, status="FAILED", last_error="Invalid output path outside download directory")
+        _schedule_prune(job.tag, _FAILED_PRUNE_SEC)
+        return
+
     job.output_file = out_path
     job.output_paths = [out_path]
 
