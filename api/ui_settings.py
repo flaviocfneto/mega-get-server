@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import os
+import re
 import threading
 from pathlib import Path
 from typing import Any
@@ -112,12 +113,28 @@ def merge_post_into_stored(body: dict[str, Any]) -> None:
                 stored[key] = action
                 continue
 
+            if key in {"scheduled_start", "scheduled_stop"}:
+                time_str = str(val).strip()
+                if not re.match(r"^([01]\d|2[0-3]):([0-5]\d)$", time_str):
+                    continue
+                stored[key] = time_str
+                continue
+
             default = DEFAULT_UI_KEYS[key]
             if isinstance(default, bool):
                 stored[key] = bool(val)
             elif isinstance(default, int):
                 try:
-                    stored[key] = int(val)
+                    v = int(val)
+                    if key == "history_limit" and not (1 <= v <= 1000):
+                        continue
+                    if key == "history_retention_days" and not (1 <= v <= 365):
+                        continue
+                    if key == "max_retries" and not (0 <= v <= 100):
+                        continue
+                    if key == "global_speed_limit_kbps" and not (0 <= v <= 1000000):
+                        continue
+                    stored[key] = v
                 except (TypeError, ValueError):
                     pass
             else:
