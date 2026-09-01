@@ -102,3 +102,51 @@ def test_post_download_action_whitelist_enforced(client):
         assert resp.status_code == 200
         resp = client.get("/api/config", headers=headers)
         assert resp.json().get("post_download_action") == valid_act
+
+
+def test_schedule_times_and_numeric_bounds_enforced(client):
+    import ui_settings as us
+
+    orig_stored = us.load_stored()
+    headers = {"X-API-KEY": "test-write-key", "Origin": "http://localhost:5173"}
+    resp = client.get("/api/config", headers=headers)
+    assert resp.status_code == 200
+    orig_start = resp.json().get("scheduled_start")
+    orig_limit = resp.json().get("history_limit")
+
+    try:
+        # Direct merge tests with invalid schedule strings and out-of-bounds ints
+        us.merge_post_into_stored(
+            {
+                "scheduled_start": "25:00",
+                "scheduled_stop": "invalid",
+                "history_limit": -5,
+                "history_retention_days": 1000,
+                "max_retries": -1,
+                "global_speed_limit_kbps": -500,
+            }
+        )
+        stored = us.load_stored()
+        assert stored.get("scheduled_start") == orig_start
+        assert stored.get("history_limit") == orig_limit
+
+        # Direct merge tests with valid inputs
+        us.merge_post_into_stored(
+            {
+                "scheduled_start": "08:30",
+                "scheduled_stop": "22:15",
+                "history_limit": 100,
+                "history_retention_days": 14,
+                "max_retries": 5,
+                "global_speed_limit_kbps": 5000,
+            }
+        )
+        stored = us.load_stored()
+        assert stored.get("scheduled_start") == "08:30"
+        assert stored.get("scheduled_stop") == "22:15"
+        assert stored.get("history_limit") == 100
+        assert stored.get("history_retention_days") == 14
+        assert stored.get("max_retries") == 5
+        assert stored.get("global_speed_limit_kbps") == 5000
+    finally:
+        us.save_stored(orig_stored)
