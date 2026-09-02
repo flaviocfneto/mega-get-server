@@ -249,6 +249,8 @@ def _redacted_client_error(raw: str | None) -> str:
 
 
 def _parse_queue_item_id(item_id: str) -> str:
+    if any(ord(c) < 32 or ord(c) == 127 for c in item_id):
+        raise HTTPException(status_code=400, detail="Invalid queue item id")
     try:
         return str(uuid.UUID(item_id.strip()))
     except ValueError:
