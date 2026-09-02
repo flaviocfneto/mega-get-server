@@ -97,3 +97,26 @@ def test_api_download_and_queue_reject_priority_control_characters(test_client):
     )
     assert res2.status_code == 400
     assert "Priority contains invalid control characters" in res2.json()["detail"]
+
+
+def test_api_queue_item_endpoints_reject_control_characters_in_item_id(test_client):
+    # Test percent-encoded newline (%0A) in URL path parameter
+    res1 = test_client.delete(
+        "/api/queue/550e8400-e29b-41d4-a716-446655440000%0A",
+        headers={"x-api-key": "write-secret", **SAFE_HEADERS},
+    )
+    assert res1.status_code == 400
+    assert "Invalid queue item id" in res1.json()["detail"]
+
+    res2 = test_client.post(
+        "/api/queue/550e8400-e29b-41d4-a716-446655440000%00/start",
+        headers={"x-api-key": "write-secret", **SAFE_HEADERS},
+    )
+    assert res2.status_code == 400
+    assert "Invalid queue item id" in res2.json()["detail"]
+
+    # Direct function test for _parse_queue_item_id with control characters
+    with pytest.raises(api_main.HTTPException) as exc_info:
+        api_main._parse_queue_item_id("550e8400-e29b-41d4-a716-446655440000\r\n")
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "Invalid queue item id"
