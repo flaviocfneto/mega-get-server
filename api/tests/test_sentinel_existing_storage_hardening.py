@@ -123,6 +123,23 @@ def test_transfer_metadata_existing_file_hardening(tmp_path: Path, monkeypatch) 
     assert stat.S_IMODE(meta_file.stat().st_mode) == 0o600
 
 
+def test_pending_correlation_existing_file_hardening(tmp_path: Path, monkeypatch) -> None:
+    if os.name != "posix":
+        return
+
+    import pending_correlation
+
+    correlation_file = tmp_path / "test_existing_correlation.json"
+    monkeypatch.setattr(pending_correlation, "CORRELATION_PATH", correlation_file)
+
+    correlation_file.write_text('{"entries": {}}', encoding="utf-8")
+    os.chmod(correlation_file, 0o644)
+    assert stat.S_IMODE(correlation_file.stat().st_mode) == 0o644
+
+    pending_correlation._load_entries_unlocked()
+    assert stat.S_IMODE(correlation_file.stat().st_mode) == 0o600
+
+
 def test_read_json_dict_existing_file_hardening(tmp_path: Path) -> None:
     if os.name != "posix":
         return
