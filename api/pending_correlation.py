@@ -45,6 +45,13 @@ def max_entries() -> int:
 
 
 def _load_entries_unlocked() -> dict[str, dict[str, Any]]:
+    if os.name == "posix" and CORRELATION_PATH.is_file():
+        try:
+            st = os.stat(CORRELATION_PATH)
+            if (st.st_mode & 0o777) != 0o600:
+                os.chmod(CORRELATION_PATH, 0o600)
+        except OSError:
+            pass
     data = read_json_dict(CORRELATION_PATH)
     raw = data.get("entries")
     if not isinstance(raw, dict):
