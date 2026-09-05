@@ -90,3 +90,24 @@ def test_redact_query_param_secrets():
         redacted = ms.redact_sensitive_text(url)
         assert secret not in redacted, f"Failed for {param_key}"
         assert f"{param_key}=***" in redacted, f"Failed for {param_key}"
+
+
+def test_get_command_events_redaction(monkeypatch):
+    test_event = {
+        "ok": True,
+        "command": "mega-login testuser secretpass123",
+        "exit_code": 0,
+        "stdout": "Logged in as testuser secretpass123 token=secret_token_abc123",
+        "stderr": "warning: api_key=my_super_secret",
+        "output": "output containing token=secret_token_abc123",
+        "timestamp": 123456789,
+    }
+    monkeypatch.setattr(ms, "_command_events", [test_event])
+    events = ms.get_command_events()
+    assert len(events) == 1
+    evt = events[0]
+    assert "secretpass123" not in evt["command"]
+    assert "secret_token_abc123" not in evt["stdout"]
+    assert "my_super_secret" not in evt["stderr"]
+    assert "secret_token_abc123" not in evt["output"]
+    assert evt["timestamp"] == 123456789
