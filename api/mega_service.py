@@ -226,7 +226,7 @@ def _record_command_event(event: dict[str, Any]) -> None:
 
 
 def get_command_events() -> list[dict[str, Any]]:
-    return list(_command_events)
+    return [redact_data_structure(e) for e in _command_events]
 
 
 # Compiled regex patterns for redaction
